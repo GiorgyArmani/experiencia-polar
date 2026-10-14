@@ -1,8 +1,9 @@
-// Sesión mínima: una cookie httpOnly con el id (UUID) del jugador.
+// Sesión mínima: el id (UUID aleatorio, nunca se publica) del jugador.
+// La web lo guarda en una cookie httpOnly; la app nativa lo envía como `Authorization: Bearer <id>`.
 import 'server-only';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { getStore } from './store';
-import type { Player } from './types';
+import type { Player } from '@/shared/types';
 
 const COOKIE = 'polar_player';
 const MAX_AGE = 60 * 60 * 24 * 60; // 60 días
@@ -22,7 +23,8 @@ export function clearPlayerCookie() {
 }
 
 export async function currentPlayer(): Promise<Player | null> {
-  const id = cookies().get(COOKIE)?.value;
+  const bearer = /^Bearer\s+(.+)$/i.exec(headers().get('authorization') ?? '')?.[1];
+  const id = bearer ?? cookies().get(COOKIE)?.value;
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return null;
   try {
     return await getStore().getPlayer(id);

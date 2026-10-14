@@ -5,6 +5,10 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
+  // Universal links (iOS) y App links (Android) para que el QR abra la app.
+  async rewrites() {
+    return [{ source: '/.well-known/:file', destination: '/api/well-known/:file' }];
+  },
   async headers() {
     return [
       {

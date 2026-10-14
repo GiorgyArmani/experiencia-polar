@@ -1,13 +1,19 @@
-// Tipos compartidos entre servidor y cliente.
+// Contrato de la API: lo comparten el servidor (Next.js), la web y la app nativa (Expo).
+import type { Avatar } from './avatar';
+
+export interface Sede {
+  code: string; // va en el QR: https://experienciapolar.aulaciete.com/q/<code>
+  name: string;
+}
 
 export interface Player {
   id: string;
   nombre: string;
   email: string;
   telefono: string;
-  sede: string;
+  sede: string; // nombre de la sede
   oso_nombre: string;
-  look: string;
+  avatar: Avatar;
   puntos: number;
   completed: number[];
   current_trivia: number | null;
@@ -19,13 +25,12 @@ export interface Player {
   updated_at: string;
 }
 
-/** Lo que el navegador ve del jugador (sin email ni teléfono). */
+/** Lo que el cliente ve del jugador (sin email ni teléfono). */
 export interface PublicPlayer {
-  id: string;
   nombre: string;
   sede: string;
   osoNombre: string;
-  look: string;
+  avatar: Avatar;
   puntos: number;
   completed: number[];
 }
@@ -57,8 +62,19 @@ export interface MeResponse {
   player: PublicPlayer | null;
   status: GameStatus | null;
   question: QuestionView | null;
-  sedes: string[];
+  sedes: Sede[];
   demoTools: boolean;
+}
+
+export interface RegisterResponse extends MeResponse {
+  recovered: boolean;
+  /** Para la app nativa: se envía como `Authorization: Bearer <token>`. La web usa cookie. */
+  token: string;
+}
+
+/** Respuesta de /api/qr: a qué sede pertenece un QR (para el onboarding). */
+export interface QrResponse {
+  sede: Sede;
 }
 
 export interface AnswerResponse {
@@ -74,14 +90,16 @@ export interface AnswerResponse {
 export interface LeaderRow {
   rank: number;
   osoNombre: string;
-  look: string;
+  avatar: Avatar;
   puntos: number;
+  graduado: boolean;
   isMe: boolean;
 }
 
 export interface SedeRow {
   rank: number;
   sede: string;
+  code: string;
   puntos: number;
   jugadores: number;
   isMine: boolean;

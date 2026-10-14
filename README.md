@@ -1,76 +1,124 @@
 # Experiencia Polar
 
-Web app (PWA) de la trivia con QR para el aniversario de la Universidad Empresas Polar.
-Next.js 14 (App Router) + React + TypeScript + Tailwind. Datos en Supabase.
+Trivia con QR y realidad aumentada ligera para el aniversario de la Universidad Empresas Polar.
 
-- **experienciapolar.aulaciete.com** → el juego
-- **leaderboardpolar.aulaciete.com** → el ranking (mismo despliegue; el `middleware.ts` envía `/` a `/ranking`).
-  Para una pantalla de una sede: `https://leaderboardpolar.aulaciete.com/?sede=Sede%20Caracas`
-
-## Flujo
-
-Inicio → **Crea tu oso** (flechas de cabeza y ropa + nombre del oso) → **Tus datos** (nombre, correo, teléfono, sede)
-→ Reglas → **Cámara** (lee el QR) → **Trivia** (5 preguntas; si falla: pantalla de error y reintenta)
-→ **Trivia superada** → **Timer** de la próxima trivia → … ×4 → **¡Te graduaste!** → Ranking.
-
-Todo lo decide el servidor con su propia hora: el teléfono nunca recibe la respuesta correcta
-y no se puede adelantar una trivia cambiando la hora del dispositivo.
-
-## Correr en local
-
-```bash
-npm install
-cp .env.example .env.local   # sin SUPABASE_* usa memoria (solo pruebas)
-npm run dev                  # http://localhost:3000
+```
+mobile/      App nativa iOS + Android (Expo SDK 57, React Native, Three.js)  ← lo que usa el jugador
+app/, lib/   Servidor Next.js 14: API del juego, leaderboard web, página del QR y versión web de respaldo
+shared/      Contrato común (tipos de la API, avatar, formato del QR) — lo importan servidor y app
+supabase/    schema.sql (sirve para Supabase y para Postgres en Dokploy)
 ```
 
-La cámara del navegador solo funciona en `https://` o `localhost`. Para probar en el teléfono usa el despliegue.
+| Dominio | Qué sirve |
+| --- | --- |
+| **experienciapolar.aulaciete.com** | API (`/api/*`), destino del QR (`/q/<CODIGO>`), universal links y juego web de respaldo |
+| **leaderboardpolar.aulaciete.com** | Ranking para pantallas. Una sede: `https://leaderboardpolar.aulaciete.com/?sede=CCS` |
 
-## Configuración (`.env`)
+Los dos dominios apuntan al **mismo** despliegue del servidor (`middleware.ts` envía `/` del leaderboard a `/ranking`).
+
+## Gameloop
+
+1. **Bienvenida** → escanea el **QR de su sede** (eso registra la sede).
+2. **Diseña su oso**: pelaje, cabeza, ropa, accesorio + nombre (modelo 3D low poly).
+3. **Sus datos**: nombre, correo, teléfono (la sede ya viene del QR). Si hay una trivia abierta, arranca de una vez.
+4. **Trivia** de 5 preguntas. Correcta al primer intento = puntos; si falla, reintenta pero esa pregunta vale 0.
+5. **Espera** con contador hasta que abra la siguiente trivia. Se vuelve a escanear el **mismo QR**.
+6. Tras la última: **oso graduado** (birrete y toga) → **leaderboard** de su sede.
+
+El oso acompaña cada pantalla con reacciones: `celebrar`, `duda`, `pensar`, `error` (+ `idle`).
+Cada pantalla está armada como una página de cómic: viñetas (`Panel`), cartuchos de narración (`Caption`)
+y globos de diálogo (`Bubble`) en `mobile/src/components/comic.tsx`.
+
+### Reglas que impone el servidor
+
+- El servidor decide todo con **su** hora: el teléfono nunca recibe la respuesta correcta y no se adelanta una trivia cambiando el reloj.
+- **Horarios por nivel** (`TRIVIA_WINDOWS`): cada trivia tiene ventana `opensAt`–`closesAt`. Se evalúa en cada petición, así que
+  no hace falta un cron que "abra" niveles (no hay proceso que se pueda caer). Si una ventana cierra sin jugarla, se salta.
+- **QR por sede** (`QR_STRICT_SEDE=true`): solo el QR de tu sede abre tu trivia.
+- Un doble toque no suma dos veces (la actualización es condicional a la pregunta actual).
+- Recuperar la partida en otro teléfono exige **correo + teléfono** iguales a los del registro.
+
+## Códigos QR
+
+Uno por sede, el mismo para todas las trivias:
+
+```
+https://experienciapolar.aulaciete.com/q/<CODIGO>      (CODIGO de SEDES, p. ej. CCS)
+```
+
+- Escaneado **dentro de la app** → la app lee el código directamente.
+- Escaneado con la **cámara del teléfono** → si la app está instalada la abre directo (universal/app links); si no,
+  la página `/q/<CODIGO>` ofrece App Store / Google Play o jugar en el navegador.
+
+## Configuración del servidor (`.env`)
 
 | Variable | Qué hace |
 | --- | --- |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Base de datos. La service role key va **solo en el servidor**. |
+| `DATABASE_URL` | Postgres (Dokploy, o cadena de conexión de Supabase). Tiene prioridad. |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Alternativa vía API de Supabase. La service role key va **solo en el servidor**. |
+| `SEDES` | `CODIGO:Nombre` separados por coma. El código es el del QR. |
+| `QR_STRICT_SEDE` | `true` (defecto): solo el QR de tu sede abre tu trivia. |
 | `GAME_MODE` | `demo` (cada trivia abre `DEMO_WAIT_SECONDS` después de la anterior) o `schedule` (horarios reales). |
-| `TRIVIA_WINDOWS` | JSON con `opensAt` / `closesAt` de cada trivia (modo `schedule`). Si una ventana cierra sin jugarla, se salta. |
-| `POINTS_PER_CORRECT` | Puntos por respuesta correcta al primer intento. Si falla y reintenta, esa pregunta suma 0. |
-| `SEDES` | Lista de sedes del registro, separadas por coma. |
-| `NEXT_PUBLIC_QR_VALUE` | Texto exacto del QR impreso. Vacío = acepta cualquier QR. |
-| `NEXT_PUBLIC_DEMO` | `true` muestra "Simular escaneo" y "Saltar espera". **Ponlo en `false` el día del evento.** |
+| `TRIVIA_WINDOWS` | JSON con `opensAt` / `closesAt` de cada trivia (modo `schedule`), zona `-04:00`. |
+| `POINTS_PER_CORRECT` | Puntos por respuesta correcta al primer intento. |
+| `APP_STORE_URL`, `PLAY_STORE_URL` | Botones de la página del QR. |
+| `APPLE_TEAM_ID`, `ANDROID_SHA256_CERT` | Habilitan `/.well-known/apple-app-site-association` y `assetlinks.json`. |
+| `NEXT_PUBLIC_DEMO` | `true` muestra "Simular escaneo" y "Saltar espera" (web y app). **`false` el día del evento.** Se fija al compilar. |
 
-Las variables `NEXT_PUBLIC_*` se fijan al compilar: si las cambias, vuelve a desplegar.
+Sin base de datos configurada usa memoria (solo pruebas).
 
-## Base de datos (Supabase)
+## Base de datos
 
-1. Crea el proyecto en Supabase.
-2. SQL Editor → pega y ejecuta `supabase/schema.sql`.
-3. Copia `Project URL` y la `service_role key` a las variables de entorno.
+Ejecuta `supabase/schema.sql` (es idempotente y migra la columna `look` de la versión anterior a `avatar`):
 
-Tablas: `players` (jugador, oso, sede, puntos, progreso) y `answers` (cada respuesta, para auditoría).
-RLS está activo sin políticas públicas: solo el servidor accede.
+- **Supabase**: SQL Editor → pegar y ejecutar.
+- **Dokploy**: crea un servicio Postgres, y `psql "$DATABASE_URL" -f supabase/schema.sql`.
+
+Tablas: `players` (jugador, sede, avatar, puntos, progreso) y `answers` (auditoría). Índice `(sede, puntos desc)` para el ranking.
+Para ~2.000 jugadores un Postgres pequeño sobra; el pool por instancia es `DATABASE_POOL` (10).
 
 ## Preguntas
 
-Edita `lib/trivias.ts`: 4 trivias × 5 preguntas, cada una con 4 opciones y el índice `correct` (0-3).
+`lib/trivias.ts`: 4 trivias × 5 preguntas, 4 opciones y el índice `correct` (0-3). Solo vive en el servidor.
 
-## Desplegar
+## Servidor: correr y desplegar
 
-### Dokploy (Docker)
-1. Nueva aplicación → origen: este repositorio → Build type: **Dockerfile**.
-2. Variables de entorno: las de `.env.example`. Las `NEXT_PUBLIC_*` también como **Build args**.
-3. Dominios: `experienciapolar.aulaciete.com` y `leaderboardpolar.aulaciete.com` → puerto `3000`, HTTPS activado.
+```bash
+npm install
+cp .env.example .env.local
+npm run dev                  # http://localhost:3000
+```
 
-### Vercel
-1. Importa el repositorio (framework Next.js, sin cambios).
-2. Agrega las variables de entorno.
-3. Domains → agrega los dos subdominios y crea en tu DNS los `CNAME` que indique Vercel.
+**Dokploy**: aplicación → Build type **Dockerfile** → variables de `.env.example` (`NEXT_PUBLIC_DEMO` también como build arg)
+→ dominios `experienciapolar.aulaciete.com` y `leaderboardpolar.aulaciete.com` → puerto `3000`, HTTPS.
 
-## QR
+**Vercel**: importa el repo (Next.js), agrega las variables y los dos dominios. Con Supabase usa la URL del pooler en `DATABASE_URL`.
 
-Genera un QR con el texto de `NEXT_PUBLIC_QR_VALUE` (por ejemplo `EXPERIENCIA-POLAR`). Es el mismo para todas las trivias.
+## App nativa (`mobile/`)
 
-## Imágenes
+```bash
+cd mobile
+npm install
+# Servidor local desde el teléfono: usa la IP de tu PC, no localhost.
+EXPO_PUBLIC_API_URL=http://192.168.1.10:3000 npx expo start
+```
 
-`public/osos/` (looks del oso y oso graduado) y `public/logos/`. Para que cualquier cabeza combine con cualquier ropa,
-el artista debe entregar el oso base y cada pieza como PNG transparentes del mismo tamaño; luego se apilan como capas
-en `app/registro/page.tsx` y `lib/looks.ts`.
+La app usa módulos nativos (cámara, GL), así que se prueba con un **development build**, no con Expo Go:
+
+```bash
+npx eas-cli@latest build --profile development --platform android   # o ios
+npx eas-cli@latest build --profile preview --platform android       # APK para testers
+npx eas-cli@latest build --profile production --platform all
+npx eas-cli@latest submit --platform all
+```
+
+- Bundle ID / package: `com.aulaciete.experienciapolar`. Esquema de deep link: `experienciapolar://q/<CODIGO>`.
+- La URL del servidor sale de `EXPO_PUBLIC_API_URL` o de `app.json → extra.apiUrl`.
+- El oso 3D está hecho con primitivas (`mobile/src/components/Bear3D.tsx`). Si el artista entrega un `.glb`, se reemplaza ese
+  componente con la misma interfaz (`avatar`, `reaction`, `graduado`).
+- `npm run typecheck` y `npx expo-doctor` deben pasar antes de cada build.
+
+## Web de respaldo
+
+`/registro`, `/jugar`, `/ranking` siguen funcionando en el navegador (mismo servidor y mismas reglas), con el oso en SVG 2D.
+Sirve si la publicación en las tiendas se retrasa o para quien no pueda instalar la app.

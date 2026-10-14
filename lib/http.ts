@@ -2,7 +2,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { config } from './config';
 import { computeStatus, questionView, toPublic } from './game';
-import type { MeResponse, Player } from './types';
+import type { MeResponse, Player } from '@/shared/types';
 
 export function json<T>(data: T, status = 200) {
   return NextResponse.json(data, { status, headers: { 'Cache-Control': 'no-store' } });

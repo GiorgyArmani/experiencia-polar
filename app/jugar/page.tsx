@@ -1,13 +1,13 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
-import { OSO_ESTANDAR, OSO_GRADUADO } from '@/lib/looks';
-import type { AnswerResponse, MeResponse } from '@/lib/types';
+import type { Avatar } from '@/shared/avatar';
+import type { AnswerResponse, MeResponse } from '@/shared/types';
+import { BearSvg } from '@/components/BearSvg';
 import { BearCard, Bubble, Confetti, Screen, Spinner } from '@/components/ui';
 
 const QrScanner = dynamic(() => import('@/components/QrScanner'), { ssr: false });
@@ -94,11 +94,12 @@ export default function Jugar() {
 
   let content: React.ReactNode;
   if (overlay?.kind === 'error') {
-    content = <Incorrecto onRetry={() => setOverlay(null)} />;
+    content = <Incorrecto avatar={player.avatar} onRetry={() => setOverlay(null)} />;
   } else if (overlay?.kind === 'superada') {
     const isLast = status.phase === 'final';
     content = (
       <Superada
+        avatar={player.avatar}
         trivia={overlay.trivia}
         points={overlay.points}
         nextLabel={isLast ? 'Ver mi resultado final' : `Ver cuándo abre la Trivia ${status.trivia ?? ''}`}
@@ -108,6 +109,7 @@ export default function Jugar() {
   } else if (status.phase === 'playing' && question) {
     content = (
       <Trivia
+        avatar={player.avatar}
         trivia={question.trivia}
         total={status.totalTrivias}
         index={question.index}
@@ -122,6 +124,8 @@ export default function Jugar() {
   } else if (status.phase === 'scan') {
     content = (
       <Camara
+        avatar={player.avatar}
+        sedeCode={me.sedes.find((s) => s.name === player.sede)?.code ?? ''}
         trivia={status.trivia ?? 1}
         closesAt={status.closesAt}
         completed={player.completed}
@@ -134,6 +138,7 @@ export default function Jugar() {
   } else if (status.phase === 'locked') {
     content = (
       <Espera
+        avatar={player.avatar}
         trivia={status.trivia ?? 1}
         opensAt={status.opensAt}
         offset={offset.current}
@@ -145,7 +150,7 @@ export default function Jugar() {
       />
     );
   } else {
-    content = <Final puntos={player.puntos} completed={player.completed.length} total={status.totalTrivias} />;
+    content = <Final avatar={player.avatar} puntos={player.puntos} completed={player.completed.length} total={status.totalTrivias} />;
   }
 
   return (
@@ -183,10 +188,10 @@ function Progress({ completed, total, current }: { completed: number[]; total: n
   );
 }
 
-function Thumb() {
+function Thumb({ avatar }: { avatar: Avatar }) {
   return (
-    <div className="relative h-[187px] w-[105px] shrink-0 overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky">
-      <Image src={OSO_ESTANDAR} alt="Tu oso" fill sizes="105px" className="object-cover object-[center_35%]" />
+    <div className="relative flex h-[187px] w-[105px] shrink-0 items-end overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky">
+      <BearSvg avatar={avatar} className="w-full" title="Tu oso" />
     </div>
   );
 }
@@ -197,6 +202,8 @@ function hora(iso: string | null) {
 }
 
 function Camara({
+  avatar,
+  sedeCode,
   trivia,
   closesAt,
   completed,
@@ -205,6 +212,8 @@ function Camara({
   busy,
   onScan,
 }: {
+  avatar: Avatar;
+  sedeCode: string;
   trivia: number;
   closesAt: string | null;
   completed: number[];
@@ -218,7 +227,7 @@ function Camara({
       <QrScanner onScan={onScan} paused={busy} />
 
       <div className="relative z-10 flex items-start gap-3">
-        <Thumb />
+        <Thumb avatar={avatar} />
         <div className="flex flex-col gap-2 pr-3 pt-7">
           <Bubble>¡Busca el QR de la Trivia {trivia}!</Bubble>
           {closesAt && (
@@ -243,7 +252,7 @@ function Camara({
 
       <div className="relative z-10 mt-auto flex flex-col gap-3 p-5">
         {demoTools && (
-          <button type="button" onClick={() => onScan(process.env.NEXT_PUBLIC_QR_VALUE ?? 'demo')} className="btn-game">
+          <button type="button" onClick={() => onScan(`POLAR:${sedeCode}`)} className="btn-game">
             Simular escaneo (demo)
           </button>
         )}
@@ -261,6 +270,7 @@ function Camara({
 }
 
 function Trivia({
+  avatar,
   trivia,
   total,
   index,
@@ -271,6 +281,7 @@ function Trivia({
   flash,
   onAnswer,
 }: {
+  avatar: Avatar;
   trivia: number;
   total: number;
   index: number;
@@ -301,8 +312,8 @@ function Trivia({
           </button>
         ))}
       </div>
-      <div className="relative mx-auto mt-auto h-[38vh] max-h-[434px] w-[255px] overflow-hidden rounded-t-[20px] border-4 border-b-0 border-white bg-polar-sky">
-        <Image src={OSO_ESTANDAR} alt="Tu oso pensando" fill sizes="255px" className="object-cover object-[center_30%]" />
+      <div className="relative mx-auto mt-auto flex h-[38vh] max-h-[434px] w-[255px] items-end overflow-hidden rounded-t-[20px] border-4 border-b-0 border-white bg-polar-sky">
+        <BearSvg avatar={avatar} mood={flash !== null ? 'feliz' : 'normal'} className="w-full" title="Tu oso pensando" />
       </div>
       <Bubble className="absolute bottom-[34vh] right-6 text-[15px]">{flash !== null ? '¡Bien!' : 'Mmm…'}</Bubble>
 
@@ -318,7 +329,7 @@ function Trivia({
   );
 }
 
-function Incorrecto({ onRetry }: { onRetry: () => void }) {
+function Incorrecto({ avatar, onRetry }: { avatar: Avatar; onRetry: () => void }) {
   return (
     <div className="flex flex-1 flex-col px-[18px] pb-4 pt-10">
       <h1 className="mx-4 flex h-14 items-center justify-center gap-2.5 rounded-full bg-polar-ink text-[21px] font-black uppercase shadow-[0_5px_0_#000]">
@@ -327,7 +338,7 @@ function Incorrecto({ onRetry }: { onRetry: () => void }) {
         </svg>
         Respuesta incorrecta
       </h1>
-      <BearCard src={OSO_ESTANDAR} alt="Tu oso" className="mt-6 flex-1" imgClassName="origin-bottom animate-shake saturate-[0.85]">
+      <BearCard art={<BearSvg avatar={avatar} mood="triste" className="h-full" title="Tu oso" />} className="mt-6 flex-1" artClassName="origin-bottom animate-shake">
         <div className="absolute inset-x-4 top-4 flex animate-pop flex-col gap-0.5 rounded-[18px] border-[3px] border-polar-ink bg-white px-4 py-3 text-polar-ink">
           <span className="text-xl font-black">¡Ups, casi!</span>
           <span className="text-[15px] font-semibold">Esa no era. Piénsalo otra vez.</span>
@@ -344,13 +355,13 @@ function Incorrecto({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-function Superada({ trivia, points, nextLabel, onNext }: { trivia: number; points: number; nextLabel: string; onNext: () => void }) {
+function Superada({ avatar, trivia, points, nextLabel, onNext }: { avatar: Avatar; trivia: number; points: number; nextLabel: string; onNext: () => void }) {
   return (
     <div className="flex flex-1 flex-col px-[18px] pb-4 pt-10">
       <h1 className="mx-4 flex h-14 items-center justify-center rounded-full bg-polar-orange text-[22px] font-black uppercase shadow-game">
         ¡Trivia {trivia} superada!
       </h1>
-      <BearCard src={OSO_ESTANDAR} alt="Tu oso celebrando" className="mt-6 flex-1" imgClassName="origin-bottom animate-hop">
+      <BearCard art={<BearSvg avatar={avatar} mood="feliz" className="h-full" title="Tu oso celebrando" />} className="mt-6 flex-1" artClassName="origin-bottom animate-hop">
         <Confetti />
         <Bubble className="absolute left-4 top-4 animate-pop text-lg font-black">¡Sumaste +{points} para tu sede!</Bubble>
       </BearCard>
@@ -362,6 +373,7 @@ function Superada({ trivia, points, nextLabel, onNext }: { trivia: number; point
 }
 
 function Espera({
+  avatar,
   trivia,
   opensAt,
   offset,
@@ -371,6 +383,7 @@ function Espera({
   onOpen,
   onSkip,
 }: {
+  avatar: Avatar;
   trivia: number;
   opensAt: string | null;
   offset: number;
@@ -409,7 +422,7 @@ function Espera({
   return (
     <div className="relative m-3 flex min-h-[calc(100dvh-24px)] flex-1 flex-col rounded-[22px] bg-polar-cam text-polar-ink">
       <div className="flex items-start gap-3">
-        <Thumb />
+        <Thumb avatar={avatar} />
         <Bubble className="mr-3 mt-7">¡Ya hiciste la Trivia {last}! Vuelve cuando abra la próxima.</Bubble>
       </div>
 
@@ -459,7 +472,7 @@ function Espera({
   );
 }
 
-function Final({ puntos, completed, total }: { puntos: number; completed: number; total: number }) {
+function Final({ avatar, puntos, completed, total }: { avatar: Avatar; puntos: number; completed: number; total: number }) {
   const [rank, setRank] = useState<number | null>(null);
   useEffect(() => {
     api.leaderboard().then((r) => setRank(r.me?.rank ?? null)).catch(() => {});
@@ -471,7 +484,7 @@ function Final({ puntos, completed, total }: { puntos: number; completed: number
         <span className="text-sm font-extrabold uppercase tracking-[0.12em]">{completed} de {total} trivias completadas</span>
         <h1 className="text-[44px] font-black uppercase leading-none text-polar-ink">¡Te graduaste!</h1>
       </div>
-      <BearCard src={OSO_GRADUADO} alt="Oso polar graduado celebrando" className="mt-5 flex-1" imgClassName="object-[center_20%]">
+      <BearCard art={<BearSvg avatar={avatar} graduado mood="feliz" className="h-full" title="Tu oso graduado" />} className="mt-5 flex-1">
         <Confetti />
       </BearCard>
       <div className="mx-4 mt-4 grid grid-cols-2 gap-3 rounded-[20px] bg-white px-5 py-3.5 text-polar-ink">

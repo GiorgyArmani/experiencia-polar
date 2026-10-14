@@ -1,9 +1,13 @@
-// Acceso a datos. Usa Supabase si SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY están
-// definidos; si no, un almacenamiento en memoria (solo para pruebas locales).
+// Acceso a datos. Orden de preferencia:
+//   1. DATABASE_URL  → Postgres directo (Dokploy, o la cadena de conexión de Supabase)
+//   2. SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY → API de Supabase
+//   3. Nada → memoria (solo pruebas locales)
 import 'server-only';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import postgres from 'postgres';
+import { parseAvatar, type Avatar } from '@/shared/avatar';
+import type { Player } from '@/shared/types';
 import { config } from './config';
-import type { Player } from './types';
 
 export interface NewPlayer {
   nombre: string;
@@ -11,21 +15,117 @@ export interface NewPlayer {
   telefono: string;
   sede: string;
   oso_nombre: string;
-  look: string;
+  avatar: Avatar;
+}
+
+/** Condición para actualizar: si el jugador ya no está en ese estado, no se toca (evita dobles toques). */
+export interface Expect {
+  current_trivia: number | null;
+  current_question?: number;
+}
+
+export interface SedeTotal {
+  sede: string;
+  puntos: number;
+  jugadores: number;
 }
 
 export interface Store {
   getPlayer(id: string): Promise<Player | null>;
   getPlayerByEmail(email: string): Promise<Player | null>;
   createPlayer(p: NewPlayer): Promise<Player>;
-  updatePlayer(id: string, patch: Partial<Player>): Promise<Player>;
+  /** Devuelve null si `expect` no se cumple. */
+  updatePlayer(id: string, patch: Partial<Player>, expect?: Expect): Promise<Player | null>;
   logAnswer(a: { player_id: string; trivia: number; question: number; option_idx: number; correct: boolean }): Promise<void>;
   topBySede(sede: string, limit: number): Promise<Player[]>;
   rankInSede(player: Player): Promise<number>;
-  sedeTotals(): Promise<{ sede: string; puntos: number; jugadores: number }[]>;
+  sedeTotals(): Promise<SedeTotal[]>;
 }
 
-/* ───────────────────────── Supabase ───────────────────────── */
+const UPDATABLE = [
+  'puntos',
+  'completed',
+  'current_trivia',
+  'current_question',
+  'missed',
+  'trivia_puntos',
+  'last_completed_at',
+] as const satisfies readonly (keyof Player)[];
+
+function pickPatch(patch: Partial<Player>) {
+  const out: Record<string, unknown> = {};
+  for (const k of UPDATABLE) if (k in patch) out[k] = patch[k];
+  return out;
+}
+
+function fromRow(row: Record<string, unknown> | null | undefined): Player | null {
+  if (!row) return null;
+  return {
+    ...(row as unknown as Player),
+    avatar: parseAvatar(row.avatar),
+    completed: (row.completed as number[] | null) ?? [],
+    last_completed_at: row.last_completed_at ? new Date(row.last_completed_at as string).toISOString() : null,
+  };
+}
+
+/* ───────────────────────── Postgres (Dokploy / Supabase) ───────────────────────── */
+
+class PostgresStore implements Store {
+  private sql: postgres.Sql;
+  constructor(url: string) {
+    // prepare:false para funcionar también detrás del pooler de Supabase (pgbouncer).
+    this.sql = postgres(url, { max: Number(process.env.DATABASE_POOL ?? 10), prepare: false, idle_timeout: 30 });
+  }
+  async getPlayer(id: string) {
+    const [row] = await this.sql`select * from players where id = ${id}`;
+    return fromRow(row);
+  }
+  async getPlayerByEmail(email: string) {
+    const [row] = await this.sql`select * from players where email = ${email}`;
+    return fromRow(row);
+  }
+  async createPlayer(p: NewPlayer) {
+    const [row] = await this.sql`
+      insert into players (nombre, email, telefono, sede, oso_nombre, avatar)
+      values (${p.nombre}, ${p.email}, ${p.telefono}, ${p.sede}, ${p.oso_nombre}, ${this.sql.json(p.avatar as never)})
+      returning *`;
+    return fromRow(row)!;
+  }
+  async updatePlayer(id: string, patch: Partial<Player>, expect?: Expect) {
+    const values = { ...pickPatch(patch), updated_at: new Date() };
+    const sql = this.sql;
+    const cond = expect
+      ? sql`and current_trivia is not distinct from ${expect.current_trivia}
+            ${expect.current_question !== undefined ? sql`and current_question = ${expect.current_question}` : sql``}`
+      : sql``;
+    const [row] = await sql`update players set ${sql(values)} where id = ${id} ${cond} returning *`;
+    return fromRow(row);
+  }
+  async logAnswer(a: { player_id: string; trivia: number; question: number; option_idx: number; correct: boolean }) {
+    try {
+      await this.sql`insert into answers ${this.sql(a)}`;
+    } catch (e) {
+      console.error('[store] logAnswer', (e as Error).message);
+    }
+  }
+  async topBySede(sede: string, limit: number) {
+    const rows = await this.sql`
+      select * from players where sede = ${sede}
+      order by puntos desc, last_completed_at asc nulls last
+      limit ${limit}`;
+    return rows.map((r) => fromRow(r)!);
+  }
+  async rankInSede(player: Player) {
+    const [{ n }] = await this.sql`select count(*)::int as n from players where sede = ${player.sede} and puntos > ${player.puntos}`;
+    return n + 1;
+  }
+  async sedeTotals() {
+    const rows = await this.sql`select sede, coalesce(sum(puntos), 0)::int as puntos, count(*)::int as jugadores from players group by sede`;
+    return rows as unknown as SedeTotal[];
+  }
+}
+
+/* ───────────────────────── Supabase (API REST) ───────────────────────── */
 
 class SupabaseStore implements Store {
   private db: SupabaseClient;
@@ -35,27 +135,30 @@ class SupabaseStore implements Store {
   async getPlayer(id: string) {
     const { data, error } = await this.db.from('players').select('*').eq('id', id).maybeSingle();
     if (error) throw error;
-    return (data as Player) ?? null;
+    return fromRow(data);
   }
   async getPlayerByEmail(email: string) {
     const { data, error } = await this.db.from('players').select('*').eq('email', email).maybeSingle();
     if (error) throw error;
-    return (data as Player) ?? null;
+    return fromRow(data);
   }
   async createPlayer(p: NewPlayer) {
     const { data, error } = await this.db.from('players').insert(p).select('*').single();
     if (error) throw error;
-    return data as Player;
+    return fromRow(data)!;
   }
-  async updatePlayer(id: string, patch: Partial<Player>) {
-    const { data, error } = await this.db
+  async updatePlayer(id: string, patch: Partial<Player>, expect?: Expect) {
+    let q = this.db
       .from('players')
-      .update({ ...patch, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select('*')
-      .single();
+      .update({ ...pickPatch(patch), updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (expect) {
+      q = expect.current_trivia === null ? q.is('current_trivia', null) : q.eq('current_trivia', expect.current_trivia);
+      if (expect.current_question !== undefined) q = q.eq('current_question', expect.current_question);
+    }
+    const { data, error } = await q.select('*').maybeSingle();
     if (error) throw error;
-    return data as Player;
+    return fromRow(data);
   }
   async logAnswer(a: { player_id: string; trivia: number; question: number; option_idx: number; correct: boolean }) {
     const { error } = await this.db.from('answers').insert(a);
@@ -70,7 +173,7 @@ class SupabaseStore implements Store {
       .order('last_completed_at', { ascending: true, nullsFirst: false })
       .limit(limit);
     if (error) throw error;
-    return (data as Player[]) ?? [];
+    return (data ?? []).map((r) => fromRow(r)!);
   }
   async rankInSede(player: Player) {
     const { count, error } = await this.db
@@ -84,7 +187,7 @@ class SupabaseStore implements Store {
   async sedeTotals() {
     const { data, error } = await this.db.rpc('sede_totals');
     if (error) throw error;
-    return (data as { sede: string; puntos: number; jugadores: number }[]) ?? [];
+    return (data as SedeTotal[]) ?? [];
   }
 }
 
@@ -119,10 +222,14 @@ class MemoryStore implements Store {
     mem.players.set(player.id, player);
     return player;
   }
-  async updatePlayer(id: string, patch: Partial<Player>) {
+  async updatePlayer(id: string, patch: Partial<Player>, expect?: Expect) {
     const cur = mem.players.get(id);
-    if (!cur) throw new Error('Jugador no encontrado');
-    const next = { ...cur, ...patch, updated_at: new Date().toISOString() };
+    if (!cur) return null;
+    if (expect) {
+      if (cur.current_trivia !== expect.current_trivia) return null;
+      if (expect.current_question !== undefined && cur.current_question !== expect.current_question) return null;
+    }
+    const next = { ...cur, ...pickPatch(patch), updated_at: new Date().toISOString() } as Player;
     mem.players.set(id, next);
     return next;
   }
@@ -141,7 +248,7 @@ class MemoryStore implements Store {
     return [...mem.players.values()].filter((p) => p.sede === player.sede && p.puntos > player.puntos).length + 1;
   }
   async sedeTotals() {
-    const map = new Map<string, { sede: string; puntos: number; jugadores: number }>();
+    const map = new Map<string, SedeTotal>();
     for (const p of mem.players.values()) {
       const row = map.get(p.sede) ?? { sede: p.sede, puntos: 0, jugadores: 0 };
       row.puntos += p.puntos;
@@ -152,15 +259,17 @@ class MemoryStore implements Store {
   }
 }
 
-let store: Store | null = null;
+const gs = globalThis as unknown as { __polarStore?: Store };
 
 export function getStore(): Store {
-  if (store) return store;
-  if (config.supabaseUrl && config.supabaseKey) {
-    store = new SupabaseStore(config.supabaseUrl, config.supabaseKey);
+  if (gs.__polarStore) return gs.__polarStore;
+  if (config.databaseUrl) {
+    gs.__polarStore = new PostgresStore(config.databaseUrl);
+  } else if (config.supabaseUrl && config.supabaseKey) {
+    gs.__polarStore = new SupabaseStore(config.supabaseUrl, config.supabaseKey);
   } else {
-    console.warn('[store] Sin Supabase configurado: usando memoria (solo pruebas).');
-    store = new MemoryStore();
+    console.warn('[store] Sin base de datos configurada: usando memoria (solo pruebas).');
+    gs.__polarStore = new MemoryStore();
   }
-  return store;
+  return gs.__polarStore;
 }

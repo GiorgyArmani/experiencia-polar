@@ -1,20 +1,25 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { lookById, stepLook, type LookId } from '@/lib/looks';
+import { AVATAR_PARTS, DEFAULT_AVATAR, optionOf, stepAvatar, type Avatar, type AvatarPart } from '@/shared/avatar';
+import type { Sede } from '@/shared/types';
+import { BearSvg } from '@/components/BearSvg';
 import { Chevron, Logos, Screen, Spinner, Stepper } from '@/components/ui';
+
+const PART_LABEL: Record<AvatarPart, string> = { pelaje: 'Pelaje', cabeza: 'Cabeza', ropa: 'Ropa', accesorio: 'Accesorio' };
 
 export default function Registro() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
-  const [look, setLook] = useState<LookId>('clasico');
+  const [avatar, setAvatar] = useState<Avatar>(DEFAULT_AVATAR);
   const [osoNombre, setOsoNombre] = useState('');
   const [form, setForm] = useState({ nombre: '', email: '', telefono: '', sede: '' });
-  const [sedes, setSedes] = useState<string[] | null>(null);
+  const [sedes, setSedes] = useState<Sede[] | null>(null);
+  // Si viene del QR (/q/CODIGO → /registro?sede=CODIGO), la sede queda fija.
+  const [qrSede, setQrSede] = useState<Sede | null>(null);
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
 
@@ -22,8 +27,12 @@ export default function Registro() {
     api
       .me()
       .then((r) => {
-        if (r.player) router.replace('/jugar');
-        else setSedes(r.sedes);
+        if (r.player) return router.replace('/jugar');
+        const code = new URLSearchParams(window.location.search).get('sede')?.toUpperCase();
+        const fromQr = r.sedes.find((x) => x.code === code) ?? null;
+        setQrSede(fromQr);
+        if (fromQr) setForm((f) => ({ ...f, sede: fromQr.name }));
+        setSedes(r.sedes);
       })
       .catch(() => setSedes([]));
   }, [router]);
@@ -35,8 +44,6 @@ export default function Registro() {
       </Screen>
     );
   }
-
-  const current = lookById(look);
 
   function next() {
     if (!osoNombre.trim()) {
@@ -52,7 +59,7 @@ export default function Registro() {
     setSending(true);
     setError('');
     try {
-      await api.register({ ...form, osoNombre: osoNombre.trim(), look });
+      await api.register({ ...form, osoNombre: osoNombre.trim(), avatar });
       router.push('/reglas');
     } catch (err) {
       setError((err as Error).message);
@@ -66,31 +73,20 @@ export default function Registro() {
         <Stepper step={1} />
         <h1 className="mt-3 text-center text-[26px] font-black uppercase">Crea tu oso</h1>
 
-        <div className="relative mx-auto mt-3 w-full px-[22px]">
-          <div className="mx-auto aspect-[314/470] w-[min(314px,72vw)] rounded-[20px] border-4 border-white bg-polar-card p-[7px]">
-            <div className="relative h-full w-full overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky">
-              <Image src={current.src} alt={`Tu oso: ${current.head}, ${current.body}`} fill sizes="320px" className="object-cover object-[center_35%]" priority />
-              <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
-                <span className="rounded-full bg-polar-ink px-3 py-1.5 text-xs font-extrabold uppercase tracking-wide">Cabeza · {current.head}</span>
-                <span className="rounded-full bg-polar-ink px-3 py-1.5 text-xs font-extrabold uppercase tracking-wide">Ropa · {current.body}</span>
-              </div>
-            </div>
-          </div>
+        <div className="mx-auto mt-3 flex aspect-square w-[min(260px,62vw)] items-end justify-center overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky">
+          <BearSvg avatar={avatar} mood="feliz" className="h-[96%]" title={`Tu oso: ${describe(avatar)}`} />
+        </div>
 
-          <ArrowRow
-            className="top-[16%]"
-            labelPrev="Cabeza anterior"
-            labelNext="Cabeza siguiente"
-            onPrev={() => setLook(stepLook(look, 'head', -1))}
-            onNext={() => setLook(stepLook(look, 'head', 1))}
-          />
-          <ArrowRow
-            className="top-[52%]"
-            labelPrev="Ropa anterior"
-            labelNext="Ropa siguiente"
-            onPrev={() => setLook(stepLook(look, 'body', -1))}
-            onNext={() => setLook(stepLook(look, 'body', 1))}
-          />
+        <div className="mx-auto mt-3 flex w-[min(314px,86vw)] flex-col gap-2">
+          {(Object.keys(AVATAR_PARTS) as AvatarPart[]).map((part) => (
+            <PartRow
+              key={part}
+              label={PART_LABEL[part]}
+              value={optionOf(part, avatar[part]).label}
+              onPrev={() => setAvatar(stepAvatar(avatar, part, -1))}
+              onNext={() => setAvatar(stepAvatar(avatar, part, 1))}
+            />
+          ))}
         </div>
 
         <div className="mx-auto mt-4 flex w-[min(314px,80vw)] flex-col gap-1.5">
@@ -126,7 +122,9 @@ export default function Registro() {
 
       <form id="datos" onSubmit={submit} className="mx-4 mt-3 flex flex-col gap-6 rounded-[20px] bg-white px-6 py-5 text-polar-ink">
         <div className="flex items-center gap-3 border-b border-[#E3E3E3] pb-3.5">
-          <Image src={current.src} alt="" width={52} height={52} className="h-[52px] w-[52px] rounded-full border-[3px] border-polar-blue object-cover object-[center_18%]" />
+          <span className="block h-[52px] w-[52px] overflow-hidden rounded-full border-[3px] border-polar-blue bg-polar-sky">
+            <BearSvg avatar={avatar} crop="head" className="h-full w-full" />
+          </span>
           <div className="flex flex-col">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#5A5A5A]">Tu oso</span>
             <span className="text-lg font-extrabold">{osoNombre}</span>
@@ -137,12 +135,17 @@ export default function Registro() {
         <Field id="telf" label="Teléfono" type="tel" autoComplete="tel" value={form.telefono} onChange={(v) => setForm({ ...form, telefono: v })} placeholder="0414 000 0000" />
         <div className="relative">
           <label htmlFor="sede" className="field-label">Sede</label>
-          <select id="sede" required value={form.sede} onChange={(e) => setForm({ ...form, sede: e.target.value })} className="field">
-            <option value="" disabled>Selecciona tu sede</option>
-            {sedes.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+          {qrSede ? (
+            <input id="sede" readOnly value={qrSede.name} className="field bg-[#F2F2F2]" aria-describedby="sede-qr" />
+          ) : (
+            <select id="sede" required value={form.sede} onChange={(e) => setForm({ ...form, sede: e.target.value })} className="field">
+              <option value="" disabled>Selecciona tu sede</option>
+              {sedes.map((s) => (
+                <option key={s.code} value={s.name}>{s.name}</option>
+              ))}
+            </select>
+          )}
+          {qrSede && <span id="sede-qr" className="mt-1 block text-xs text-polar-muted">Tomada del QR que escaneaste.</span>}
         </div>
         <p className="-mt-2 text-[13px] text-polar-muted">Usamos tus datos solo para el juego y la entrega de premios.</p>
       </form>
@@ -160,28 +163,24 @@ export default function Registro() {
   );
 }
 
-function ArrowRow({
-  className,
-  onPrev,
-  onNext,
-  labelPrev,
-  labelNext,
-}: {
-  className: string;
-  onPrev: () => void;
-  onNext: () => void;
-  labelPrev: string;
-  labelNext: string;
-}) {
+function describe(a: Avatar) {
+  return (Object.keys(AVATAR_PARTS) as AvatarPart[]).map((p) => `${PART_LABEL[p]} ${optionOf(p, a[p]).label}`).join(', ');
+}
+
+function PartRow({ label, value, onPrev, onNext }: { label: string; value: string; onPrev: () => void; onNext: () => void }) {
   const btn =
-    'flex h-[60px] w-[60px] items-center justify-center rounded-full bg-white text-polar-blue shadow-arrow transition-transform active:translate-y-[3px] active:shadow-none';
+    'flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-polar-blue shadow-arrow transition-transform active:translate-y-[3px] active:shadow-none';
   return (
-    <div className={`pointer-events-none absolute inset-x-0 flex justify-between px-[18px] ${className}`}>
-      <button type="button" onClick={onPrev} aria-label={labelPrev} className={`pointer-events-auto ${btn}`}>
-        <Chevron dir="left" />
+    <div className="flex items-center gap-2">
+      <button type="button" onClick={onPrev} aria-label={`${label} anterior`} className={btn}>
+        <Chevron dir="left" size={22} />
       </button>
-      <button type="button" onClick={onNext} aria-label={labelNext} className={`pointer-events-auto ${btn}`}>
-        <Chevron dir="right" />
+      <div className="flex h-11 flex-1 flex-col items-center justify-center rounded-full bg-polar-card leading-tight" aria-live="polite">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-[#DCEBFF]">{label}</span>
+        <span className="text-[15px] font-extrabold">{value}</span>
+      </div>
+      <button type="button" onClick={onNext} aria-label={`${label} siguiente`} className={btn}>
+        <Chevron dir="right" size={22} />
       </button>
     </div>
   );

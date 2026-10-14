@@ -1,0 +1,72 @@
+{
+  "expo": {
+    "name": "Experiencia Polar",
+    "slug": "experiencia-polar",
+    "scheme": "experienciapolar",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.aulaciete.experienciapolar",
+      "associatedDomains": [
+        "applinks:experienciapolar.aulaciete.com"
+      ],
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.aulaciete.experienciapolar",
+      "adaptiveIcon": {
+        "backgroundColor": "#2A7EEB",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "experienciapolar.aulaciete.com",
+              "pathPrefix": "/q/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#2A7EEB"
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Experiencia Polar usa la c�mara para leer los c�digos QR de la trivia.",
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-splash-screen"
+    ],
+    "extra": {
+      "apiUrl": "https://experienciapolar.aulaciete.com"
+    }
+  }
+}

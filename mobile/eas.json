@@ -1,0 +1,16 @@
+{
+  "cli": { "appVersionSource": "remote" },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": { "EXPO_PUBLIC_API_URL": "https://experienciapolar.aulaciete.com" }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" }
+    },
+    "production": { "autoIncrement": true }
+  },
+  "submit": { "production": {} }
+}

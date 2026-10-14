@@ -4,7 +4,7 @@ import { error, json } from '@/lib/http';
 import { currentPlayer } from '@/lib/session';
 import { getStore } from '@/lib/store';
 import { getTrivia } from '@/lib/trivias';
-import type { AnswerResponse, Player } from '@/lib/types';
+import type { AnswerResponse, Player } from '@/shared/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,14 +24,6 @@ export async function POST(req: Request) {
 
   const store = getStore();
   const correct = option === q.correct;
-  await store.logAnswer({
-    player_id: p.id,
-    trivia: trivia.id,
-    question: p.current_question,
-    option_idx: option,
-    correct,
-  });
-
   let patch: Partial<Player>;
   let pointsEarned = 0;
   let triviaDone = false;
@@ -59,7 +51,20 @@ export async function POST(req: Request) {
     }
   }
 
-  const updated = await store.updatePlayer(p.id, patch);
+  // Solo aplica si sigue en esta misma pregunta: un doble toque no suma dos veces.
+  const updated = await store.updatePlayer(p.id, patch, {
+    current_trivia: p.current_trivia,
+    current_question: p.current_question,
+  });
+  if (!updated) return error('Esa pregunta ya fue respondida', 409);
+  await store.logAnswer({
+    player_id: p.id,
+    trivia: trivia.id,
+    question: p.current_question,
+    option_idx: option,
+    correct,
+  });
+
   const res: AnswerResponse = {
     correct,
     pointsEarned,

@@ -1,43 +1,52 @@
-import { config } from '@/lib/config';
+import type { LeaderboardResponse, LeaderRow, Player } from '@/shared/types';
+import { config, sedeByCode, sedeByName } from '@/lib/config';
+import { computeStatus } from '@/lib/game';
 import { error, json } from '@/lib/http';
 import { currentPlayer } from '@/lib/session';
 import { getStore } from '@/lib/store';
-import type { LeaderboardResponse, LeaderRow } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+
+const TOP = 10;
+
+function row(p: Player, rank: number, meId: string | undefined): LeaderRow {
+  return {
+    rank,
+    osoNombre: p.oso_nombre,
+    avatar: p.avatar,
+    puntos: p.puntos,
+    graduado: p.completed.length > 0 && computeStatus(p).phase === 'final',
+    isMe: p.id === meId,
+  };
+}
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const me = await currentPlayer();
-  const sede = url.searchParams.get('sede') ?? me?.sede ?? null;
-  if (sede && !config.sedes.includes(sede)) return error('Sede desconocida', 404);
+  // ?sede= acepta el código (CCS) o el nombre ("Sede Caracas"); sin parámetro, la sede del jugador.
+  const param = url.searchParams.get('sede');
+  const sede = param ? (sedeByCode(param) ?? sedeByName(param))?.name : me?.sede;
+  if (param && !sede) return error('Sede desconocida', 404);
 
   const store = getStore();
   try {
-    const topPlayers = sede ? await store.topBySede(sede, 8) : [];
-    const top: LeaderRow[] = topPlayers.map((p, i) => ({
-      rank: i + 1,
-      osoNombre: p.oso_nombre,
-      look: p.look,
-      puntos: p.puntos,
-      isMe: p.id === me?.id,
-    }));
+    const topPlayers = sede ? await store.topBySede(sede, TOP) : [];
+    // Rango por puntos (empates comparten puesto, igual que rankInSede).
+    const top = topPlayers.map((p) => row(p, topPlayers.filter((o) => o.puntos > p.puntos).length + 1, me?.id));
 
     let mine: LeaderRow | null = null;
-    if (me && me.sede === sede) {
-      mine = { rank: await store.rankInSede(me), osoNombre: me.oso_nombre, look: me.look, puntos: me.puntos, isMe: true };
-    }
+    if (me && me.sede === sede) mine = row(me, await store.rankInSede(me), me.id);
 
     const totals = await store.sedeTotals();
     const sedes = config.sedes
       .map((s) => {
-        const t = totals.find((x) => x.sede === s);
-        return { sede: s, puntos: Number(t?.puntos ?? 0), jugadores: Number(t?.jugadores ?? 0) };
+        const t = totals.find((x) => x.sede === s.name);
+        return { sede: s.name, code: s.code, puntos: Number(t?.puntos ?? 0), jugadores: Number(t?.jugadores ?? 0) };
       })
       .sort((a, b) => b.puntos - a.puntos)
       .map((s, i) => ({ ...s, rank: i + 1, isMine: s.sede === me?.sede }));
 
-    const res: LeaderboardResponse = { sede, top, me: mine, sedes };
+    const res: LeaderboardResponse = { sede: sede ?? null, top, me: mine, sedes };
     return json(res);
   } catch (e) {
     console.error('[leaderboard]', e);

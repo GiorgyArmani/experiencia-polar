@@ -1,0 +1,125 @@
+// Escena 3 del onboarding: datos del jugador. La sede viene fija del QR.
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Bear3D } from '@/components/Bear3D';
+import { Bubble, Caption, GameButton, Page, Panel } from '@/components/comic';
+import { api } from '@/lib/api';
+import { useSession } from '@/lib/session';
+import { C, font } from '@/lib/theme';
+
+export default function OnboardingDatos() {
+  const { draft, signIn, apply } = useSession();
+  const [form, setForm] = useState({ nombre: '', email: '', telefono: '' });
+  const [error, setError] = useState('');
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (!draft.sede) router.replace('/onboarding/qr');
+  }, [draft.sede]);
+
+  async function submit() {
+    if (!draft.sede) return;
+    setSending(true);
+    setError('');
+    try {
+      const r = await api.register({
+        ...form,
+        sedeCode: draft.sede.code,
+        osoNombre: draft.osoNombre.trim(),
+        avatar: draft.avatar,
+      });
+      await signIn(r.token, r);
+      // Ya escaneó el QR al empezar: si hay una trivia abierta, la abrimos de una vez.
+      if (r.status?.phase === 'scan' && draft.qrValue) {
+        await api.scan(draft.qrValue).then(apply).catch(() => {});
+      }
+      router.replace('/jugar');
+    } catch (e) {
+      setError((e as Error).message);
+      setSending(false);
+    }
+  }
+
+  return (
+    <Page>
+      <SafeAreaView style={styles.safe}>
+        <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+            <View style={styles.row}>
+              <Panel tilt={-2} style={styles.bearPanel} innerStyle={styles.fill}>
+                <Bear3D avatar={draft.avatar} reaction={error ? 'duda' : 'idle'} style={styles.fill} />
+              </Panel>
+              <Bubble tail="left" style={styles.bubble}>
+                {error || `¡Soy ${draft.osoNombre || 'tu oso'}! Ahora cuéntame de ti.`}
+              </Bubble>
+            </View>
+
+            <Panel tilt={0.6} innerStyle={styles.form}>
+              <Caption>Escena 3 · Tus datos</Caption>
+              <Field label="Nombre y apellido" value={form.nombre} onChangeText={(nombre) => setForm({ ...form, nombre })} autoComplete="name" textContentType="name" />
+              <Field
+                label="Correo electrónico"
+                value={form.email}
+                onChangeText={(email) => setForm({ ...form, email })}
+                autoComplete="email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                textContentType="emailAddress"
+              />
+              <Field
+                label="Teléfono"
+                value={form.telefono}
+                onChangeText={(telefono) => setForm({ ...form, telefono })}
+                autoComplete="tel"
+                keyboardType="phone-pad"
+                textContentType="telephoneNumber"
+              />
+              <View>
+                <Text style={styles.label}>Sede (del QR)</Text>
+                <Text style={styles.sede}>{draft.sede?.name}</Text>
+              </View>
+              <Text style={styles.note}>Usamos tus datos solo para el juego y la entrega de premios.</Text>
+            </Panel>
+
+            <GameButton label={sending ? 'Registrando…' : 'Terminar registro'} onPress={submit} disabled={sending} />
+            <GameButton label="Atrás" variant="ghost" onPress={() => router.back()} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </Page>
+  );
+}
+
+function Field({ label, ...props }: { label: string } & TextInputProps) {
+  return (
+    <View>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput {...props} accessibilityLabel={label} style={styles.input} placeholderTextColor="#8A8A8A" />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1 },
+  fill: { flex: 1 },
+  scroll: { padding: 18, gap: 18 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 24 },
+  bearPanel: { width: 120, height: 150 },
+  bubble: { flex: 1 },
+  form: { padding: 16, gap: 14 },
+  label: { ...font.bold, fontSize: 12, color: C.muted, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4 },
+  input: {
+    height: 50,
+    borderWidth: 2,
+    borderColor: C.ink,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    fontSize: 16,
+    color: C.ink,
+    backgroundColor: C.white,
+  },
+  sede: { ...font.black, fontSize: 17, color: C.ink, paddingVertical: 6 },
+  note: { fontSize: 13, color: C.muted },
+});

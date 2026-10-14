@@ -66,23 +66,21 @@ export function Bubble({ children, className = '' }: { children: ReactNode; clas
   );
 }
 
-/** Tarjeta grande del oso con borde blanco. */
+/** Tarjeta grande del oso con borde blanco. `art` es el dibujo (BearSvg). */
 export function BearCard({
-  src,
-  alt,
+  art,
   className = '',
-  imgClassName = '',
+  artClassName = '',
   children,
 }: {
-  src: string;
-  alt: string;
+  art: ReactNode;
   className?: string;
-  imgClassName?: string;
+  artClassName?: string;
   children?: ReactNode;
 }) {
   return (
     <div className={`relative overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky ${className}`}>
-      <Image src={src} alt={alt} fill sizes="440px" className={`object-cover object-[center_40%] ${imgClassName}`} priority />
+      <div className={`absolute inset-x-0 bottom-0 top-[18%] flex justify-center ${artClassName}`}>{art}</div>
       {children}
     </div>
   );

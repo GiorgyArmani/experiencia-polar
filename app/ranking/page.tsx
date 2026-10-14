@@ -1,11 +1,18 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { lookById } from '@/lib/looks';
-import type { LeaderboardResponse, LeaderRow } from '@/lib/types';
+import type { LeaderboardResponse, LeaderRow } from '@/shared/types';
+import { BearSvg } from '@/components/BearSvg';
+
+function Face({ row, size, className = '' }: { row: LeaderRow; size: number; className?: string }) {
+  return (
+    <span className={`block overflow-hidden rounded-full bg-polar-sky ${className}`} style={{ width: size, height: size }}>
+      <BearSvg avatar={row.avatar} graduado={row.graduado} crop="head" className="h-full w-full" />
+    </span>
+  );
+}
 
 export default function Ranking() {
   const [tab, setTab] = useState<'sede' | 'general'>('sede');
@@ -16,7 +23,7 @@ export default function Ranking() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // En pantallas públicas (leaderboardpolar.aulaciete.com) se pasa ?sede=Nombre.
+    // En pantallas públicas (leaderboardpolar.aulaciete.com) se pasa ?sede=CODIGO (o el nombre).
     const s = new URLSearchParams(window.location.search).get('sede') ?? undefined;
     setSedeParam(s);
     setReady(true);
@@ -42,7 +49,7 @@ export default function Ranking() {
 
   const top = data?.top ?? [];
   const podium = [top[1], top[0], top[2]];
-  const rest = top.slice(3, 8);
+  const rest = top.slice(3, 10);
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col bg-polar-ice font-figtree text-[#0E1B33]">
@@ -84,14 +91,7 @@ export default function Ranking() {
               return (
                 <div key={place} className="flex flex-col items-center gap-1.5">
                   {row ? (
-                    <Image
-                      src={lookById(row.look).src}
-                      alt=""
-                      width={size}
-                      height={size}
-                      className={`rounded-full border-[3px] object-cover object-[center_18%] ${place === 1 ? 'border-polar-clay' : 'border-[#CFE0F7]'}`}
-                      style={{ width: size, height: size }}
-                    />
+                    <Face row={row} size={size} className={`border-[3px] ${place === 1 ? 'border-polar-clay' : 'border-[#CFE0F7]'}`} />
                   ) : (
                     <span className="rounded-full border-[3px] border-dashed border-[#CFE0F7]/60" style={{ width: size, height: size }} />
                   )}
@@ -108,8 +108,8 @@ export default function Ranking() {
 
       {tab === 'sede' ? (
         <ol className="flex flex-col gap-2 px-[18px] pt-4">
-          {rest.map((r) => (
-            <Row key={r.rank} row={r} />
+          {rest.map((r, i) => (
+            <Row key={i} row={r} />
           ))}
           {data && top.length === 0 && <li className="rounded-2xl bg-white p-4 text-center font-semibold">Aún no hay puntos en esta sede. ¡Sé el primero!</li>}
         </ol>
@@ -133,7 +133,7 @@ export default function Ranking() {
         <div className="mt-auto px-[18px] pb-6 pt-3">
           <div className="flex items-center gap-3 rounded-[18px] border-[2.5px] border-polar-clay bg-[#FFF1E6] py-2.5 pl-2.5 pr-3.5">
             <span className="w-7 text-center font-extrabold text-polar-navy">#{data.me.rank}</span>
-            <Image src={lookById(data.me.look).src} alt="" width={44} height={44} className="h-11 w-11 rounded-full object-cover object-[center_18%]" />
+            <Face row={data.me} size={44} />
             <span className="flex-1 text-[17px] font-extrabold">
               {data.me.osoNombre} <span className="text-sm font-semibold text-polar-slate">(tú)</span>
             </span>
@@ -149,7 +149,7 @@ function Row({ row }: { row: LeaderRow }) {
   return (
     <li className={`flex min-h-14 items-center gap-3 rounded-2xl py-2 pl-2.5 pr-3.5 ${row.isMe ? 'border-[2.5px] border-polar-clay bg-[#FFF1E6]' : 'bg-white'}`}>
       <span className="w-7 text-center font-extrabold text-polar-slate">{row.rank}</span>
-      <Image src={lookById(row.look).src} alt="" width={40} height={40} className="h-10 w-10 rounded-full object-cover object-[center_18%]" />
+      <Face row={row} size={40} />
       <span className="flex-1 text-base font-bold">{row.osoNombre}</span>
       <span className="font-bold text-polar-navy">{row.puntos} pts</span>
     </li>

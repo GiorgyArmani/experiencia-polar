@@ -1,15 +1,15 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { lookById } from '@/lib/looks';
-import type { PublicPlayer } from '@/lib/types';
+import { DEFAULT_AVATAR } from '@/shared/avatar';
+import type { PublicPlayer } from '@/shared/types';
+import { BearSvg } from '@/components/BearSvg';
 import { Logos, Screen } from '@/components/ui';
 
 const REGLAS = [
-  { t: 'Busca el QR en tu sede', d: 'Siempre es el mismo código.' },
+  { t: 'Busca el QR de tu sede', d: 'Siempre es el mismo código. El de otra sede no sirve.' },
   { t: 'Responde la trivia', d: 'Cada respuesta correcta al primer intento suma puntos para tu sede.' },
   { t: 'Espera la próxima trivia', d: 'Cada trivia abre en su horario. Vuelve al mismo QR cuando abra.' },
   { t: 'Gana premios', d: 'Al terminar las 4 trivias se revela el ranking de tu sede.' },
@@ -22,16 +22,14 @@ export default function Reglas() {
     api.me().then((r) => setPlayer(r.player)).catch(() => {});
   }, []);
 
-  const look = lookById(player?.look);
-
   return (
     <Screen>
       <h1 className="mx-9 mt-14 flex h-[45px] items-center rounded-full bg-polar-orange px-6 text-lg font-extrabold">Reglas</h1>
 
       <div className="mx-9 mt-5 rounded-[20px] bg-white px-[22px] py-5 text-polar-ink">
         <div className="flex items-center gap-3.5 border-b border-[#E3E3E3] pb-3.5">
-          <div className="relative h-[120px] w-[83px] shrink-0 overflow-hidden rounded-[20px] border-[3px] border-polar-blue bg-polar-sky">
-            <Image src={look.src} alt={player?.osoNombre ?? 'Tu oso'} fill sizes="83px" className="object-cover object-[center_30%]" />
+          <div className="relative flex h-[120px] w-[83px] shrink-0 items-end overflow-hidden rounded-[20px] border-[3px] border-polar-blue bg-polar-sky">
+            <BearSvg avatar={player?.avatar ?? DEFAULT_AVATAR} className="w-full" title={player?.osoNombre ?? 'Tu oso'} />
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-[13px] font-semibold text-[#5A5A5A]">{player ? `${player.osoNombre} te acompaña` : 'Tu oso te acompaña'}</span>

@@ -9,9 +9,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Las variables NEXT_PUBLIC_* se incrustan en el build: pásalas como build args en Dokploy.
-ARG NEXT_PUBLIC_QR_VALUE
 ARG NEXT_PUBLIC_DEMO
-ENV NEXT_PUBLIC_QR_VALUE=$NEXT_PUBLIC_QR_VALUE
 ENV NEXT_PUBLIC_DEMO=$NEXT_PUBLIC_DEMO
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build

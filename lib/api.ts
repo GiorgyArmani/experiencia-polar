@@ -1,5 +1,6 @@
 // Llamadas del navegador a las API routes.
-import type { AnswerResponse, LeaderboardResponse, MeResponse } from './types';
+import type { Avatar } from '@/shared/avatar';
+import type { AnswerResponse, LeaderboardResponse, MeResponse, RegisterResponse } from '@/shared/types';
 
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -18,10 +19,11 @@ export const api = {
     nombre: string;
     email: string;
     telefono: string;
-    sede: string;
+    sede?: string;
+    sedeCode?: string;
     osoNombre: string;
-    look: string;
-  }) => call<MeResponse & { recovered: boolean }>('/api/register', { method: 'POST', body: JSON.stringify(body) }),
+    avatar: Avatar;
+  }) => call<RegisterResponse>('/api/register', { method: 'POST', body: JSON.stringify(body) }),
   scan: (value: string) => call<MeResponse>('/api/scan', { method: 'POST', body: JSON.stringify({ value }) }),
   answer: (option: number, index: number) =>
     call<AnswerResponse>('/api/answer', { method: 'POST', body: JSON.stringify({ option, index }) }),
