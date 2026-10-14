@@ -1,27 +1,32 @@
-// Formato del QR impreso en cada sede (siempre el mismo para todas las trivias):
+// Un solo QR para toda la experiencia, el mismo impreso en todas las sedes y para todas las trivias:
 //
-//   https://experienciapolar.aulaciete.com/q/<CODIGO>
+//   https://experienciapolar.aulaciete.com/q/POLAR
 //
-// Si alguien lo escanea con la cámara del teléfono abre la página /q/<CODIGO>,
-// que invita a abrir o instalar la app. Dentro de la app se lee el código directamente.
-// También se aceptan `experienciapolar://q/<CODIGO>` y `POLAR:<CODIGO>`.
+// Lo que dispara cada escaneo depende del progreso del jugador (lo decide el servidor):
+//   1.ª vez → onboarding (oso + datos + sede)
+//   luego   → abre la trivia disponible; tras terminarla, el siguiente escaneo abre la siguiente.
+//
+// Si alguien lo escanea con la cámara del teléfono abre la página /q/POLAR,
+// que invita a abrir o instalar la app. Dentro de la app se lee directamente.
+// También se aceptan `experienciapolar://q/POLAR` y `POLAR:POLAR`.
 
-const CODE = /^[A-Za-z0-9_-]{2,24}$/;
+export const QR_CODE = 'POLAR';
 
-/** Devuelve el código de sede (en mayúsculas) o null si el texto no es un QR de la experiencia. */
-export function sedeCodeFromQr(raw: string): string | null {
+/** Código que trae el QR (en mayúsculas) o null si el texto no tiene el formato de la experiencia. */
+function codeFromQr(raw: string): string | null {
   const value = raw.trim();
   const plain = /^POLAR:(.+)$/i.exec(value);
-  if (plain) return CODE.test(plain[1]) ? plain[1].toUpperCase() : null;
+  if (plain) return plain[1].toUpperCase();
 
   const path = /^(?:https?:\/\/[^/]+|experienciapolar:\/)\/q\/([^/?#]+)\/?(?:[?#].*)?$/i.exec(value);
-  if (path) {
-    const code = decodeURIComponent(path[1]);
-    return CODE.test(code) ? code.toUpperCase() : null;
-  }
-  return null;
+  return path ? decodeURIComponent(path[1]).toUpperCase() : null;
 }
 
-export function qrUrlFor(baseUrl: string, code: string): string {
-  return `${baseUrl.replace(/\/$/, '')}/q/${encodeURIComponent(code)}`;
+/** ¿Es el QR de la Experiencia Polar? */
+export function isExperienceQr(raw: string): boolean {
+  return codeFromQr(raw) === QR_CODE;
+}
+
+export function qrUrlFor(baseUrl: string): string {
+  return `${baseUrl.replace(/\/$/, '')}/q/${QR_CODE}`;
 }

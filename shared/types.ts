@@ -2,7 +2,7 @@
 import type { Avatar } from './avatar';
 
 export interface Sede {
-  code: string; // va en el QR: https://experienciapolar.aulaciete.com/q/<code>
+  code: string; // ?sede=<code> en el leaderboard
   name: string;
 }
 
@@ -72,9 +72,9 @@ export interface RegisterResponse extends MeResponse {
   token: string;
 }
 
-/** Respuesta de /api/qr: a qué sede pertenece un QR (para el onboarding). */
+/** Respuesta de /api/qr: el QR es válido; el jugador elige su sede en el onboarding. */
 export interface QrResponse {
-  sede: Sede;
+  sedes: Sede[];
 }
 
 export interface AnswerResponse {

@@ -19,10 +19,10 @@ export default function OnboardingOso() {
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  // Sin sede (p. ej. volvió atrás hasta el inicio) no puede seguir.
+  // Sin escanear el QR (p. ej. volvió atrás hasta el inicio) no puede seguir.
   useEffect(() => {
-    if (!draft.sede) router.replace('/onboarding/qr');
-  }, [draft.sede]);
+    if (!draft.scanned) router.replace('/onboarding/qr');
+  }, [draft.scanned]);
 
   function change(part: AvatarPart, dir: 1 | -1) {
     setDraft({ avatar: stepAvatar(draft.avatar, part, dir) });
@@ -48,11 +48,6 @@ export default function OnboardingOso() {
           <Panel tilt={-1} style={styles.bear} innerStyle={styles.fill}>
             <Bear3D avatar={draft.avatar} reaction={reaction} style={styles.fill} />
             <Caption style={styles.caption}>Escena 2 · Diseña tu oso</Caption>
-            {draft.sede && (
-              <Caption color={C.white} style={styles.sede}>
-                {draft.sede.name}
-              </Caption>
-            )}
           </Panel>
 
           <View style={styles.parts}>
@@ -106,7 +101,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   bear: { flex: 1, minHeight: 220, marginTop: 8 },
   caption: { position: 'absolute', top: 10, left: 10 },
-  sede: { position: 'absolute', bottom: 10, right: 10 },
   parts: { gap: 8 },
   partRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   partValue: {

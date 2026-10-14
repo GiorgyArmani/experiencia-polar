@@ -1,7 +1,7 @@
-// Escena 3 del onboarding: datos del jugador. La sede viene fija del QR.
+// Escena 3 del onboarding: datos del jugador y su sede.
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bear3D } from '@/components/Bear3D';
 import { Bubble, Caption, GameButton, Page, Panel } from '@/components/comic';
@@ -10,17 +10,20 @@ import { useSession } from '@/lib/session';
 import { C, font } from '@/lib/theme';
 
 export default function OnboardingDatos() {
-  const { draft, signIn, apply } = useSession();
+  const { draft, setDraft, signIn } = useSession();
   const [form, setForm] = useState({ nombre: '', email: '', telefono: '' });
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (!draft.sede) router.replace('/onboarding/qr');
-  }, [draft.sede]);
+    if (!draft.scanned) router.replace('/onboarding/qr');
+  }, [draft.scanned]);
 
   async function submit() {
-    if (!draft.sede) return;
+    if (!draft.sede) {
+      setError('Elige tu sede');
+      return;
+    }
     setSending(true);
     setError('');
     try {
@@ -31,10 +34,7 @@ export default function OnboardingDatos() {
         avatar: draft.avatar,
       });
       await signIn(r.token, r);
-      // Ya escaneó el QR al empezar: si hay una trivia abierta, la abrimos de una vez.
-      if (r.status?.phase === 'scan' && draft.qrValue) {
-        await api.scan(draft.qrValue).then(apply).catch(() => {});
-      }
+      // El siguiente escaneo del QR abre la trivia.
       router.replace('/jugar');
     } catch (e) {
       setError((e as Error).message);
@@ -77,8 +77,23 @@ export default function OnboardingDatos() {
                 textContentType="telephoneNumber"
               />
               <View>
-                <Text style={styles.label}>Sede (del QR)</Text>
-                <Text style={styles.sede}>{draft.sede?.name}</Text>
+                <Text style={styles.label}>Tu sede</Text>
+                <View style={styles.sedes}>
+                  {draft.sedes.map((s) => {
+                    const selected = draft.sede?.code === s.code;
+                    return (
+                      <Pressable
+                        key={s.code}
+                        onPress={() => setDraft({ sede: s })}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                        style={[styles.sedeChip, selected && styles.sedeChipOn]}
+                      >
+                        <Text style={[styles.sedeText, selected && styles.sedeTextOn]}>{s.name}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
               <Text style={styles.note}>Usamos tus datos solo para el juego y la entrega de premios.</Text>
             </Panel>
@@ -120,6 +135,10 @@ const styles = StyleSheet.create({
     color: C.ink,
     backgroundColor: C.white,
   },
-  sede: { ...font.black, fontSize: 17, color: C.ink, paddingVertical: 6 },
+  sedes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  sedeChip: { borderWidth: 2, borderColor: C.ink, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: C.white },
+  sedeChipOn: { backgroundColor: C.ink },
+  sedeText: { ...font.bold, fontSize: 15, color: C.ink },
+  sedeTextOn: { color: C.white },
   note: { fontSize: 13, color: C.muted },
 });

@@ -5,8 +5,9 @@ import type { MeResponse, Sede } from '@shared/types';
 import { api, loadToken, saveToken } from './api';
 
 export interface Draft {
-  sede: Sede | null; // viene del QR escaneado en el onboarding
-  qrValue: string | null; // para abrir la primera trivia sin volver a escanear
+  scanned: boolean; // ya escaneó el QR de la experiencia (primer escaneo = onboarding)
+  sedes: Sede[]; // opciones que devuelve /api/qr
+  sede: Sede | null; // la elige el jugador en "Tus datos"
   avatar: Avatar;
   osoNombre: string;
 }
@@ -29,7 +30,13 @@ const Ctx = createContext<Session | null>(null);
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [offset, setOffset] = useState(0);
-  const [draft, setDraftState] = useState<Draft>({ sede: null, qrValue: null, avatar: DEFAULT_AVATAR, osoNombre: '' });
+  const [draft, setDraftState] = useState<Draft>({
+    scanned: false,
+    sedes: [],
+    sede: null,
+    avatar: DEFAULT_AVATAR,
+    osoNombre: '',
+  });
   const booted = useRef(false);
 
   const apply = useCallback((r: MeResponse) => {

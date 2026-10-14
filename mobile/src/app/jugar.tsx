@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Avatar } from '@shared/avatar';
+import { QR_CODE } from '@shared/qr';
 import type { AnswerResponse, QuestionView } from '@shared/types';
 import { Bear3D, type Reaction } from '@/components/Bear3D';
 import { Bubble, Burst, Caption, GameButton, Page, Panel } from '@/components/comic';
@@ -53,7 +54,6 @@ export default function Jugar() {
   if (!me?.player || !me.status) return <Page>{null}</Page>;
 
   const { status, question, player, demoTools } = me;
-  const sedeCode = me.sedes.find((s) => s.name === player.sede)?.code ?? '';
 
   async function onScan(value: string) {
     if (busy) return;
@@ -128,7 +128,7 @@ export default function Jugar() {
         total={status.totalTrivias}
         busy={busy}
         onScan={onScan}
-        onDemo={demoTools ? () => onScan(`POLAR:${sedeCode}`) : undefined}
+        onDemo={demoTools ? () => onScan(`POLAR:${QR_CODE}`) : undefined}
       />
     );
   } else if (status.phase === 'locked') {

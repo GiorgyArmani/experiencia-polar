@@ -1,4 +1,4 @@
-// Escena 0: presentación. Dos viñetas y el llamado a escanear el QR de la sede.
+// Escena 0: presentación. Dos viñetas y el llamado a escanear el QR.
 import { router } from 'expo-router';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,11 +28,11 @@ export default function Bienvenida() {
         <Panel tilt={1} bg={C.yellow} style={styles.small} innerStyle={styles.smallInner}>
           <Text style={styles.mission}>Tu misión</Text>
           <Text style={styles.missionText}>
-            Busca los códigos QR escondidos en tu sede, responde las trivias y gradúa a tu oso.
+            Busca el QR de la Experiencia Polar: cada vez que lo escanees desbloqueas el siguiente paso. Responde las trivias y gradúa a tu oso.
           </Text>
         </Panel>
 
-        <GameButton label="Escanear el QR de mi sede" onPress={() => router.push('/onboarding/qr')} style={styles.cta} />
+        <GameButton label="Escanear el QR" onPress={() => router.push('/onboarding/qr')} style={styles.cta} />
       </SafeAreaView>
     </Page>
   );

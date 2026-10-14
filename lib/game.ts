@@ -2,9 +2,9 @@
 // así nadie avanza cambiando la hora del teléfono.
 import 'server-only';
 import { getTrivia, TOTAL_TRIVIAS } from './trivias';
-import { sedeCodeFromQr } from '@/shared/qr';
+import { isExperienceQr } from '@/shared/qr';
 import type { GameStatus, Player, PublicPlayer, QuestionView } from '@/shared/types';
-import { config, sedeByCode } from './config';
+import { config } from './config';
 
 export function toPublic(p: Player): PublicPlayer {
   return {
@@ -77,14 +77,3 @@ export function questionView(p: Player): QuestionView | null {
   };
 }
 
-export type ScanCheck = { ok: true } | { ok: false; error: string };
-
-/** El QR debe ser de la experiencia y, si QR_STRICT_SEDE está activo, de la sede del jugador. */
-export function checkScan(p: Player, value: string): ScanCheck {
-  const sede = sedeByCode(sedeCodeFromQr(value));
-  if (!sede) return { ok: false, error: 'Ese no es un QR de la Experiencia Polar' };
-  if (config.qrStrictSede && sede.name !== p.sede) {
-    return { ok: false, error: `Ese QR es de ${sede.name}. Busca el QR de ${p.sede}.` };
-  }
-  return { ok: true };
-}

@@ -9,7 +9,7 @@ import { BearSvg } from '@/components/BearSvg';
 import { Logos, Screen } from '@/components/ui';
 
 const REGLAS = [
-  { t: 'Busca el QR de tu sede', d: 'Siempre es el mismo código. El de otra sede no sirve.' },
+  { t: 'Busca el QR de la Experiencia Polar', d: 'Es el mismo código en todas las sedes. Cada escaneo te lleva al siguiente paso.' },
   { t: 'Responde la trivia', d: 'Cada respuesta correcta al primer intento suma puntos para tu sede.' },
   { t: 'Espera la próxima trivia', d: 'Cada trivia abre en su horario. Vuelve al mismo QR cuando abra.' },
   { t: 'Gana premios', d: 'Al terminar las 4 trivias se revela el ranking de tu sede.' },

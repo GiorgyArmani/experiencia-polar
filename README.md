@@ -18,11 +18,13 @@ Los dos dominios apuntan al **mismo** despliegue del servidor (`middleware.ts` e
 
 ## Gameloop
 
-1. **Bienvenida** → escanea el **QR de su sede** (eso registra la sede).
-2. **Diseña su oso**: pelaje, cabeza, ropa, accesorio + nombre (modelo 3D low poly).
-3. **Sus datos**: nombre, correo, teléfono (la sede ya viene del QR). Si hay una trivia abierta, arranca de una vez.
-4. **Trivia** de 5 preguntas. Correcta al primer intento = puntos; si falla, reintenta pero esa pregunta vale 0.
-5. **Espera** con contador hasta que abra la siguiente trivia. Se vuelve a escanear el **mismo QR**.
+Hay **un solo QR** (el mismo en todas las sedes). Lo que dispara cada escaneo depende del progreso del jugador:
+
+1. **1.er escaneo → onboarding**: diseña su oso (pelaje, cabeza, ropa, accesorio + nombre, modelo 3D low poly)
+   y llena sus datos: nombre, correo, teléfono y **sede** (la elige de la lista). Se guarda en `players`.
+2. **2.º escaneo → abre la trivia** disponible: 5 preguntas. Correcta al primer intento = puntos; si falla, reintenta pero esa pregunta vale 0.
+3. **Espera** con contador hasta que abra la siguiente trivia.
+4. **Siguiente escaneo → siguiente trivia**, y así hasta la última.
 6. Tras la última: **oso graduado** (birrete y toga) → **leaderboard** de su sede.
 
 El oso acompaña cada pantalla con reacciones: `celebrar`, `duda`, `pensar`, `error` (+ `idle`).
@@ -34,21 +36,21 @@ y globos de diálogo (`Bubble`) en `mobile/src/components/comic.tsx`.
 - El servidor decide todo con **su** hora: el teléfono nunca recibe la respuesta correcta y no se adelanta una trivia cambiando el reloj.
 - **Horarios por nivel** (`TRIVIA_WINDOWS`): cada trivia tiene ventana `opensAt`–`closesAt`. Se evalúa en cada petición, así que
   no hace falta un cron que "abra" niveles (no hay proceso que se pueda caer). Si una ventana cierra sin jugarla, se salta.
-- **QR por sede** (`QR_STRICT_SEDE=true`): solo el QR de tu sede abre tu trivia.
+- **Un solo QR**: el servidor decide qué abre cada escaneo según el progreso guardado del jugador.
 - Un doble toque no suma dos veces (la actualización es condicional a la pregunta actual).
 - Recuperar la partida en otro teléfono exige **correo + teléfono** iguales a los del registro.
 
 ## Códigos QR
 
-Uno por sede, el mismo para todas las trivias:
+Uno solo, el mismo en todas las sedes y para todas las trivias (archivos para imprimir: `public/qr/`):
 
 ```
-https://experienciapolar.aulaciete.com/q/<CODIGO>      (CODIGO de SEDES, p. ej. CCS)
+https://experienciapolar.aulaciete.com/q/POLAR
 ```
 
 - Escaneado **dentro de la app** → la app lee el código directamente.
 - Escaneado con la **cámara del teléfono** → si la app está instalada la abre directo (universal/app links); si no,
-  la página `/q/<CODIGO>` ofrece App Store / Google Play o jugar en el navegador.
+  la página `/q/POLAR` ofrece App Store / Google Play o jugar en el navegador.
 
 ## Configuración del servidor (`.env`)
 
@@ -56,8 +58,7 @@ https://experienciapolar.aulaciete.com/q/<CODIGO>      (CODIGO de SEDES, p. ej. 
 | --- | --- |
 | `DATABASE_URL` | Postgres (Dokploy, o cadena de conexión de Supabase). Tiene prioridad. |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Alternativa vía API de Supabase. La service role key va **solo en el servidor**. |
-| `SEDES` | `CODIGO:Nombre` separados por coma. El código es el del QR. |
-| `QR_STRICT_SEDE` | `true` (defecto): solo el QR de tu sede abre tu trivia. |
+| `SEDES` | `CODIGO:Nombre` separados por coma. El jugador elige la suya al registrarse; el código se usa en `?sede=` del ranking. |
 | `GAME_MODE` | `demo` (cada trivia abre `DEMO_WAIT_SECONDS` después de la anterior) o `schedule` (horarios reales). |
 | `TRIVIA_WINDOWS` | JSON con `opensAt` / `closesAt` de cada trivia (modo `schedule`), zona `-04:00`. |
 | `POINTS_PER_CORRECT` | Puntos por respuesta correcta al primer intento. |

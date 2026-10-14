@@ -18,8 +18,6 @@ export default function Registro() {
   const [osoNombre, setOsoNombre] = useState('');
   const [form, setForm] = useState({ nombre: '', email: '', telefono: '', sede: '' });
   const [sedes, setSedes] = useState<Sede[] | null>(null);
-  // Si viene del QR (/q/CODIGO → /registro?sede=CODIGO), la sede queda fija.
-  const [qrSede, setQrSede] = useState<Sede | null>(null);
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
 
@@ -28,10 +26,6 @@ export default function Registro() {
       .me()
       .then((r) => {
         if (r.player) return router.replace('/jugar');
-        const code = new URLSearchParams(window.location.search).get('sede')?.toUpperCase();
-        const fromQr = r.sedes.find((x) => x.code === code) ?? null;
-        setQrSede(fromQr);
-        if (fromQr) setForm((f) => ({ ...f, sede: fromQr.name }));
         setSedes(r.sedes);
       })
       .catch(() => setSedes([]));
@@ -135,17 +129,12 @@ export default function Registro() {
         <Field id="telf" label="Teléfono" type="tel" autoComplete="tel" value={form.telefono} onChange={(v) => setForm({ ...form, telefono: v })} placeholder="0414 000 0000" />
         <div className="relative">
           <label htmlFor="sede" className="field-label">Sede</label>
-          {qrSede ? (
-            <input id="sede" readOnly value={qrSede.name} className="field bg-[#F2F2F2]" aria-describedby="sede-qr" />
-          ) : (
-            <select id="sede" required value={form.sede} onChange={(e) => setForm({ ...form, sede: e.target.value })} className="field">
-              <option value="" disabled>Selecciona tu sede</option>
-              {sedes.map((s) => (
-                <option key={s.code} value={s.name}>{s.name}</option>
-              ))}
-            </select>
-          )}
-          {qrSede && <span id="sede-qr" className="mt-1 block text-xs text-polar-muted">Tomada del QR que escaneaste.</span>}
+          <select id="sede" required value={form.sede} onChange={(e) => setForm({ ...form, sede: e.target.value })} className="field">
+            <option value="" disabled>Selecciona tu sede</option>
+            {sedes.map((s) => (
+              <option key={s.code} value={s.name}>{s.name}</option>
+            ))}
+          </select>
         </div>
         <p className="-mt-2 text-[13px] text-polar-muted">Usamos tus datos solo para el juego y la entrega de premios.</p>
       </form>

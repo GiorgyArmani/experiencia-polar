@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
+import { qrUrlFor } from '@/shared/qr';
 import type { Avatar } from '@/shared/avatar';
 import type { AnswerResponse, MeResponse } from '@/shared/types';
 import { BearSvg } from '@/components/BearSvg';
@@ -125,7 +126,6 @@ export default function Jugar() {
     content = (
       <Camara
         avatar={player.avatar}
-        sedeCode={me.sedes.find((s) => s.name === player.sede)?.code ?? ''}
         trivia={status.trivia ?? 1}
         closesAt={status.closesAt}
         completed={player.completed}
@@ -203,7 +203,6 @@ function hora(iso: string | null) {
 
 function Camara({
   avatar,
-  sedeCode,
   trivia,
   closesAt,
   completed,
@@ -213,7 +212,6 @@ function Camara({
   onScan,
 }: {
   avatar: Avatar;
-  sedeCode: string;
   trivia: number;
   closesAt: string | null;
   completed: number[];
@@ -252,7 +250,7 @@ function Camara({
 
       <div className="relative z-10 mt-auto flex flex-col gap-3 p-5">
         {demoTools && (
-          <button type="button" onClick={() => onScan(`POLAR:${sedeCode}`)} className="btn-game">
+          <button type="button" onClick={() => onScan(qrUrlFor(window.location.origin))} className="btn-game">
             Simular escaneo (demo)
           </button>
         )}

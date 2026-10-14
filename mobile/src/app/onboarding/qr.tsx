@@ -1,4 +1,4 @@
-// Escena 1 del onboarding: el QR de la sede registra a qué sede pertenece el jugador.
+// Escena 1 del onboarding: el primer escaneo del QR de la experiencia arranca el registro.
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -19,8 +19,8 @@ export default function OnboardingQr() {
     setBusy(true);
     setMsg('');
     try {
-      const { sede } = await api.qr(value);
-      setDraft({ sede, qrValue: value });
+      const { sedes } = await api.qr(value);
+      setDraft({ scanned: true, sedes });
       router.push('/onboarding/oso');
     } catch (e) {
       setMsg((e as Error).message);
@@ -34,7 +34,7 @@ export default function OnboardingQr() {
       <SafeAreaView style={styles.safe}>
         <Panel tilt={-0.8} style={styles.cam} innerStyle={styles.fill}>
           <QrCamera onScan={onScan} busy={busy} />
-          <Caption style={styles.caption}>Escena 1 · Encuentra el QR de tu sede</Caption>
+          <Caption style={styles.caption}>Escena 1 · Encuentra el QR</Caption>
         </Panel>
 
         <View style={styles.row}>
@@ -42,7 +42,7 @@ export default function OnboardingQr() {
             <Bear3D avatar={draft.avatar} reaction={msg ? 'error' : 'pensar'} style={styles.fill} />
           </Panel>
           <Bubble tail="left" style={styles.bubble}>
-            {msg || '¿Dónde estará? Apunta la cámara al código QR de tu sede.'}
+            {msg || '¿Dónde estará? Apunta la cámara al código QR de la Experiencia Polar.'}
           </Bubble>
         </View>
 

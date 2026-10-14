@@ -1,4 +1,5 @@
-import { checkScan, computeStatus } from '@/lib/game';
+import { isExperienceQr } from '@/shared/qr';
+import { computeStatus } from '@/lib/game';
 import { error, json, meResponse } from '@/lib/http';
 import { currentPlayer } from '@/lib/session';
 import { getStore } from '@/lib/store';
@@ -10,9 +11,7 @@ export async function POST(req: Request) {
   if (!p) return error('Regístrate primero', 401);
 
   const { value } = (await req.json().catch(() => ({}))) as { value?: string };
-  if (typeof value !== 'string') return error('Ese no es un QR de la Experiencia Polar');
-  const check = checkScan(p, value);
-  if (!check.ok) return error(check.error);
+  if (typeof value !== 'string' || !isExperienceQr(value)) return error('Ese no es un QR de la Experiencia Polar');
 
   const status = computeStatus(p);
   if (status.phase === 'playing') return json(meResponse(p));

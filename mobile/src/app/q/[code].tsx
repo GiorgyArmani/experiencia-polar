@@ -1,7 +1,8 @@
-// Deep link del QR impreso: experienciapolar://q/<CODIGO> o https://experienciapolar.aulaciete.com/q/<CODIGO>
+// Deep link del QR impreso: experienciapolar://q/POLAR o https://experienciapolar.aulaciete.com/q/POLAR
 // (si el jugador lo escanea con la cámara del teléfono y la app está instalada, llega aquí).
-//   · Sin registro → onboarding con la sede ya tomada del QR.
-//   · Registrado  → intenta abrir la trivia como si lo hubiera escaneado dentro de la app.
+// Hace lo mismo que escanearlo dentro de la app:
+//   · Sin registro → onboarding.
+//   · Registrado  → el servidor decide el siguiente paso (abrir la trivia disponible).
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator } from 'react-native';
@@ -20,8 +21,8 @@ export default function QrLink() {
       try {
         const me = await boot();
         if (!me.player) {
-          const { sede } = await api.qr(value);
-          setDraft({ sede, qrValue: value });
+          const { sedes } = await api.qr(value);
+          setDraft({ scanned: true, sedes });
           router.replace('/onboarding/oso');
           return;
         }

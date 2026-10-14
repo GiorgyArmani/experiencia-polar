@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   const nombre = clean(body.nombre);
   const email = clean(body.email, 120).toLowerCase();
   const telefono = clean(body.telefono, 30);
-  // La app envía el código de sede leído del QR; la web puede enviar el nombre.
+  // La app envía el código de la sede elegida; la web puede enviar el nombre.
   const sede = sedeByCode(clean(body.sedeCode, 24)) ?? sedeByName(clean(body.sede));
   const oso_nombre = clean(body.osoNombre, 24);
 
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   if (nombre.length < 3) return error('Escribe tu nombre y apellido');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return error('Revisa tu correo');
   if (digits(telefono).length < 7) return error('Revisa tu teléfono');
-  if (!sede) return error('Escanea el QR de tu sede para registrarte');
+  if (!sede) return error('Elige tu sede');
 
   const store = getStore();
   try {

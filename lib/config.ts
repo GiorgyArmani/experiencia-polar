@@ -43,8 +43,6 @@ export const config = {
   windows: parseWindows(process.env.TRIVIA_WINDOWS),
   pointsPerCorrect: Math.max(0, Number(process.env.POINTS_PER_CORRECT ?? 100)),
   sedes: parseSedes(process.env.SEDES),
-  // true: para abrir una trivia hay que escanear el QR de TU sede (no el de otra).
-  qrStrictSede: process.env.QR_STRICT_SEDE !== 'false',
   demoTools: process.env.NEXT_PUBLIC_DEMO === 'true',
   // Base de datos: DATABASE_URL (Postgres en Dokploy, o la cadena de conexión de Supabase)
   // tiene prioridad; si no, SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY; si no, memoria.
