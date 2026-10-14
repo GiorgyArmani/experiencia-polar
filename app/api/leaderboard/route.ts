@@ -26,7 +26,7 @@ export async function GET(req: Request) {
   // ?sede= acepta el código (CCS) o el nombre ("Sede Caracas"); sin parámetro, la sede del jugador.
   const param = url.searchParams.get('sede');
   const sede = param ? (sedeByCode(param) ?? sedeByName(param))?.name : me?.sede;
-  if (param && !sede) return error('Sede desconocida', 404);
+  if (param && !sede) return error('Localidad desconocida', 404);
 
   const store = getStore();
   try {
@@ -43,6 +43,8 @@ export async function GET(req: Request) {
         const t = totals.find((x) => x.sede === s.name);
         return { sede: s.name, code: s.code, puntos: Number(t?.puntos ?? 0), jugadores: Number(t?.jugadores ?? 0) };
       })
+      // Son 130 localidades: solo se listan las que ya tienen jugadores (y la del jugador).
+      .filter((s) => s.jugadores > 0 || s.sede === me?.sede)
       .sort((a, b) => b.puntos - a.puntos)
       .map((s, i) => ({ ...s, rank: i + 1, isMine: s.sede === me?.sede }));
 

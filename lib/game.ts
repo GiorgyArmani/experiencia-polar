@@ -15,7 +15,60 @@ export function toPublic(p: Player): PublicPlayer {
     avatar: p.avatar,
     puntos: p.puntos,
     completed: p.completed ?? [],
+    triviaPuntos: p.trivia_puntos ?? 0,
   };
+}
+
+/* ───────────────────────── Contrarreloj ───────────────────────── */
+
+// Margen para la latencia de la red: una respuesta enviada en el último segundo todavía cuenta.
+const GRACE_MS = 2000;
+// Puntaje por rapidez: puntaje completo si responde en ≤ FAST s; baja en línea recta hasta la mitad en SLOW s.
+const FAST_S = 3;
+const SLOW_S = 15;
+
+/** Hasta cuándo hay para terminar la trivia en curso (null si no está jugando). */
+export function deadlineOf(p: Player): Date | null {
+  if (!p.current_trivia || !p.trivia_started_at) return null;
+  return new Date(new Date(p.trivia_started_at).getTime() + config.triviaSeconds * 1000);
+}
+
+export function isTimeUp(p: Player, now = new Date()) {
+  const d = deadlineOf(p);
+  return d !== null && now.getTime() > d.getTime() + GRACE_MS;
+}
+
+/** Puntos de una respuesta correcta según cuánto tardó en esa pregunta: de `pointsPerCorrect` a la mitad. */
+export function speedPoints(p: Player, now = new Date()) {
+  const from = p.question_started_at ?? p.trivia_started_at;
+  const secs = from ? (now.getTime() - new Date(from).getTime()) / 1000 : SLOW_S;
+  const slow = Math.min(1, Math.max(0, (secs - FAST_S) / (SLOW_S - FAST_S)));
+  return Math.round(config.pointsPerCorrect * (1 - 0.5 * slow));
+}
+
+/** Cambios para cerrar la trivia en curso (terminó las preguntas o se le acabó el tiempo). */
+export function finishPatch(p: Player, extra: Partial<Player> = {}): Partial<Player> {
+  return {
+    ...extra,
+    completed: [...new Set([...(p.completed ?? []), p.current_trivia!])].sort((a, b) => a - b),
+    current_trivia: null,
+    current_question: 0,
+    missed: false,
+    trivia_started_at: null,
+    question_started_at: null,
+    last_completed_at: new Date().toISOString(),
+  };
+}
+
+/** Si se le acabó el tiempo (aunque haya cerrado la pestaña), cierra la trivia con lo que alcanzó a sumar. */
+export async function settleTimeUp(p: Player): Promise<Player> {
+  if (!isTimeUp(p)) return p;
+  const store = getStore();
+  const updated = await store.updatePlayer(p.id, finishPatch(p), {
+    current_trivia: p.current_trivia,
+    current_question: p.current_question,
+  });
+  return updated ?? (await store.getPlayer(p.id)) ?? p;
 }
 
 /** Siguiente trivia que el jugador no ha completado (1..4) o null si terminó. */
@@ -25,7 +78,12 @@ function nextTrivia(p: Player): number | null {
 }
 
 export function computeStatus(p: Player, now = new Date()): GameStatus {
-  const base = { totalTrivias: TOTAL_TRIVIAS, serverNow: now.toISOString() };
+  const base = {
+    totalTrivias: TOTAL_TRIVIAS,
+    serverNow: now.toISOString(),
+    deadline: deadlineOf(p)?.toISOString() ?? null,
+    limitSeconds: config.triviaSeconds,
+  };
 
   if (p.current_trivia) {
     return { ...base, phase: 'playing', trivia: p.current_trivia, opensAt: null, closesAt: closesAtFor(p.current_trivia) };
@@ -90,7 +148,15 @@ export async function scanQr(p: Player): Promise<ScanResult> {
   const store = getStore();
   const updated = await store.updatePlayer(
     p.id,
-    { current_trivia: status.trivia, current_question: 0, missed: false, trivia_puntos: 0 },
+    {
+      current_trivia: status.trivia,
+      current_question: 0,
+      missed: false,
+      trivia_puntos: 0,
+      // Arranca el reloj: desde ya corren los segundos de la trivia.
+      trivia_started_at: new Date().toISOString(),
+      question_started_at: new Date().toISOString(),
+    },
     { current_trivia: null },
   );
   // Si otro escaneo simultáneo ya abrió la trivia, devolvemos el estado actual.

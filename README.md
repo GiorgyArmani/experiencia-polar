@@ -21,8 +21,10 @@ Los dos dominios apuntan al **mismo** despliegue del servidor (`middleware.ts` e
 Hay **un solo QR** (el mismo en todas las sedes). Lo que dispara cada escaneo depende del progreso del jugador:
 
 1. **1.er escaneo → onboarding**: diseña su oso (pelaje, cabeza, ropa, accesorio + nombre, modelo 3D low poly)
-   y llena sus datos: nombre, correo, teléfono y **sede** (la elige de la lista). Se guarda en `players`.
-2. **2.º escaneo → abre la trivia** disponible: 5 preguntas. Correcta al primer intento = puntos; si falla, reintenta pero esa pregunta vale 0.
+   y llena sus datos: **cédula**, nombre completo, correo (opcional) y **localidad** (130, en `lib/localidades.ts`). Se guarda en `players`.
+2. **2.º escaneo → abre la trivia** disponible, **contrarreloj**: `TRIVIA_SECONDS` (60) para responder todas las preguntas.
+   Correcta = de 100 a 50 puntos según la rapidez en esa pregunta (100 si responde en ≤ 3 s, baja en línea recta hasta 50 a los 15 s).
+   Incorrecta = 0 y pasa a la siguiente. Si se acaba el tiempo, la trivia se cierra con lo que sumó.
 3. **Espera** con contador hasta que abra la siguiente trivia.
 4. **Siguiente escaneo → siguiente trivia**, y así hasta la última.
 6. Tras la última: **oso graduado** (birrete y toga) → **leaderboard** de su sede.
@@ -38,15 +40,17 @@ y globos de diálogo (`Bubble`) en `mobile/src/components/comic.tsx`.
   no hace falta un cron que "abra" niveles (no hay proceso que se pueda caer). Si una ventana cierra sin jugarla, se salta.
 - **Un solo QR**: el servidor decide qué abre cada escaneo según el progreso guardado del jugador.
 - Un doble toque no suma dos veces (la actualización es condicional a la pregunta actual).
-- Recuperar la partida en otro teléfono exige **correo + teléfono** iguales a los del registro.
+- El reloj lo lleva el servidor (`trivia_started_at`, `question_started_at`), con 2 s de margen por la latencia. Si el jugador
+  cierra la pestaña, la trivia se cierra sola en su siguiente petición al vencer el tiempo.
+- Recuperar la partida en otro teléfono: misma **cédula** y mismo primer nombre (sin importar acentos ni mayúsculas).
 
 ## Códigos QR
 
 Uno solo, el mismo en todas las sedes y para todas las trivias. Contiene `<APP_URL>/q/POLAR`
 (hoy `https://experiencia-polar.vercel.app/q/POLAR`). El servidor lo genera con el dominio de `APP_URL`:
 
-- `<APP_URL>/qr` → SVG para imprenta
-- `<APP_URL>/qr?format=png&size=2048` → PNG (agrega `&download` para descargarlo)
+- `<APP_URL>/qr` → **afiche A4** con el estilo Polar (oso, logos, pasos) y botón "Imprimir afiche"
+- `<APP_URL>/qr/imagen` → solo el QR en SVG; `?format=png&size=2048` en PNG (agrega `&download` para descargarlo)
 
 Si cambia el dominio (p. ej. a `experienciapolar.aulaciete.com`), hay que **reimprimir el QR** y compilar la app de nuevo con ese dominio.
 
@@ -65,7 +69,8 @@ Si cambia el dominio (p. ej. a `experienciapolar.aulaciete.com`), hay que **reim
 | `SEDES` | `CODIGO:Nombre` separados por coma. El jugador elige la suya al registrarse; el código se usa en `?sede=` del ranking. |
 | `GAME_MODE` | `demo` (cada trivia abre `DEMO_WAIT_SECONDS` después de la anterior) o `schedule` (horarios reales). |
 | `TRIVIA_WINDOWS` | JSON con `opensAt` / `closesAt` de cada trivia (modo `schedule`), zona `-04:00`. |
-| `POINTS_PER_CORRECT` | Puntos por respuesta correcta al primer intento. |
+| `POINTS_PER_CORRECT` | Puntos máximos por respuesta correcta (respuesta rápida); el mínimo es la mitad. |
+| `TRIVIA_SECONDS` | Segundos para responder toda la trivia (defecto 60). |
 | `APP_STORE_URL`, `PLAY_STORE_URL` | Botones de la página del QR. |
 | `APPLE_TEAM_ID`, `ANDROID_SHA256_CERT` | Habilitan `/.well-known/apple-app-site-association` y `assetlinks.json`. |
 | `NEXT_PUBLIC_DEMO` | `true` muestra "Simular escaneo" y "Saltar espera" (web y app). **`false` el día del evento.** Se fija al compilar. |
@@ -79,7 +84,7 @@ Ejecuta `supabase/schema.sql` (es idempotente y migra la columna `look` de la ve
 - **Supabase**: SQL Editor → pegar y ejecutar.
 - **Dokploy**: crea un servicio Postgres, y `psql "$DATABASE_URL" -f supabase/schema.sql`.
 
-Tablas: `players` (jugador, sede, avatar, puntos, progreso) y `answers` (auditoría). Índice `(sede, puntos desc)` para el ranking.
+Tablas: `players` (jugador, cédula, localidad en la columna `sede`, avatar, puntos, progreso) y `answers` (auditoría). Índice `(sede, puntos desc)` para el ranking.
 Para ~2.000 jugadores un Postgres pequeño sobra; el pool por instancia es `DATABASE_POOL` (10).
 
 ## Preguntas

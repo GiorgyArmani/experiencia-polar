@@ -37,6 +37,11 @@ const config: Config = {
         'input-blue': '0 4px 0 #1B5FBF',
       },
       keyframes: {
+        blink: { '0%,92%,100%': { transform: 'scaleY(1)' }, '95%': { transform: 'scaleY(0.1)' } },
+        breathe: { '0%,100%': { transform: 'translateY(0) scale(1)' }, '50%': { transform: 'translateY(2px) scale(1.01,0.99)' } },
+        zzz: { '0%': { transform: 'translate(0,0) scale(0.6)', opacity: '0' }, '30%': { opacity: '1' }, '100%': { transform: 'translate(14px,-34px) scale(1.1)', opacity: '0' } },
+        wiggle: { '0%,100%': { transform: 'rotate(0deg)' }, '25%': { transform: 'rotate(-6deg)' }, '75%': { transform: 'rotate(6deg)' } },
+        sweat: { '0%': { transform: 'translateY(0)', opacity: '0' }, '20%': { opacity: '1' }, '100%': { transform: 'translateY(10px)', opacity: '0' } },
         scan: { '0%,100%': { top: '10%' }, '50%': { top: '86%' } },
         hop: {
           '0%,100%': { transform: 'translateY(0) scale(1)' },
@@ -64,6 +69,11 @@ const config: Config = {
         },
       },
       animation: {
+        blink: 'blink 4.2s ease-in-out infinite',
+        breathe: 'breathe 3s ease-in-out infinite',
+        zzz: 'zzz 2.4s ease-out infinite',
+        wiggle: 'wiggle 0.5s ease-in-out 2',
+        sweat: 'sweat 1.4s ease-in infinite',
         scan: 'scan 2.6s ease-in-out infinite',
         hop: 'hop 1.4s ease-in-out infinite',
         pop: 'pop 0.6s ease-out both',

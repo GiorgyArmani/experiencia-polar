@@ -9,10 +9,10 @@ import { BearSvg } from '@/components/BearSvg';
 import { Logos, Screen } from '@/components/ui';
 
 const REGLAS = [
-  { t: 'Busca el QR de la Experiencia Polar', d: 'Es el mismo código en todas las sedes. Escanéalo con la cámara de tu teléfono: cada escaneo te lleva al siguiente paso.' },
-  { t: 'Responde la trivia', d: 'Cada respuesta correcta al primer intento suma puntos para tu sede.' },
+  { t: 'Busca el QR de la Experiencia Polar', d: 'Es el mismo código en todas las estaciones. Escanéalo con la cámara de tu teléfono: cada escaneo te lleva al siguiente paso.' },
+  { t: 'Responde contra reloj', d: 'Tienes 1 minuto para toda la trivia. Mientras más rápido aciertes, más puntos sumas para tu localidad.' },
   { t: 'Espera la próxima trivia', d: 'Cada trivia abre en su horario. Vuelve al mismo QR cuando abra.' },
-  { t: 'Gana premios', d: 'Al terminar las 4 trivias se revela el ranking de tu sede.' },
+  { t: 'Gana premios', d: 'Al terminar las 4 trivias se revela el ranking de tu localidad.' },
 ];
 
 export default function Reglas() {

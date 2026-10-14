@@ -16,7 +16,7 @@ export default function Registro() {
   const [step, setStep] = useState<1 | 2>(1);
   const [avatar, setAvatar] = useState<Avatar>(DEFAULT_AVATAR);
   const [osoNombre, setOsoNombre] = useState('');
-  const [form, setForm] = useState({ nombre: '', email: '', telefono: '', sede: '' });
+  const [form, setForm] = useState({ nombre: '', cedula: '', email: '', sede: '' });
   const [sedes, setSedes] = useState<Sede[] | null>(null);
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
@@ -124,13 +124,13 @@ export default function Registro() {
             <span className="text-lg font-extrabold">{osoNombre}</span>
           </div>
         </div>
-        <Field id="nombre" label="Nombre y apellido" autoComplete="name" value={form.nombre} onChange={(v) => setForm({ ...form, nombre: v })} placeholder="María Pérez" />
-        <Field id="email" label="Correo electrónico" type="email" autoComplete="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="tu@correo.com" />
-        <Field id="telf" label="Teléfono" type="tel" autoComplete="tel" value={form.telefono} onChange={(v) => setForm({ ...form, telefono: v })} placeholder="0414 000 0000" />
+        <Field id="cedula" label="Cédula" inputMode="numeric" autoComplete="off" value={form.cedula} onChange={(v) => setForm({ ...form, cedula: v })} placeholder="12345678" />
+        <Field id="nombre" label="Nombre completo" autoComplete="name" value={form.nombre} onChange={(v) => setForm({ ...form, nombre: v })} placeholder="María Pérez" />
+        <Field id="email" label="Correo electrónico (opcional)" type="email" autoComplete="email" required={false} value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="tu@correo.com" />
         <div className="relative">
-          <label htmlFor="sede" className="field-label">Sede</label>
+          <label htmlFor="sede" className="field-label">Localidad</label>
           <select id="sede" required value={form.sede} onChange={(e) => setForm({ ...form, sede: e.target.value })} className="field">
-            <option value="" disabled>Selecciona tu sede</option>
+            <option value="" disabled>Selecciona tu localidad</option>
             {sedes.map((s) => (
               <option key={s.code} value={s.name}>{s.name}</option>
             ))}
@@ -183,6 +183,8 @@ function Field({
   type = 'text',
   placeholder,
   autoComplete,
+  inputMode,
+  required = true,
 }: {
   id: string;
   label: string;
@@ -191,6 +193,8 @@ function Field({
   type?: string;
   placeholder?: string;
   autoComplete?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+  required?: boolean;
 }) {
   return (
     <div className="relative">
@@ -198,7 +202,8 @@ function Field({
       <input
         id={id}
         type={type}
-        required
+        required={required}
+        inputMode={inputMode}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}

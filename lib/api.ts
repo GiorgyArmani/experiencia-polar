@@ -17,8 +17,8 @@ export const api = {
   me: () => call<MeResponse>('/api/me'),
   register: (body: {
     nombre: string;
+    cedula: string;
     email: string;
-    telefono: string;
     sede?: string;
     sedeCode?: string;
     osoNombre: string;

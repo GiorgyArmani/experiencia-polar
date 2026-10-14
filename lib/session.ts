@@ -2,6 +2,7 @@
 // La web lo guarda en una cookie httpOnly; la app nativa lo envía como `Authorization: Bearer <id>`.
 import 'server-only';
 import { cookies, headers } from 'next/headers';
+import { settleTimeUp } from './game';
 import { getStore } from './store';
 import type { Player } from '@/shared/types';
 
@@ -29,7 +30,9 @@ export async function currentPlayer(): Promise<Player | null> {
   const id = bearer ?? cookies().get(COOKIE)?.value;
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return null;
   try {
-    return await getStore().getPlayer(id);
+    const p = await getStore().getPlayer(id);
+    // Si se le acabó el tiempo de la trivia, se cierra aquí (cualquier petición lo detecta).
+    return p ? await settleTimeUp(p) : null;
   } catch (e) {
     console.error('[session]', e);
     return null;

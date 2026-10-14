@@ -37,7 +37,7 @@ export default function QrScanner({ onScan, paused = false }: { onScan: (text: s
         const msg = String((e as Error)?.message ?? e);
         setProblem(
           /permission|NotAllowed/i.test(msg)
-            ? 'Necesitamos permiso para usar la cámara. Actívalo en la configuración del navegador y recarga.'
+            ? 'Necesitamos permiso para usar la cámara. Actívalo en la configuración del navegador y recarga la página.'
             : 'No pudimos abrir la cámara. Prueba con Chrome o Safari actualizados.',
         );
       }

@@ -8,18 +8,21 @@ export interface Sede {
 
 export interface Player {
   id: string;
-  nombre: string;
-  email: string;
-  telefono: string;
-  sede: string; // nombre de la sede
+  nombre: string; // nombre completo
+  cedula: string; // identifica al jugador (solo dígitos); con ella recupera su partida en otro teléfono
+  email: string | null; // opcional: no todos tienen correo corporativo
+  telefono: string | null; // ya no se pide (versiones anteriores)
+  sede: string; // nombre de la localidad
   oso_nombre: string;
   avatar: Avatar;
   puntos: number;
   completed: number[];
   current_trivia: number | null;
   current_question: number;
-  missed: boolean;
+  missed: boolean; // sin uso desde que la trivia es contrarreloj (fallar pasa a la siguiente)
   trivia_puntos: number; // puntos de la trivia en curso o la última terminada
+  trivia_started_at: string | null; // arranca el reloj de la trivia (al escanear)
+  question_started_at: string | null; // cuándo vio la pregunta actual (para el puntaje por rapidez)
   last_completed_at: string | null;
   created_at: string;
   updated_at: string;
@@ -33,6 +36,7 @@ export interface PublicPlayer {
   avatar: Avatar;
   puntos: number;
   completed: number[];
+  triviaPuntos: number; // puntos de la trivia en curso o la última terminada
 }
 
 export type Phase =
@@ -46,6 +50,8 @@ export interface GameStatus {
   trivia: number | null; // trivia abierta o en curso, o la próxima que abrirá
   opensAt: string | null; // si está bloqueada, cuándo abre
   closesAt: string | null; // si está abierta, hasta cuándo
+  deadline: string | null; // jugando: hasta cuándo hay para terminar la trivia (contrarreloj)
+  limitSeconds: number; // tiempo total de cada trivia
   totalTrivias: number;
   serverNow: string;
 }

@@ -1,5 +1,6 @@
 // Configuración del juego leída del entorno (solo servidor).
 import type { Sede } from '@/shared/types';
+import { LOCALIDADES } from './localidades';
 
 export type GameMode = 'demo' | 'schedule';
 
@@ -34,7 +35,8 @@ function parseSedes(raw: string | undefined): Sede[] {
     })
     .filter((s): s is Sede => s !== null);
   if (raw && !list.length) console.error('[config] SEDES debe tener el formato CODIGO:Nombre,CODIGO:Nombre');
-  return list.length ? list : [{ code: 'DEMO', name: '[Sede demo]' }];
+  // Sin SEDES: las 130 localidades de Empresas Polar (lib/localidades.ts).
+  return list.length ? list : LOCALIDADES;
 }
 
 export const config = {
@@ -43,7 +45,10 @@ export const config = {
   mode: (process.env.GAME_MODE === 'schedule' ? 'schedule' : 'demo') as GameMode,
   demoWaitSeconds: Math.max(1, Number(process.env.DEMO_WAIT_SECONDS ?? 10)),
   windows: parseWindows(process.env.TRIVIA_WINDOWS),
+  // Puntos máximos por respuesta correcta (si responde rápido); baja hasta la mitad si tarda.
   pointsPerCorrect: Math.max(0, Number(process.env.POINTS_PER_CORRECT ?? 100)),
+  // Contrarreloj: segundos para responder TODA la trivia.
+  triviaSeconds: Math.max(10, Number(process.env.TRIVIA_SECONDS ?? 60)),
   sedes: parseSedes(process.env.SEDES),
   demoTools: process.env.NEXT_PUBLIC_DEMO === 'true',
   // Base de datos: DATABASE_URL (Postgres en Dokploy, o la cadena de conexión de Supabase)

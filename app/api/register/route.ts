@@ -7,8 +7,11 @@ import { getStore } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
-const clean = (v: unknown, max = 80) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
-const digits = (v: string) => v.replace(/\D/g, '');
+const clean = (v: unknown, max = 80) => (typeof v === 'string' ? v.trim().replace(/\s+/g, ' ').slice(0, max) : '');
+/** "V-12.345.678" → "12345678" */
+const soloDigitos = (v: string) => v.replace(/\D/g, '');
+/** Para comparar nombres sin importar mayúsculas ni acentos. */
+const norm = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 export async function POST(req: Request) {
   let body: Record<string, unknown>;
@@ -19,26 +22,26 @@ export async function POST(req: Request) {
   }
 
   const nombre = clean(body.nombre);
-  const email = clean(body.email, 120).toLowerCase();
-  const telefono = clean(body.telefono, 30);
-  // La app envía el código de la sede elegida; la web puede enviar el nombre.
-  const sede = sedeByCode(clean(body.sedeCode, 24)) ?? sedeByName(clean(body.sede));
+  const cedula = soloDigitos(clean(body.cedula, 20));
+  const email = clean(body.email, 120).toLowerCase() || null;
+  // La app envía el código de la localidad elegida; la web envía el nombre.
+  const sede = sedeByCode(clean(body.sedeCode, 40)) ?? sedeByName(clean(body.sede));
   const oso_nombre = clean(body.osoNombre, 24);
 
   if (!oso_nombre) return error('Ponle nombre a tu oso');
   if (!isValidAvatar(body.avatar)) return error('Termina de vestir a tu oso');
-  if (nombre.length < 3) return error('Escribe tu nombre y apellido');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return error('Revisa tu correo');
-  if (digits(telefono).length < 7) return error('Revisa tu teléfono');
-  if (!sede) return error('Elige tu sede');
+  if (nombre.split(' ').length < 2 || nombre.length < 5) return error('Escribe tu nombre completo');
+  if (cedula.length < 5 || cedula.length > 10) return error('Revisa tu cédula');
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return error('Revisa tu correo (o déjalo vacío)');
+  if (!sede) return error('Elige tu localidad');
 
   const store = getStore();
   try {
-    // Si el correo ya existe y el teléfono coincide, recuperamos su partida en este dispositivo.
-    const existing = await store.getPlayerByEmail(email);
+    // Si la cédula ya existe y el primer nombre coincide, recuperamos su partida en este dispositivo.
+    const existing = await store.getPlayerByCedula(cedula);
     if (existing) {
-      if (digits(existing.telefono) !== digits(telefono)) {
-        return error('Ese correo ya está registrado con otro teléfono', 409);
+      if (norm(existing.nombre).split(' ')[0] !== norm(nombre).split(' ')[0]) {
+        return error('Esa cédula ya está registrada con otro nombre', 409);
       }
       setPlayerCookie(existing.id);
       const res: RegisterResponse = { ...meResponse(existing), recovered: true, token: existing.id };
@@ -46,8 +49,9 @@ export async function POST(req: Request) {
     }
     const player = await store.createPlayer({
       nombre,
+      cedula,
       email,
-      telefono,
+      telefono: null,
       sede: sede.name,
       oso_nombre,
       avatar: parseAvatar(body.avatar),
@@ -56,8 +60,11 @@ export async function POST(req: Request) {
     const res: RegisterResponse = { ...meResponse(player), recovered: false, token: player.id };
     return json(res);
   } catch (e) {
-    // Dos registros simultáneos con el mismo correo: el índice único gana.
-    if (/duplicate|unique/i.test(String((e as Error)?.message))) return error('Ese correo ya está registrado', 409);
+    // Dos registros simultáneos con la misma cédula (o el mismo correo): el índice único gana.
+    const msg = String((e as Error)?.message);
+    if (/duplicate|unique/i.test(msg)) {
+      return error(/email/i.test(msg) ? 'Ese correo ya está registrado' : 'Esa cédula ya está registrada', 409);
+    }
     console.error('[register]', e);
     return error('No pudimos registrarte. Intenta de nuevo.', 500);
   }

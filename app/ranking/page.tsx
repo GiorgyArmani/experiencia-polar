@@ -63,7 +63,7 @@ export default function Ranking() {
           <div className="flex flex-col">
             <h1 className="font-display text-[28px] font-extrabold leading-none">Ranking</h1>
             <span className="text-sm text-[#CFE0F7]">
-              {tab === 'sede' ? data?.sede ?? 'Tu sede' : 'Sedes por puntos acumulados'}
+              {tab === 'sede' ? data?.sede ?? 'Tu localidad' : 'Localidades por puntos acumulados'}
             </span>
           </div>
         </div>
@@ -77,7 +77,7 @@ export default function Ranking() {
               onClick={() => setTab(t)}
               className={`h-11 rounded-[11px] text-[15px] font-bold ${tab === t ? 'bg-white text-polar-navy' : 'text-white'}`}
             >
-              {t === 'sede' ? 'Mi sede' : 'Todas las sedes'}
+              {t === 'sede' ? 'Mi localidad' : 'Todas'}
             </button>
           ))}
         </div>
@@ -111,7 +111,7 @@ export default function Ranking() {
           {rest.map((r, i) => (
             <Row key={i} row={r} />
           ))}
-          {data && top.length === 0 && <li className="rounded-2xl bg-white p-4 text-center font-semibold">Aún no hay puntos en esta sede. ¡Sé el primero!</li>}
+          {data && top.length === 0 && <li className="rounded-2xl bg-white p-4 text-center font-semibold">Aún no hay puntos en esta localidad. ¡Sé el primero!</li>}
         </ol>
       ) : (
         <ol className="flex flex-col gap-2 px-[18px] pt-4">

@@ -11,8 +11,9 @@ import { config } from './config';
 
 export interface NewPlayer {
   nombre: string;
-  email: string;
-  telefono: string;
+  cedula: string;
+  email: string | null;
+  telefono: string | null;
   sede: string;
   oso_nombre: string;
   avatar: Avatar;
@@ -32,7 +33,7 @@ export interface SedeTotal {
 
 export interface Store {
   getPlayer(id: string): Promise<Player | null>;
-  getPlayerByEmail(email: string): Promise<Player | null>;
+  getPlayerByCedula(cedula: string): Promise<Player | null>;
   createPlayer(p: NewPlayer): Promise<Player>;
   /** Devuelve null si `expect` no se cumple. */
   updatePlayer(id: string, patch: Partial<Player>, expect?: Expect): Promise<Player | null>;
@@ -49,6 +50,8 @@ const UPDATABLE = [
   'current_question',
   'missed',
   'trivia_puntos',
+  'trivia_started_at',
+  'question_started_at',
   'last_completed_at',
 ] as const satisfies readonly (keyof Player)[];
 
@@ -64,8 +67,14 @@ function fromRow(row: Record<string, unknown> | null | undefined): Player | null
     ...(row as unknown as Player),
     avatar: parseAvatar(row.avatar),
     completed: (row.completed as number[] | null) ?? [],
-    last_completed_at: row.last_completed_at ? new Date(row.last_completed_at as string).toISOString() : null,
+    last_completed_at: iso(row.last_completed_at),
+    trivia_started_at: iso(row.trivia_started_at),
+    question_started_at: iso(row.question_started_at),
   };
+}
+
+function iso(v: unknown): string | null {
+  return v ? new Date(v as string).toISOString() : null;
 }
 
 /* ───────────────────────── Postgres (Dokploy / Supabase) ───────────────────────── */
@@ -80,14 +89,14 @@ class PostgresStore implements Store {
     const [row] = await this.sql`select * from players where id = ${id}`;
     return fromRow(row);
   }
-  async getPlayerByEmail(email: string) {
-    const [row] = await this.sql`select * from players where email = ${email}`;
+  async getPlayerByCedula(cedula: string) {
+    const [row] = await this.sql`select * from players where cedula = ${cedula}`;
     return fromRow(row);
   }
   async createPlayer(p: NewPlayer) {
     const [row] = await this.sql`
-      insert into players (nombre, email, telefono, sede, oso_nombre, avatar)
-      values (${p.nombre}, ${p.email}, ${p.telefono}, ${p.sede}, ${p.oso_nombre}, ${this.sql.json(p.avatar as never)})
+      insert into players (nombre, cedula, email, telefono, sede, oso_nombre, avatar)
+      values (${p.nombre}, ${p.cedula}, ${p.email}, ${p.telefono}, ${p.sede}, ${p.oso_nombre}, ${this.sql.json(p.avatar as never)})
       returning *`;
     return fromRow(row)!;
   }
@@ -137,8 +146,8 @@ class SupabaseStore implements Store {
     if (error) throw error;
     return fromRow(data);
   }
-  async getPlayerByEmail(email: string) {
-    const { data, error } = await this.db.from('players').select('*').eq('email', email).maybeSingle();
+  async getPlayerByCedula(cedula: string) {
+    const { data, error } = await this.db.from('players').select('*').eq('cedula', cedula).maybeSingle();
     if (error) throw error;
     return fromRow(data);
   }
@@ -200,8 +209,8 @@ class MemoryStore implements Store {
   async getPlayer(id: string) {
     return mem.players.get(id) ?? null;
   }
-  async getPlayerByEmail(email: string) {
-    for (const p of mem.players.values()) if (p.email === email) return p;
+  async getPlayerByCedula(cedula: string) {
+    for (const p of mem.players.values()) if (p.cedula === cedula) return p;
     return null;
   }
   async createPlayer(p: NewPlayer) {
@@ -215,6 +224,8 @@ class MemoryStore implements Store {
       current_question: 0,
       missed: false,
       trivia_puntos: 0,
+      trivia_started_at: null,
+      question_started_at: null,
       last_completed_at: null,
       created_at: now,
       updated_at: now,

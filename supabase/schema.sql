@@ -7,9 +7,10 @@ create extension if not exists "pgcrypto";
 
 create table if not exists public.players (
   id                uuid primary key default gen_random_uuid(),
-  nombre            text not null,
-  email             text not null unique,
-  telefono          text not null,
+  nombre            text not null,                -- nombre completo
+  cedula            text unique,                  -- identifica al jugador (solo dígitos)
+  email             text unique,                  -- opcional
+  telefono          text,                         -- ya no se pide
   sede              text not null,
   oso_nombre        text not null,
   avatar            jsonb not null default '{}'::jsonb, -- { pelaje, cabeza, ropa, accesorio }
@@ -24,11 +25,21 @@ create table if not exists public.players (
   updated_at        timestamptz not null default now()
 );
 
+-- Registro UEP: cédula (identifica al jugador), correo opcional, sin teléfono.
+alter table public.players add column if not exists cedula text;
+create unique index if not exists players_cedula_key on public.players (cedula);
+alter table public.players alter column email drop not null;
+alter table public.players alter column telefono drop not null;
+
+-- Contrarreloj: cuándo arrancó la trivia en curso y cuándo vio la pregunta actual.
+alter table public.players add column if not exists trivia_started_at timestamptz;
+alter table public.players add column if not exists question_started_at timestamptz;
+
 -- Migración desde la versión PWA (look → avatar). No hace nada en una base nueva.
 alter table public.players add column if not exists avatar jsonb not null default '{}'::jsonb;
 alter table public.players drop column if exists look;
 
--- Claves de consulta: sede + puntos (leaderboard) y email (registro).
+-- Claves de consulta: localidad + puntos (leaderboard) y cédula (registro).
 create index if not exists players_sede_puntos_idx on public.players (sede, puntos desc);
 
 -- Registro de cada respuesta (auditoría y desempates).

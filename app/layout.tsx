@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Experiencia Polar',
-  description: 'Busca los QR, responde las trivias y suma puntos para tu sede.',
+  description: 'Busca los QR, responde las trivias y suma puntos para tu localidad.',
   icons: { icon: '/icon.png', apple: '/icon.png' },
   appleWebApp: { capable: true, title: 'Experiencia Polar', statusBarStyle: 'default' },
 };
