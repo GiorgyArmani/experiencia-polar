@@ -5,6 +5,7 @@ import { getTrivia, TOTAL_TRIVIAS } from './trivias';
 import { isExperienceQr } from '@/shared/qr';
 import type { GameStatus, Player, PublicPlayer, QuestionView } from '@/shared/types';
 import { config } from './config';
+import { getStore } from './store';
 
 export function toPublic(p: Player): PublicPlayer {
   return {
@@ -77,3 +78,21 @@ export function questionView(p: Player): QuestionView | null {
   };
 }
 
+export type ScanResult = { ok: true; player: Player } | { ok: false; error: string; status: number };
+
+/** Escaneo del QR por un jugador registrado: abre la trivia disponible según su progreso. */
+export async function scanQr(p: Player): Promise<ScanResult> {
+  const status = computeStatus(p);
+  if (status.phase === 'playing') return { ok: true, player: p };
+  if (status.phase === 'locked') return { ok: false, error: 'Esta trivia todavía no abre', status: 409 };
+  if (status.phase === 'final' || !status.trivia) return { ok: false, error: 'Ya completaste todas las trivias', status: 409 };
+
+  const store = getStore();
+  const updated = await store.updatePlayer(
+    p.id,
+    { current_trivia: status.trivia, current_question: 0, missed: false, trivia_puntos: 0 },
+    { current_trivia: null },
+  );
+  // Si otro escaneo simultáneo ya abrió la trivia, devolvemos el estado actual.
+  return { ok: true, player: updated ?? (await store.getPlayer(p.id)) ?? p };
+}

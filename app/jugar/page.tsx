@@ -38,6 +38,12 @@ export default function Jugar() {
     refresh()
       .then(() => {})
       .catch(() => setToast('Sin conexión. Revisa tu internet.'));
+    // Aviso que deja /q/POLAR cuando el escaneo no pudo abrir una trivia.
+    const aviso = new URLSearchParams(window.location.search).get('aviso');
+    if (aviso) {
+      setToast(aviso);
+      window.history.replaceState(null, '', '/jugar');
+    }
   }, [refresh]);
 
   useEffect(() => {

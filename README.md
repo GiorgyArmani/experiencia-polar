@@ -50,9 +50,10 @@ Uno solo, el mismo en todas las sedes y para todas las trivias. Contiene `<APP_U
 
 Si cambia el dominio (p. ej. a `experienciapolar.aulaciete.com`), hay que **reimprimir el QR** y compilar la app de nuevo con ese dominio.
 
-- Escaneado **dentro de la app** → la app lee el código directamente.
-- Escaneado con la **cámara del teléfono** → si la app está instalada la abre directo (universal/app links); si no,
-  la página `/q/POLAR` ofrece App Store / Google Play o jugar en el navegador.
+- Escaneado con la **cámara del teléfono** → `/q/POLAR` dispara el siguiente paso en el navegador:
+  sin registro va a `/registro`; registrado abre la trivia disponible y entra a `/jugar` (si aún no abre, muestra el aviso).
+  La sesión vive en una cookie, así que el jugador debe usar siempre el mismo navegador.
+- También se puede escanear desde la cámara dentro de `/jugar`.
 
 ## Configuración del servidor (`.env`)
 

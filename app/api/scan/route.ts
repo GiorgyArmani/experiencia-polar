@@ -1,8 +1,7 @@
 import { isExperienceQr } from '@/shared/qr';
-import { computeStatus } from '@/lib/game';
+import { scanQr } from '@/lib/game';
 import { error, json, meResponse } from '@/lib/http';
 import { currentPlayer } from '@/lib/session';
-import { getStore } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,16 +12,6 @@ export async function POST(req: Request) {
   const { value } = (await req.json().catch(() => ({}))) as { value?: string };
   if (typeof value !== 'string' || !isExperienceQr(value)) return error('Ese no es un QR de la Experiencia Polar');
 
-  const status = computeStatus(p);
-  if (status.phase === 'playing') return json(meResponse(p));
-  if (status.phase === 'locked') return error('Esta trivia todavía no abre', 409);
-  if (status.phase === 'final' || !status.trivia) return error('Ya completaste todas las trivias', 409);
-
-  const updated = await getStore().updatePlayer(
-    p.id,
-    { current_trivia: status.trivia, current_question: 0, missed: false, trivia_puntos: 0 },
-    { current_trivia: null },
-  );
-  // Si otro escaneo simultáneo ya abrió la trivia, devolvemos el estado actual.
-  return json(meResponse(updated ?? (await getStore().getPlayer(p.id))));
+  const r = await scanQr(p);
+  return r.ok ? json(meResponse(r.player)) : error(r.error, r.status);
 }

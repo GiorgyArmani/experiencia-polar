@@ -6,7 +6,9 @@ import { getStore } from './store';
 import type { Player } from '@/shared/types';
 
 const COOKIE = 'polar_player';
-const MAX_AGE = 60 * 60 * 24 * 60; // 60 días
+// Sin contraseñas: el jugador queda logueado para siempre en su navegador.
+// 400 días es el máximo que aceptan los navegadores; /api/me la renueva en cada visita.
+const MAX_AGE = 60 * 60 * 24 * 400;
 
 export function setPlayerCookie(id: string) {
   cookies().set(COOKIE, id, {
