@@ -1,6 +1,6 @@
 // Un solo QR para toda la experiencia, el mismo impreso en todas las sedes y para todas las trivias:
 //
-//   https://experienciapolar.aulaciete.com/q/POLAR
+//   <APP_URL>/q/POLAR
 //
 // Lo que dispara cada escaneo depende del progreso del jugador (lo decide el servidor):
 //   1.ª vez → onboarding (oso + datos + sede)

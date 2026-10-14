@@ -42,11 +42,13 @@ y globos de diálogo (`Bubble`) en `mobile/src/components/comic.tsx`.
 
 ## Códigos QR
 
-Uno solo, el mismo en todas las sedes y para todas las trivias (archivos para imprimir: `public/qr/`):
+Uno solo, el mismo en todas las sedes y para todas las trivias. Contiene `<APP_URL>/q/POLAR`
+(hoy `https://experiencia-polar.vercel.app/q/POLAR`). El servidor lo genera con el dominio de `APP_URL`:
 
-```
-https://experienciapolar.aulaciete.com/q/POLAR
-```
+- `<APP_URL>/qr` → SVG para imprenta
+- `<APP_URL>/qr?format=png&size=2048` → PNG (agrega `&download` para descargarlo)
+
+Si cambia el dominio (p. ej. a `experienciapolar.aulaciete.com`), hay que **reimprimir el QR** y compilar la app de nuevo con ese dominio.
 
 - Escaneado **dentro de la app** → la app lee el código directamente.
 - Escaneado con la **cámara del teléfono** → si la app está instalada la abre directo (universal/app links); si no,
@@ -56,6 +58,7 @@ https://experienciapolar.aulaciete.com/q/POLAR
 
 | Variable | Qué hace |
 | --- | --- |
+| `APP_URL` | Dominio público del servidor; es el que va dentro del QR. Defecto `https://experiencia-polar.vercel.app`. |
 | `DATABASE_URL` | Postgres (Dokploy, o cadena de conexión de Supabase). Tiene prioridad. |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Alternativa vía API de Supabase. La service role key va **solo en el servidor**. |
 | `SEDES` | `CODIGO:Nombre` separados por coma. El jugador elige la suya al registrarse; el código se usa en `?sede=` del ranking. |
@@ -114,7 +117,8 @@ npx eas-cli@latest submit --platform all
 ```
 
 - Bundle ID / package: `com.aulaciete.experienciapolar`. Esquema de deep link: `experienciapolar://q/<CODIGO>`.
-- La URL del servidor sale de `EXPO_PUBLIC_API_URL` o de `app.json → extra.apiUrl`.
+- El dominio del servidor sale de `EXPO_PUBLIC_API_URL` (defecto `https://experiencia-polar.vercel.app`). `app.config.ts` lo usa
+  para la API y para los universal/app links, así que debe coincidir con `APP_URL` del servidor.
 - El oso 3D está hecho con primitivas (`mobile/src/components/Bear3D.tsx`). Si el artista entrega un `.glb`, se reemplaza ese
   componente con la misma interfaz (`avatar`, `reaction`, `graduado`).
 - `npm run typecheck` y `npx expo-doctor` deben pasar antes de cada build.

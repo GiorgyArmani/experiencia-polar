@@ -1,4 +1,4 @@
-// Deep link del QR impreso: experienciapolar://q/POLAR o https://experienciapolar.aulaciete.com/q/POLAR
+// Deep link del QR impreso: experienciapolar://q/POLAR o <APP_URL>/q/POLAR
 // (si el jugador lo escanea con la cámara del teléfono y la app está instalada, llega aquí).
 // Hace lo mismo que escanearlo dentro de la app:
 //   · Sin registro → onboarding.

@@ -1,4 +1,4 @@
-// Destino del QR impreso (el mismo en todas las sedes): https://experienciapolar.aulaciete.com/q/POLAR
+// Destino del QR impreso (el mismo en todas las sedes): <APP_URL>/q/POLAR
 // Si la app está instalada, iOS/Android la abren directo (universal/app links) y esta página no se ve.
 // Si no, invita a instalarla o a jugar en la web.
 import Image from 'next/image';

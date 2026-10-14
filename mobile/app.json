@@ -11,7 +11,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.aulaciete.experienciapolar",
       "associatedDomains": [
-        "applinks:experienciapolar.aulaciete.com"
+        "applinks:experiencia-polar.vercel.app"
       ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -33,7 +33,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "experienciapolar.aulaciete.com",
+              "host": "experiencia-polar.vercel.app",
               "pathPrefix": "/q/"
             }
           ],
@@ -66,7 +66,7 @@
       "expo-splash-screen"
     ],
     "extra": {
-      "apiUrl": "https://experienciapolar.aulaciete.com"
+      "apiUrl": "https://experiencia-polar.vercel.app"
     }
   }
 }

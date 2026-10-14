@@ -38,6 +38,8 @@ function parseSedes(raw: string | undefined): Sede[] {
 }
 
 export const config = {
+  // Dominio público del servidor: va dentro del QR impreso (<APP_URL>/q/POLAR).
+  appUrl: (process.env.APP_URL || 'https://experiencia-polar.vercel.app').replace(/\/$/, ''),
   mode: (process.env.GAME_MODE === 'schedule' ? 'schedule' : 'demo') as GameMode,
   demoWaitSeconds: Math.max(1, Number(process.env.DEMO_WAIT_SECONDS ?? 10)),
   windows: parseWindows(process.env.TRIVIA_WINDOWS),
