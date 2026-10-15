@@ -47,6 +47,9 @@ export const ROPAS = [
   { id: 'liquiliqui', label: 'Liqui liqui', color: '#F3EEDF', accent: '#C9B98F' },
   { id: 'playera', label: 'Camisa playera', color: '#1FB5A8', accent: '#FFD23F' },
   { id: 'vestido', label: 'Vestido de lunares', color: '#E5233B', accent: '#FFFFFF' },
+  { id: 'jumper', label: 'Jumper a cuadros', color: '#CDB89A', accent: '#B3263A' },
+  { id: 'falda', label: 'Blusa y falda', color: '#F7A8C4', accent: '#2E3A55' },
+  { id: 'joropo', label: 'Traje de joropo', color: '#FFFFFF', accent: '#E5233B' },
 ] as const satisfies readonly Option[];
 
 export const ACCESORIOS = [
@@ -59,6 +62,9 @@ export const ACCESORIOS = [
   { id: 'cayena', label: 'Flor de cayena', color: '#E5233B', accent: '#FFD23F' },
   { id: 'lazo', label: 'Lazo', color: '#E8476A', accent: '#B8304F' },
   { id: 'audifonos', label: 'Audífonos', color: '#1E1E1E', accent: '#2A7EEB' },
+  { id: 'zarcillos', label: 'Zarcillos', color: '#E6B422', accent: '#B8860B' },
+  { id: 'cintillo', label: 'Cintillo', color: '#E8476A', accent: '#FFFFFF' },
+  { id: 'boina', label: 'Boina', color: '#B3263A', accent: '#8E1B2C' },
 ] as const satisfies readonly Option[];
 
 export type PielId = (typeof PIELES)[number]['id'];

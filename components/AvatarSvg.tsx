@@ -1,5 +1,6 @@
 // Avatar 2D del jugador: una persona cabezona y redondita (estilo Animal Crossing), personalizable.
 // Lo usan el registro, el juego, las instrucciones, el ranking y el afiche del QR.
+import { useId } from 'react';
 import { optionOf, type Avatar } from '@/shared/avatar';
 
 /**
@@ -35,6 +36,24 @@ const SHOE = '#24324A';
 const HEAD = { cx: 100, cy: 92, rx: 64, ry: 60 };
 const EYE_X = [78, 122];
 const EYE_Y = 104;
+// La cabeza baja un poco para montarse sobre el cuello de la franela (si no, se ve flotando).
+const HEAD_DROP = 6;
+// Banda de cada sombrero (altura y bordes): el pelo de arriba se recorta para que no atraviese el sombrero,
+// y por los lados el corte baja en curva, así el pelo parece salir por debajo del sombrero.
+interface HatBand {
+  y: number;
+  l: number;
+  r: number;
+}
+const HAT_BAND: Record<string, HatBand> = {
+  gorra: { y: 78, l: 40, r: 160 },
+  gorro: { y: 74, l: 36, r: 164 },
+  llanero: { y: 58, l: 18, r: 182 },
+  boina: { y: 52, l: 42, r: 160 },
+};
+const MORTARBOARD_BAND: HatBand = { y: 60, l: 58, r: 142 };
+const hairClipD = ({ y, l, r }: HatBand) =>
+  `M-50 400 L-50 ${y + 44} Q${l - 6} ${y + 44} ${l} ${y} L${r} ${y} Q${r + 6} ${y + 44} 250 ${y + 44} L250 400 Z`;
 
 export function AvatarSvg({ avatar, graduado = false, crop = 'full', mood = 'normal', look, className, title }: Props) {
   const piel = optionOf('piel', avatar.piel);
@@ -49,9 +68,14 @@ export function AvatarSvg({ avatar, graduado = false, crop = 'full', mood = 'nor
   const hat = graduado ? null : acc.id;
   const peinado = avatar.peinado;
 
+  const clipId = `hair-${useId().replace(/:/g, '')}`;
+  const band = graduado ? MORTARBOARD_BAND : hat ? HAT_BAND[hat] : undefined;
+  const hairClip = band ? `url(#${clipId})` : undefined;
+  const headT = `translate(0 ${HEAD_DROP})`;
+
   return (
     <svg
-      viewBox={crop === 'head' ? '28 12 144 144' : '-8 0 216 300'}
+      viewBox={crop === 'head' ? `28 ${12 + HEAD_DROP} 144 144` : '-8 0 216 300'}
       // Si la caja sobra de alto, el personaje se queda parado abajo (no flota en el medio).
       preserveAspectRatio={crop === 'head' ? undefined : 'xMidYMax meet'}
       className={className}
@@ -59,30 +83,48 @@ export function AvatarSvg({ avatar, graduado = false, crop = 'full', mood = 'nor
       aria-label={title}
       aria-hidden={title ? undefined : true}
     >
+      {band && (
+        <defs>
+          <clipPath id={clipId}>
+            <path d={hairClipD(band)} />
+          </clipPath>
+        </defs>
+      )}
+
+      {/* Pelo de atrás: va detrás del cuerpo, así el pelo largo cae por la espalda y no tapa los hombros */}
+      <g transform={headT}>
+        <g clipPath={hairClip}>
+          <HairBack id={peinado} hair={hair} hairS={hairS} hat={hat} covered={!!band} />
+        </g>
+        {/* Con sombrero la cola sale por debajo, colgando de la nuca (fuera del recorte para que no se corte) */}
+        {peinado === 'cola' && band && <LowPonytail hair={hair} hairS={hairS} />}
+      </g>
+
       {crop === 'full' && (
         <Body skin={skin} skinS={skinS} ropa={ropa.id} color={ropa.color} accent={ropa.accent ?? ropa.color} graduado={graduado} />
       )}
 
-      {/* Pelo de atrás (va detrás de la cabeza) */}
-      <HairBack id={peinado} hair={hair} hairS={hairS} hat={hat} />
+      <g transform={headT}>
+        {/* Orejas y cabeza */}
+        {[37, 163].map((cx) => (
+          <g key={cx}>
+            <circle cx={cx} cy={102} r={10} fill={skin} stroke={skinS} strokeWidth={2.5} />
+            <circle cx={cx + (cx < 100 ? 2 : -2)} cy={102} r={4.5} fill={skinS} opacity={0.6} />
+          </g>
+        ))}
+        <ellipse {...ellipse(HEAD)} fill={skin} stroke={skinS} strokeWidth={2.5} />
 
-      {/* Orejas y cabeza */}
-      {[37, 163].map((cx) => (
-        <g key={cx}>
-          <circle cx={cx} cy={102} r={10} fill={skin} stroke={skinS} strokeWidth={2.5} />
-          <circle cx={cx + (cx < 100 ? 2 : -2)} cy={102} r={4.5} fill={skinS} opacity={0.6} />
+        <Face mood={mood} look={look} brow={hairS} skinS={skinS} />
+
+        {/* Pelo de adelante (flequillo) */}
+        <g clipPath={hairClip}>
+          <HairFront id={peinado} hair={hair} hairS={hairS} hat={hat} />
         </g>
-      ))}
-      <ellipse {...ellipse(HEAD)} fill={skin} stroke={skinS} strokeWidth={2.5} />
 
-      <Face mood={mood} look={look} brow={hairS} skinS={skinS} />
-
-      {/* Pelo de adelante (flequillo) */}
-      <HairFront id={peinado} hair={hair} hairS={hairS} hat={hat} />
-
-      {(acc.id === 'lentes' || acc.id === 'lentes-sol') && <Glasses sun={acc.id === 'lentes-sol'} accent={acc.accent} />}
-      {hat && <Hat id={hat} color={acc.color} accent={acc.accent ?? acc.color} />}
-      {graduado && <Mortarboard />}
+        {(acc.id === 'lentes' || acc.id === 'lentes-sol') && <Glasses sun={acc.id === 'lentes-sol'} accent={acc.accent} />}
+        {hat && <Hat id={hat} color={acc.color} accent={acc.accent ?? acc.color} />}
+        {graduado && <Mortarboard />}
+      </g>
     </svg>
   );
 }
@@ -97,6 +139,13 @@ const ARM_L = 'M50 186 L65 191 L62 214 L47 211 Z';
 const flipD = (d: string) => d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${200 - Number(x)} ${y}`);
 
 const PANTS: Record<string, string> = { bata: '#3B3B5C', liquiliqui: '#E9E2CC', pelotero: '#E6E6E6', chaqueta: '#2E3A55' };
+// Conjuntos con falda (sin shorts). La del joropo es larga, hasta los tobillos.
+const SKIRT: Record<string, string> = {
+  vestido: 'M64 206 L136 206 L150 254 Q100 264 50 254 Z',
+  jumper: 'M64 206 L136 206 L148 254 Q100 262 52 254 Z',
+  falda: 'M66 214 L134 214 L146 252 Q100 260 54 252 Z',
+  joropo: 'M64 210 L136 210 L164 274 Q100 286 36 274 Z',
+};
 
 function Body({
   skin,
@@ -113,9 +162,11 @@ function Body({
   accent: string;
   graduado: boolean;
 }) {
-  const shirt = graduado ? GRAD_NAVY : color;
-  const shirtS = graduado ? '#061A42' : accent === color ? '#00000033' : accent;
-  const dress = !graduado && ropa === 'vestido';
+  // El jumper va sobre una franela de cuello alto (el color de acento); el peto se dibuja en el patrón.
+  const shirt = graduado ? GRAD_NAVY : ropa === 'jumper' ? accent : color;
+  const shirtS = graduado ? '#061A42' : accent === color || ropa in SKIRT ? '#00000033' : accent;
+  const skirt = graduado ? undefined : SKIRT[ropa];
+  const skirtFill = ropa === 'jumper' ? color : ropa === 'falda' || ropa === 'joropo' ? accent : shirt;
   const pants = PANTS[ropa] ?? '#34507A';
   return (
     <g>
@@ -134,7 +185,7 @@ function Body({
       ))}
 
       {/* Shorts o pantalón (con vestido no) */}
-      {!dress && (
+      {!skirt && (
         <path
           d="M66 222 L134 222 L136 250 Q136 255 131 255 L105 255 L100 240 L95 255 L69 255 Q64 255 64 250 Z"
           fill={graduado ? GRAD_NAVY : pants}
@@ -153,12 +204,13 @@ function Body({
       ))}
 
       {/* Torso (y falda si es vestido) */}
-      {dress && <path d="M64 206 L136 206 L150 254 Q100 264 50 254 Z" fill={shirt} stroke={shirtS} strokeWidth={2} strokeLinejoin="round" />}
+      {skirt && <path d={skirt} fill={skirtFill} stroke="#00000033" strokeWidth={2} strokeLinejoin="round" />}
+      {skirt && <SkirtPattern id={ropa} color={color} />}
       <path d={TORSO} fill={shirt} stroke={shirtS} strokeWidth={2} />
       {graduado ? <GownDetails /> : <ShirtPattern id={ropa} accent={accent} />}
 
       {/* Sombra de la cabeza sobre el cuello */}
-      <ellipse cx="100" cy="155" rx="34" ry="6" fill="#000" opacity={0.12} />
+      <ellipse cx="100" cy={155 + HEAD_DROP} rx="30" ry="6" fill="#000" opacity={0.14} />
     </g>
   );
 }
@@ -259,6 +311,111 @@ function ShirtPattern({ id, accent }: { id: string; accent: string }) {
           <path d="M86 153 Q100 164 114 153" stroke="#FFFFFF" strokeWidth={4} fill="none" strokeLinecap="round" />
         </g>
       );
+    case 'jumper':
+      return (
+        <g>
+          {/* Cuello alto de la franela */}
+          <rect x="86" y="148" width="28" height="10" rx="4" fill={accent} stroke="#00000033" strokeWidth={2} />
+          {/* Peto del jumper con sus tirantes */}
+          <path d="M72 178 L128 178 L131 231 L69 231 Z" fill="#CDB89A" stroke="#00000033" strokeWidth={2} strokeLinejoin="round" />
+          <path d="M76 158 L76 180 M124 158 L124 180" stroke="#CDB89A" strokeWidth={7} strokeLinecap="round" />
+          <Plaid x1={70} x2={130} y1={178} y2={231} />
+          {[84, 116].map((x) => (
+            <circle key={x} cx={x} cy={184} r={2.6} fill="#5A4632" />
+          ))}
+        </g>
+      );
+    case 'falda':
+      return (
+        <g>
+          {/* Cuellito redondo blanco */}
+          {[91, 109].map((cx) => (
+            <ellipse key={cx} cx={cx} cy={157} rx={10} ry={6} fill="#FFFFFF" stroke="#00000022" strokeWidth={1.5} />
+          ))}
+          {[176, 192, 208].map((y) => (
+            <circle key={y} cx={100} cy={y} r={2.2} fill="#FFFFFF" />
+          ))}
+        </g>
+      );
+    case 'joropo':
+      return (
+        <g>
+          {/* Blusa blanca con vuelo rojo en el escote */}
+          <path
+            d="M70 162 Q76 168 82 162 Q88 168 94 162 Q100 168 106 162 Q112 168 118 162 Q124 168 130 162"
+            stroke={accent}
+            strokeWidth={3}
+            fill="none"
+            strokeLinecap="round"
+          />
+          <circle cx={100} cy={176} r={4} fill="#FFD23F" />
+        </g>
+      );
+    default:
+      return null;
+  }
+}
+
+/** Cuadros (líneas cruzadas) dentro de un rectángulo. */
+function Plaid({ x1, x2, y1, y2 }: { x1: number; x2: number; y1: number; y2: number }) {
+  const xs = [x1 + 14, (x1 + x2) / 2, x2 - 14];
+  const ys = Array.from({ length: Math.floor((y2 - y1) / 16) }, (_, i) => y1 + 10 + i * 16);
+  return (
+    <g strokeWidth={2} opacity={0.45}>
+      {xs.map((x) => (
+        <line key={`v${x}`} x1={x} y1={y1 + 2} x2={x} y2={y2 - 2} stroke="#8C6E4E" />
+      ))}
+      {ys.map((y) => (
+        <line key={`h${y}`} x1={x1 + 2} y1={y} x2={x2 - 2} y2={y} stroke="#B3263A" />
+      ))}
+    </g>
+  );
+}
+
+/** Detalles de las faldas (van antes del torso, así el torso tapa la cintura). */
+function SkirtPattern({ id, color }: { id: string; color: string }) {
+  switch (id) {
+    case 'jumper':
+      return (
+        <g strokeWidth={2} opacity={0.45}>
+          {[80, 100, 120].map((x) => (
+            <line key={x} x1={x} y1={228} x2={x + (x - 100) * 0.25} y2={256} stroke="#8C6E4E" />
+          ))}
+          <line x1={57} y1={242} x2={143} y2={242} stroke="#B3263A" />
+        </g>
+      );
+    case 'falda':
+      return (
+        <g stroke="#00000030" strokeWidth={2}>
+          {[78, 92, 108, 122].map((x) => (
+            <line key={x} x1={x} y1={230} x2={x + (x - 100) * 0.35} y2={255} />
+          ))}
+        </g>
+      );
+    case 'joropo':
+      return (
+        <g>
+          {/* Flores en la falda y vuelo blanco en el ruedo */}
+          {[
+            [66, 246], [96, 240], [126, 248], [52, 264], [82, 266], [112, 268], [146, 262],
+          ].map(([x, y]) => (
+            <g key={`${x}-${y}`}>
+              {[0, 72, 144, 216, 288].map((a) => (
+                <circle key={a} cx={x + Math.cos((a * Math.PI) / 180) * 4} cy={y + Math.sin((a * Math.PI) / 180) * 4} r={3} fill={color} />
+              ))}
+              <circle cx={x} cy={y} r={2} fill="#FFD23F" />
+            </g>
+          ))}
+          <path
+            d="M38 274 Q46 284 54 277 Q62 286 70 279 Q78 288 86 280 Q94 289 100 281 Q106 289 114 280 Q122 288 130 279 Q138 286 146 277 Q154 284 162 274"
+            stroke={color}
+            strokeWidth={4}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
+      );
     default:
       return null;
   }
@@ -272,7 +429,17 @@ const CAP =
 const CAP_PARTED =
   'M34 106 C30 50 62 26 100 26 C138 26 170 50 166 106 C160 80 142 62 106 56 L100 64 L94 56 C58 62 40 80 34 106 Z';
 
-function HairBack({ id, hair, hairS, hat }: { id: string; hair: string; hairS: string; hat: string | null }) {
+/** Cola de caballo baja, para cuando hay sombrero: cuelga detrás de la nuca, con el gancho a la vista. */
+function LowPonytail({ hair, hairS }: { hair: string; hairS: string }) {
+  return (
+    <g>
+      <ellipse cx={170} cy={124} rx={15} ry={30} transform="rotate(16 170 124)" fill={hair} stroke={hairS} strokeWidth={2.5} />
+      <circle cx={164} cy={98} r={6} fill="#E8476A" />
+    </g>
+  );
+}
+
+function HairBack({ id, hair, hairS, hat, covered }: { id: string; hair: string; hairS: string; hat: string | null; covered: boolean }) {
   const p = { fill: hair, stroke: hairS, strokeWidth: 2.5, strokeLinejoin: 'round' as const };
   switch (id) {
     case 'afro':
@@ -286,7 +453,7 @@ function HairBack({ id, hair, hairS, hat }: { id: string; hair: string; hairS: s
         </g>
       );
     case 'cola':
-      return (
+      return covered ? null : (
         <g>
           <ellipse cx={164} cy={70} rx={17} ry={34} transform="rotate(28 164 70)" {...p} />
           <circle cx={152} cy={48} r={6} fill="#E8476A" />
@@ -294,7 +461,7 @@ function HairBack({ id, hair, hairS, hat }: { id: string; hair: string; hairS: s
       );
     case 'mono':
       // Con gorro o sombrero el moño no se ve.
-      return hat && hat !== 'cayena' && hat !== 'lazo' && hat !== 'audifonos' ? null : (
+      return hat && HAT_BAND[hat] ? null : (
         <g>
           <circle cx={100} cy={24} r={20} {...p} />
           <path d="M84 36 Q100 44 116 36" stroke="#E8476A" strokeWidth={5} fill="none" strokeLinecap="round" />
@@ -599,6 +766,37 @@ function Hat({ id, color, accent }: { id: string; color: string; accent: string 
           <path d="M0 0 L-22 -12 L-22 12 Z" fill={color} stroke={accent} strokeWidth={2} />
           <path d="M0 0 L22 -12 L22 12 Z" fill={color} stroke={accent} strokeWidth={2} />
           <circle r={6} fill={accent} />
+        </g>
+      );
+    case 'zarcillos':
+      return (
+        <g>
+          {[37, 163].map((cx) => (
+            <g key={cx}>
+              <circle cx={cx} cy={120} r={6.5} fill="none" stroke={color} strokeWidth={3} />
+              <circle cx={cx} cy={112} r={2.2} fill={accent} />
+            </g>
+          ))}
+        </g>
+      );
+    case 'cintillo':
+      return (
+        <g>
+          <path d="M40 90 C34 30 166 30 160 90" stroke={color} strokeWidth={9} fill="none" strokeLinecap="round" />
+          {[
+            [52, 66], [72, 47], [100, 40], [128, 47], [148, 66],
+          ].map(([x, y]) => (
+            <circle key={x} cx={x} cy={y} r={1.8} fill={accent} />
+          ))}
+        </g>
+      );
+    case 'boina':
+      return (
+        <g {...p} transform="rotate(-8 100 50)">
+          <ellipse cx={104} cy={44} rx={70} ry={28} fill={color} stroke={accent} strokeWidth={2.5} />
+          <path d="M44 56 Q100 76 160 56" stroke={accent} strokeWidth={6} fill="none" strokeLinecap="round" />
+          <path d="M104 16 Q106 8 112 6" stroke={accent} strokeWidth={4} fill="none" strokeLinecap="round" />
+          <ellipse cx={86} cy={34} rx={22} ry={8} fill="#FFFFFF" opacity={0.18} />
         </g>
       );
     case 'audifonos':
