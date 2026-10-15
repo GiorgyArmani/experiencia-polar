@@ -37,11 +37,13 @@ export function Bear3D({ avatar, reaction = 'idle', graduado = false, background
 
 type MeshProps = ThreeElements['mesh'];
 
-function Ico({ r, d = 1, color, ...props }: { r: number; d?: number; color: string } & MeshProps) {
+// d = nivel de subdivisión: 20·(d+1)² caras. 3 para piezas medianas, 5 para cabeza y torso.
+function Ico({ r, d = 3, color, children, ...props }: { r: number; d?: number; color: string } & MeshProps) {
   return (
     <mesh {...props}>
       <icosahedronGeometry args={[r, d]} />
       <meshStandardMaterial color={color} flatShading roughness={0.85} />
+      {children}
     </mesh>
   );
 }
@@ -114,14 +116,23 @@ function Bear({ avatar, reaction, graduado }: { avatar: Avatar; reaction: Reacti
       {/* Piernas */}
       <Ico r={0.26} color={furC} position={[-0.28, 0.24, 0.05]} scale={[1, 1.1, 1]} />
       <Ico r={0.26} color={furC} position={[0.28, 0.24, 0.05]} scale={[1, 1.1, 1]} />
+      {/* Patas: pie alargado hacia adelante con almohadilla */}
+      <Ico r={0.2} color={furC} position={[-0.3, 0.08, 0.2]} scale={[1, 0.55, 1.3]} />
+      <Ico r={0.2} color={furC} position={[0.3, 0.08, 0.2]} scale={[1, 0.55, 1.3]} />
+      <Ico r={0.11} d={2} color={furS} position={[-0.3, 0.08, 0.43]} scale={[1, 0.8, 0.3]} />
+      <Ico r={0.11} d={2} color={furS} position={[0.3, 0.08, 0.43]} scale={[1, 0.8, 0.3]} />
 
       <group ref={body}>
         {/* Torso con la ropa */}
-        <Ico r={0.62} color={shirt} position={[0, 0.85, 0]} scale={[1, 1.08, 0.88]} />
+        <Ico r={0.62} d={5} color={shirt} position={[0, 0.85, 0]} scale={[1, 1.08, 0.88]} />
+        {/* Colita */}
+        <Ico r={0.12} d={2} color={furC} position={[0, 0.45, -0.5]} />
+        {/* Cuello de pelo entre la ropa y la cabeza */}
+        <Ico r={0.36} color={furC} position={[0, 1.4, 0]} scale={[1.15, 0.45, 1]} />
         {!graduado && ropa.id === 'pelotero' &&
           stripes.map((y) => (
             <mesh key={y} position={[0, y, 0]} scale={[1, 1, 0.88]}>
-              <cylinderGeometry args={[0.6, 0.6, 0.06, 10, 1, true]} />
+              <cylinderGeometry args={[0.6, 0.6, 0.06, 28, 1, true]} />
               <Mat color={shirtS} />
             </mesh>
           ))}
@@ -160,17 +171,19 @@ function Bear({ avatar, reaction, graduado }: { avatar: Avatar; reaction: Reacti
         <group ref={armL} position={[-0.55, 1.25, 0]}>
           <Ico r={0.2} color={shirt} position={[0, -0.28, 0]} scale={[1, 1.8, 1]} />
           <Ico r={0.17} color={furC} position={[0, -0.6, 0]} />
+          <Ico r={0.08} d={2} color={furS} position={[0, -0.64, 0.13]} scale={[1, 0.9, 0.4]} />
         </group>
         <group ref={armR} position={[0.55, 1.25, 0]}>
           <Ico r={0.2} color={shirt} position={[0, -0.28, 0]} scale={[1, 1.8, 1]} />
           <Ico r={0.17} color={furC} position={[0, -0.6, 0]} />
+          <Ico r={0.08} d={2} color={furS} position={[0, -0.64, 0.13]} scale={[1, 0.9, 0.4]} />
         </group>
 
         {/* Accesorios de cuello */}
         {acc.id === 'bufanda' && (
           <>
             <mesh position={[0, 1.42, 0]} rotation={[HALF, 0, 0]}>
-              <torusGeometry args={[0.4, 0.1, 5, 10]} />
+              <torusGeometry args={[0.4, 0.1, 10, 28]} />
               <Mat color={acc.color} />
             </mesh>
             <mesh position={[0.2, 1.15, 0.42]} rotation={[0.2, 0, 0.15]}>
@@ -182,41 +195,66 @@ function Bear({ avatar, reaction, graduado }: { avatar: Avatar; reaction: Reacti
         {acc.id === 'corbatin' && (
           <group position={[0, 1.38, 0.5]}>
             <mesh position={[-0.1, 0, 0]} rotation={[0, 0, -HALF]}>
-              <coneGeometry args={[0.08, 0.18, 4]} />
+              <coneGeometry args={[0.08, 0.18, 8]} />
               <Mat color={acc.color} />
             </mesh>
             <mesh position={[0.1, 0, 0]} rotation={[0, 0, HALF]}>
-              <coneGeometry args={[0.08, 0.18, 4]} />
+              <coneGeometry args={[0.08, 0.18, 8]} />
               <Mat color={acc.color} />
             </mesh>
-            <Ico r={0.05} d={0} color={acc.color} />
+            <Ico r={0.05} d={2} color={acc.color} />
           </group>
         )}
 
         {/* Cabeza: el pivote está en el cuello */}
         <group ref={head} position={[0, 1.45, 0]}>
-          <Ico r={0.55} color={furC} position={[0, 0.42, 0]} scale={[1.08, 0.95, 0.95]} />
+          <Ico r={0.55} d={5} color={furC} position={[0, 0.42, 0]} scale={[1.08, 0.95, 0.95]} />
+          {/* Mejillas: ensanchan la cara por abajo */}
+          <Ico r={0.26} color={furC} position={[-0.26, 0.26, 0.22]} scale={[1, 0.85, 0.9]} />
+          <Ico r={0.26} color={furC} position={[0.26, 0.26, 0.22]} scale={[1, 0.85, 0.9]} />
           {/* Orejas */}
-          <Ico r={0.18} d={0} color={furC} position={[-0.42, 0.85, -0.05]} />
-          <Ico r={0.18} d={0} color={furC} position={[0.42, 0.85, -0.05]} />
-          <Ico r={0.1} d={0} color={furS} position={[-0.42, 0.85, 0.08]} />
-          <Ico r={0.1} d={0} color={furS} position={[0.42, 0.85, 0.08]} />
-          {/* Hocico, nariz, ojos, cachetes */}
+          <Ico r={0.18} d={2} color={furC} position={[-0.42, 0.85, -0.05]} scale={[1, 1, 0.7]} />
+          <Ico r={0.18} d={2} color={furC} position={[0.42, 0.85, -0.05]} scale={[1, 1, 0.7]} />
+          <Ico r={0.1} d={2} color={furS} position={[-0.42, 0.85, 0.06]} scale={[1, 1, 0.5]} />
+          <Ico r={0.1} d={2} color={furS} position={[0.42, 0.85, 0.06]} scale={[1, 1, 0.5]} />
+          {/* Hocico, nariz, boca, ojos, cejas, cachetes */}
           <Ico r={0.24} color={furS} position={[0, 0.28, 0.45]} scale={[1.15, 0.8, 0.75]} />
-          <Ico r={0.08} d={0} color={C.ink} position={[0, 0.36, 0.64]} />
-          <Ico ref={eyeL} r={0.06} d={0} color={C.ink} position={[-0.2, 0.52, 0.47]} />
-          <Ico ref={eyeR} r={0.06} d={0} color={C.ink} position={[0.2, 0.52, 0.47]} />
-          <Ico r={0.07} d={0} color="#FFB3C1" position={[-0.33, 0.3, 0.4]} scale={[1, 0.6, 0.5]} />
-          <Ico r={0.07} d={0} color="#FFB3C1" position={[0.33, 0.3, 0.4]} scale={[1, 0.6, 0.5]} />
+          <Ico r={0.08} d={2} color={C.ink} position={[0, 0.36, 0.64]} scale={[1.25, 0.8, 0.9]}>
+            <Ico r={0.025} d={1} color="#FFFFFF" position={[-0.025, 0.045, 0.06]} />
+          </Ico>
+          <mesh position={[0, 0.25, 0.62]} rotation={[0.35, 0, 0]}>
+            <boxGeometry args={[0.018, 0.1, 0.02]} />
+            <Mat color={C.ink} />
+          </mesh>
+          <mesh position={[0, 0.2, 0.6]} rotation={[0.35, 0, Math.PI]}>
+            <torusGeometry args={[0.055, 0.012, 6, 16, Math.PI]} />
+            <Mat color={C.ink} />
+          </mesh>
+          <Ico ref={eyeL} r={0.06} d={2} color={C.ink} position={[-0.2, 0.52, 0.47]}>
+            <Ico r={0.02} d={1} color="#FFFFFF" position={[0.02, 0.025, 0.045]} />
+          </Ico>
+          <Ico ref={eyeR} r={0.06} d={2} color={C.ink} position={[0.2, 0.52, 0.47]}>
+            <Ico r={0.02} d={1} color="#FFFFFF" position={[0.02, 0.025, 0.045]} />
+          </Ico>
+          <mesh position={[-0.2, 0.65, 0.47]} rotation={[0, 0, HALF + 0.12]}>
+            <capsuleGeometry args={[0.014, 0.08, 4, 8]} />
+            <Mat color={furS} />
+          </mesh>
+          <mesh position={[0.2, 0.65, 0.47]} rotation={[0, 0, HALF - 0.12]}>
+            <capsuleGeometry args={[0.014, 0.08, 4, 8]} />
+            <Mat color={furS} />
+          </mesh>
+          <Ico r={0.07} d={2} color="#FFB3C1" position={[-0.33, 0.3, 0.4]} scale={[1, 0.6, 0.5]} />
+          <Ico r={0.07} d={2} color="#FFB3C1" position={[0.33, 0.3, 0.4]} scale={[1, 0.6, 0.5]} />
 
           {acc.id === 'lentes' && (
             <>
               <mesh position={[-0.2, 0.52, 0.52]}>
-                <torusGeometry args={[0.12, 0.025, 4, 10]} />
+                <torusGeometry args={[0.12, 0.025, 8, 24]} />
                 <Mat color={acc.color} />
               </mesh>
               <mesh position={[0.2, 0.52, 0.52]}>
-                <torusGeometry args={[0.12, 0.025, 4, 10]} />
+                <torusGeometry args={[0.12, 0.025, 8, 24]} />
                 <Mat color={acc.color} />
               </mesh>
               <mesh position={[0, 0.54, 0.54]}>
@@ -243,14 +281,14 @@ function HeadItem({ id, color, accent }: { id: string; color: string; accent: st
       return (
         <>
           <mesh position={[0, 0.55, 0]} scale={[1.05, 0.8, 1]}>
-            <sphereGeometry args={[0.6, 8, 4, 0, Math.PI * 2, 0, HALF]} />
+            <sphereGeometry args={[0.6, 28, 12, 0, Math.PI * 2, 0, HALF]} />
             <Mat color={color} />
           </mesh>
           <mesh position={[0, 0.57, 0.55]} rotation={[0.15, 0, 0]}>
             <boxGeometry args={[0.6, 0.05, 0.42]} />
             <Mat color={accent} />
           </mesh>
-          <Ico r={0.06} d={0} color={accent} position={[0, 1.04, 0]} />
+          <Ico r={0.06} d={2} color={accent} position={[0, 1.04, 0]} />
         </>
       );
     case 'melena':
@@ -262,7 +300,7 @@ function HeadItem({ id, color, accent }: { id: string; color: string; accent: st
             [0.14, 0.97, 0.12, -0.35],
           ].map(([x, y, z, rz]) => (
             <mesh key={x} position={[x, y, z]} rotation={[0.2, 0, rz]}>
-              <coneGeometry args={[0.11, 0.32, 5]} />
+              <coneGeometry args={[0.11, 0.32, 10]} />
               <Mat color={accent} />
             </mesh>
           ))}
@@ -272,40 +310,40 @@ function HeadItem({ id, color, accent }: { id: string; color: string; accent: st
       return (
         <group position={[0.3, 0.92, 0.12]} rotation={[0, 0, -0.3]}>
           <mesh position={[-0.13, 0, 0]} rotation={[0, 0, -HALF]}>
-            <coneGeometry args={[0.12, 0.26, 4]} />
+            <coneGeometry args={[0.12, 0.26, 8]} />
             <Mat color={color} />
           </mesh>
           <mesh position={[0.13, 0, 0]} rotation={[0, 0, HALF]}>
-            <coneGeometry args={[0.12, 0.26, 4]} />
+            <coneGeometry args={[0.12, 0.26, 8]} />
             <Mat color={color} />
           </mesh>
-          <Ico r={0.06} d={0} color={accent} />
+          <Ico r={0.06} d={2} color={accent} />
         </group>
       );
     case 'gorro':
       return (
         <>
           <mesh position={[0, 0.55, 0]} scale={[1.05, 0.95, 1]}>
-            <sphereGeometry args={[0.6, 8, 4, 0, Math.PI * 2, 0, HALF]} />
+            <sphereGeometry args={[0.6, 28, 12, 0, Math.PI * 2, 0, HALF]} />
             <Mat color={color} />
           </mesh>
           <mesh position={[0, 0.57, 0]} rotation={[HALF, 0, 0]} scale={[1.05, 1, 1]}>
-            <torusGeometry args={[0.6, 0.07, 4, 10]} />
+            <torusGeometry args={[0.6, 0.07, 8, 28]} />
             <Mat color={accent} />
           </mesh>
-          <Ico r={0.13} d={0} color={accent} position={[0, 1.15, 0]} />
+          <Ico r={0.13} d={2} color={accent} position={[0, 1.15, 0]} />
         </>
       );
     case 'audifonos':
       return (
         <>
           <mesh position={[0, 0.45, 0]}>
-            <torusGeometry args={[0.64, 0.045, 4, 12, Math.PI]} />
+            <torusGeometry args={[0.64, 0.045, 8, 28, Math.PI]} />
             <Mat color={color} />
           </mesh>
           {[-0.64, 0.64].map((x) => (
             <mesh key={x} position={[x, 0.42, 0]} rotation={[0, 0, HALF]}>
-              <cylinderGeometry args={[0.15, 0.15, 0.12, 8]} />
+              <cylinderGeometry args={[0.15, 0.15, 0.12, 20]} />
               <Mat color={accent} />
             </mesh>
           ))}
@@ -320,7 +358,7 @@ function Birrete() {
   return (
     <group position={[0, 0.86, 0]} rotation={[-0.12, 0, 0.08]}>
       <mesh>
-        <cylinderGeometry args={[0.42, 0.46, 0.2, 8]} />
+        <cylinderGeometry args={[0.42, 0.46, 0.2, 24]} />
         <Mat color={C.navy} />
       </mesh>
       <mesh position={[0, 0.12, 0]} rotation={[0, Math.PI / 4, 0]}>
@@ -328,10 +366,10 @@ function Birrete() {
         <Mat color={C.navy} />
       </mesh>
       <mesh position={[0.42, -0.02, 0.3]}>
-        <cylinderGeometry args={[0.015, 0.015, 0.28, 4]} />
+        <cylinderGeometry args={[0.015, 0.015, 0.28, 6]} />
         <Mat color={C.yellow} />
       </mesh>
-      <Ico r={0.06} d={0} color={C.yellow} position={[0.42, -0.18, 0.3]} />
+      <Ico r={0.06} d={2} color={C.yellow} position={[0.42, -0.18, 0.3]} />
     </group>
   );
 }

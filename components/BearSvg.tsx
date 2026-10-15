@@ -1,5 +1,6 @@
 // Oso 2D (facetado, estilo low poly) para la web: ranking, registro y fallback del juego.
 // Usa la misma configuración de avatar que el modelo 3D de la app nativa.
+import { useId } from 'react';
 import { optionOf, type Avatar } from '@/shared/avatar';
 
 /**
@@ -27,6 +28,249 @@ interface Props {
 }
 
 const INK = '#1E1E1E';
+const GRAD_NAVY = '#0B2A66';
+const GRAD_GOLD = '#FFD23F';
+const TRIM = '#FF8D28';
+
+/* ───────────────────────── Geometría low poly ─────────────────────────
+ * Copia del render de referencia: oso blanco de cuerpo entero, franela de manga corta con ribete
+ * en el cuello y las mangas, patas redondas y pies con deditos.
+ *
+ * Cada pieza es una cúpula partida en anillos de vértices (con un poco de ruido fijo para que se
+ * vea tallada a mano). Cada triángulo se sombrea según su inclinación respecto a una luz arriba a
+ * la izquierda. Se pinta la silueta con el color plano y encima una capa de facetas blancas o
+ * azuladas semitransparentes: así sirve con cualquier color de pelaje o ropa.
+ * Todo se calcula una sola vez al cargar el módulo.
+ */
+
+type P = [number, number];
+type V3 = [number, number, number];
+interface Facet {
+  pts: string;
+  fill: string;
+  op: number;
+}
+interface Part {
+  outline: string;
+  facets: Facet[];
+}
+interface Ring {
+  f: number; // fracción del radio (1 = silueta)
+  n: number; // vértices en el anillo
+  off?: number; // giro del anillo, en pasos
+}
+
+const LIGHT: V3 = (() => {
+  const v: V3 = [-0.45, -0.6, 0.66];
+  const l = Math.hypot(...v);
+  return [v[0] / l, v[1] / l, v[2] / l];
+})();
+const NEUTRAL = 0.66; // una cara mirando de frente queda con el color plano
+const SHADOW = '#3A5478';
+
+const hash = (n: number) => {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+};
+const fmt = (x: V3 | P) => `${x[0].toFixed(1)},${x[1].toFixed(1)}`;
+
+function dome({
+  cx,
+  cy,
+  rx,
+  ry,
+  h,
+  rings,
+  seed = 1,
+  shape = () => 1,
+}: {
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  h: number;
+  rings: Ring[];
+  seed?: number;
+  shape?: (a: number) => number;
+}): Part {
+  const verts: V3[][] = [[[cx, cy, h]]];
+  const angles: number[][] = [[0]];
+  rings.forEach(({ f, n, off = 0 }, k) => {
+    const step = (Math.PI * 2) / n;
+    const ring: V3[] = [];
+    const angs: number[] = [];
+    for (let i = 0; i < n; i++) {
+      const a = (i + off + (hash(seed * 97 + k * 31 + i) - 0.5) * 0.5) * step;
+      const fr = f >= 1 ? 1 : f * (1 + (hash(seed * 13 + k * 7 + i * 3) - 0.5) * 0.14);
+      const sh = shape(a);
+      ring.push([cx + Math.cos(a) * rx * fr * sh, cy + Math.sin(a) * ry * fr * sh, h * Math.sqrt(Math.max(0, 1 - fr * fr))]);
+      angs.push(a);
+    }
+    verts.push(ring);
+    angles.push(angs);
+  });
+
+  // Une cada anillo con el siguiente avanzando por ángulo.
+  const tris: [V3, V3, V3][] = [];
+  for (let k = 0; k < verts.length - 1; k++) {
+    const A = verts[k];
+    const B = verts[k + 1];
+    if (A.length === 1) {
+      B.forEach((b, j) => tris.push([A[0], b, B[(j + 1) % B.length]]));
+      continue;
+    }
+    const ua = (i: number) => angles[k][i % A.length] + Math.PI * 2 * Math.floor(i / A.length);
+    const ub = (j: number) => angles[k + 1][j % B.length] + Math.PI * 2 * Math.floor(j / B.length);
+    let i = 0;
+    let j = 0;
+    while (i < A.length || j < B.length) {
+      if (j >= B.length || (i < A.length && ua(i + 1) < ub(j + 1))) {
+        tris.push([A[i % A.length], A[(i + 1) % A.length], B[j % B.length]]);
+        i++;
+      } else {
+        tris.push([A[i % A.length], B[(j + 1) % B.length], B[j % B.length]]);
+        j++;
+      }
+    }
+  }
+
+  const facets = tris.map(([p, q, r]) => {
+    const u = [q[0] - p[0], q[1] - p[1], q[2] - p[2]];
+    const v = [r[0] - p[0], r[1] - p[1], r[2] - p[2]];
+    let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    if (n[2] < 0) n = n.map((x) => -x);
+    const len = Math.hypot(n[0], n[1], n[2]) || 1;
+    const lum = Math.max(0, (n[0] * LIGHT[0] + n[1] * LIGHT[1] + n[2] * LIGHT[2]) / len);
+    const lit = lum >= NEUTRAL;
+    return {
+      pts: [p, q, r].map(fmt).join(' '),
+      fill: lit ? '#FFFFFF' : SHADOW,
+      op: +(lit ? ((lum - NEUTRAL) / (1 - NEUTRAL)) * 0.3 : ((NEUTRAL - lum) / NEUTRAL) * 0.3).toFixed(3),
+    };
+  });
+
+  return { outline: verts[verts.length - 1].map(fmt).join(' '), facets };
+}
+
+/** Cúpula con la silueta de un polígono cualquiera, vista desde `c`. */
+function blob(poly: P[], c: P, h: number, rings: Ring[], seed: number): Part {
+  const [cx, cy] = c;
+  const shape = (a: number) => {
+    const dx = Math.cos(a);
+    const dy = Math.sin(a);
+    let best = Infinity;
+    poly.forEach(([x1, y1], i) => {
+      const [x2, y2] = poly[(i + 1) % poly.length];
+      const ex = x2 - x1;
+      const ey = y2 - y1;
+      const den = dx * ey - dy * ex;
+      if (Math.abs(den) < 1e-9) return;
+      const t = ((x1 - cx) * ey - (y1 - cy) * ex) / den;
+      const u = ((x1 - cx) * dy - (y1 - cy) * dx) / den;
+      if (t > 0 && u >= 0 && u <= 1) best = Math.min(best, t);
+    });
+    return best === Infinity ? 1 : best;
+  };
+  return dome({ cx, cy, rx: 1, ry: 1, h, rings, seed, shape });
+}
+
+const flip = (poly: P[]): P[] => poly.map(([x, y]) => [200 - x, y]);
+const flipP = ([x, y]: P): P => [200 - x, y];
+const pts = (poly: P[]) => poly.map(fmt).join(' ');
+
+/* Cabeza */
+const HEAD = dome({
+  cx: 100,
+  cy: 92,
+  rx: 64,
+  ry: 62,
+  h: 60,
+  seed: 3,
+  rings: [
+    { f: 0.36, n: 6 },
+    { f: 0.7, n: 12, off: 0.3 },
+    { f: 1, n: 22 },
+  ],
+  // Más ancha en los cachetes y un poco plana arriba.
+  shape: (a) => 1 + 0.05 * Math.cos(2 * a) - 0.05 * Math.max(0, -Math.sin(a)),
+});
+// El hocico va dentro del grupo de la cara (que sube 12 unidades), por eso su centro está en 121.
+const MUZZLE = dome({
+  cx: 100,
+  cy: 121,
+  rx: 27,
+  ry: 20,
+  h: 20,
+  seed: 5,
+  rings: [
+    { f: 0.5, n: 6, off: 0.5 },
+    { f: 1, n: 14 },
+  ],
+  shape: (a) => 1 + 0.07 * Math.cos(2 * a),
+});
+const earAt = (cx: number, seed: number) => ({
+  outer: dome({ cx, cy: 44, rx: 20, ry: 19, h: 14, seed, rings: [{ f: 0.55, n: 6 }, { f: 1, n: 12 }] }),
+  inner: dome({ cx: cx + (cx < 100 ? 2 : -2), cy: 46, rx: 11, ry: 10, h: -6, seed: seed + 1, rings: [{ f: 1, n: 8 }] }),
+});
+const EARS = [earAt(48, 7), earAt(152, 11)];
+
+/* Cuerpo */
+const TORSO_POLY: P[] = [
+  [100, 138], [128, 140], [150, 146], [163, 156], [168, 172], [166, 202], [164, 232], [162, 249],
+  [100, 252], [38, 249], [36, 232], [34, 202], [32, 172], [37, 156], [50, 146], [72, 140],
+];
+const TORSO = blob(TORSO_POLY, [100, 196], 46, [{ f: 0.4, n: 8 }, { f: 0.75, n: 14, off: 0.4 }, { f: 1, n: 26 }], 13);
+
+const LEG_L: P[] = [[34, 236], [99, 236], [99, 292], [96, 336], [34, 336], [30, 290]];
+const FOOT_L: P[] = [[28, 324], [96, 324], [100, 344], [97, 360], [30, 360], [24, 344]];
+const SLEEVE_L: P[] = [[54, 140], [36, 148], [18, 162], [6, 180], [1, 190], [37, 208], [42, 188], [46, 168]];
+const CUFF_L: P[] = [[1, 188], [37, 206], [35, 214], [-1, 196]];
+const FOREARM_L: P[] = [[3, 192], [36, 208], [38, 228], [30, 238], [8, 238], [1, 222]];
+const TOES_L: P[] = [[45, 354], [57, 355.5], [69, 354]];
+const PAW_AT = { L: [20, 245] as P, R: flipP([20, 245]) };
+
+const side = (flipped: boolean, seed: number) => {
+  const f = (poly: P[]) => (flipped ? flip(poly) : poly);
+  const c = (p: P) => (flipped ? flipP(p) : p);
+  return {
+    leg: blob(f(LEG_L), c([65, 288]), 30, [{ f: 0.45, n: 7 }, { f: 1, n: 18 }], seed),
+    foot: blob(f(FOOT_L), c([62, 342]), 16, [{ f: 0.5, n: 6 }, { f: 1, n: 16 }], seed + 1),
+    sleeve: blob(f(SLEEVE_L), c([26, 176]), 16, [{ f: 0.5, n: 6 }, { f: 1, n: 16 }], seed + 2),
+    forearm: blob(f(FOREARM_L), c([19, 216]), 14, [{ f: 1, n: 10 }], seed + 3),
+    paw: dome({ cx: c(PAW_AT.L)[0], cy: PAW_AT.L[1], rx: 20, ry: 19, h: 16, seed: seed + 4, rings: [{ f: 0.5, n: 6 }, { f: 1, n: 14 }] }),
+    cuff: pts(f(CUFF_L)),
+    toes: f(TOES_L),
+  };
+};
+const SIDES = { L: side(false, 40), R: side(true, 60) };
+
+/** Silueta en color plano + facetas de luz y sombra. */
+function Shaded({ part, color }: { part: Part; color: string }) {
+  return (
+    <g>
+      <polygon points={part.outline} fill={color} />
+      <FacetsOnly part={part} />
+    </g>
+  );
+}
+
+/** Solo la capa de facetas (para sombrear lo que ya se dibujó encima de la silueta). */
+function FacetsOnly({ part }: { part: Part }) {
+  return (
+    <g>
+      {part.facets.map((f, i) => (
+        <polygon key={i} points={f.pts} fill={f.fill} fillOpacity={f.op} />
+      ))}
+    </g>
+  );
+}
+
+function Paw({ side: s, fur }: { side: 'L' | 'R'; fur: string }) {
+  return <Shaded part={SIDES[s].paw} color={fur} />;
+}
+
+// Lo que sube la cara (ojos, hocico, nariz, boca, lentes) para que quede como en la referencia.
+const FACE_UP = 'translate(0 -12)';
 
 export function BearSvg({ avatar, graduado = false, crop = 'full', mood = 'normal', look, className, title }: Props) {
   const fur = optionOf('pelaje', avatar.pelaje);
@@ -35,10 +279,15 @@ export function BearSvg({ avatar, graduado = false, crop = 'full', mood = 'norma
   const acc = optionOf('accesorio', avatar.accesorio);
   const furC = fur.color;
   const furS = fur.accent ?? '#DDE6EE';
+  const shirt = graduado ? GRAD_NAVY : ropa.color;
+  // Ribete naranja como en la referencia; si la ropa ya es naranja, usa su propio acento.
+  const trim = graduado ? GRAD_GOLD : ropa.color.toUpperCase() === TRIM ? (ropa.accent ?? INK) : TRIM;
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const torsoClip = `${uid}-torso`;
 
   return (
     <svg
-      viewBox={crop === 'head' ? '28 6 144 144' : '0 0 200 240'}
+      viewBox={crop === 'head' ? '28 6 144 144' : '-8 0 216 368'}
       className={className}
       role={title ? 'img' : undefined}
       aria-label={title}
@@ -46,92 +295,79 @@ export function BearSvg({ avatar, graduado = false, crop = 'full', mood = 'norma
     >
       {crop === 'full' && (
         <g>
-          {/* Torso + ropa */}
-          <polygon points="52,240 60,168 100,152 140,168 148,240" fill={ropa.color} />
-          <polygon points="100,152 140,168 148,240 100,240" fill={ropa.accent} opacity={0.35} />
-          {ropa.id === 'pelotero' &&
-            [178, 198, 218].map((y) => <rect key={y} x="56" y={y} width="88" height="5" fill={ropa.accent} />)}
-          {ropa.id === 'bata' && (
-            <>
-              <polygon points="86,156 100,200 100,240 92,240" fill={ropa.accent} />
-              <polygon points="114,156 100,200 100,240 108,240" fill={ropa.accent} />
-            </>
-          )}
-          {ropa.id === 'chaqueta' && <rect x="98" y="160" width="4" height="80" fill={ropa.accent} />}
-          {ropa.id === 'liquiliqui' && (
-            <>
-              {/* Cuello cerrado y botonadura dorada */}
-              <polygon points="84,152 116,152 114,164 86,164" fill={ropa.accent} />
-              <rect x="99" y="164" width="2" height="76" fill={ropa.accent} />
-              {[176, 192, 208, 224].map((y) => (
-                <circle key={y} cx="100" cy={y} r="3" fill="#C9A227" />
+          <defs>
+            <clipPath id={torsoClip}>
+              <polygon points={TORSO.outline} />
+            </clipPath>
+          </defs>
+
+          {/* Sombra en el piso */}
+          <ellipse cx="100" cy="360" rx="84" ry="6" fill={SHADOW} opacity={0.18} />
+
+          {/* Piernas y pies con deditos */}
+          {(['L', 'R'] as const).map((s) => (
+            <g key={s}>
+              <Shaded part={SIDES[s].leg} color={furC} />
+              <Shaded part={SIDES[s].foot} color={furC} />
+              {SIDES[s].toes.map(([x, y]) => (
+                <circle key={x} cx={x} cy={y} r="2.6" fill={INK} />
               ))}
-              <rect x="66" y="186" width="20" height="3" rx="1.5" fill={ropa.accent} />
-              <rect x="114" y="186" width="20" height="3" rx="1.5" fill={ropa.accent} />
-            </>
+            </g>
+          ))}
+
+          {/* Franela: color plano, estampado y luego las facetas encima */}
+          <polygon points={TORSO.outline} fill={shirt} />
+          <g clipPath={`url(#${torsoClip})`}>
+            {!graduado && <ShirtPattern ropa={ropa} />}
+            {graduado && <polygon points="86,150 100,180 114,150" fill={GRAD_GOLD} />}
+          </g>
+          <FacetsOnly part={TORSO} />
+          {/* Ribete del cuello */}
+          {(graduado || ropa.id !== 'liquiliqui') && (
+            <path d="M48 140 Q100 170 152 140 L155 149 Q100 181 45 149 Z" fill={trim} />
           )}
-          {ropa.id === 'playera' && (
-            <>
-              {/* Cuello abierto y estampado de flores */}
-              <polygon points="88,156 100,180 112,156" fill="#FFFFFF" opacity={0.9} />
-              {[
-                [72, 186],
-                [124, 182],
-                [90, 214],
-                [130, 222],
-                [64, 226],
-                [110, 200],
-              ].map(([x, y]) => (
-                <g key={`${x}-${y}`} fill={ropa.accent}>
-                  <circle cx={x - 3} cy={y} r="3" />
-                  <circle cx={x + 3} cy={y} r="3" />
-                  <circle cx={x} cy={y - 3} r="3" />
-                  <circle cx={x} cy={y + 3} r="3" />
-                  <circle cx={x} cy={y} r="2" fill="#FFFFFF" />
-                </g>
-              ))}
-            </>
-          )}
-          {/* Brazos */}
-          <polygon points="60,170 40,214 54,222 70,186" fill={ropa.color} />
-          <polygon points="140,170 160,214 146,222 130,186" fill={ropa.color} />
-          <circle cx="47" cy="220" r="9" fill={furC} />
-          <circle cx="153" cy="220" r="9" fill={furC} />
-          {graduado && (
-            <>
-              <polygon points="52,240 60,168 100,152 140,168 148,240" fill="#0B2A66" />
-              <polygon points="88,156 100,176 112,156" fill="#FFD23F" />
-            </>
-          )}
+
+          {/* Brazos: antebrazo, manga con ribete y pata */}
+          {(['L', 'R'] as const).map((s) => (
+            <g key={s}>
+              <Shaded part={SIDES[s].forearm} color={furC} />
+              <Shaded part={SIDES[s].sleeve} color={shirt} />
+              <polygon points={SIDES[s].cuff} fill={trim} />
+              <Paw side={s} fur={furC} />
+            </g>
+          ))}
         </g>
       )}
 
       {/* Orejas */}
-      <polygon points="44,44 60,24 80,38 70,62" fill={furC} />
-      <polygon points="56,42 63,32 72,40 66,52" fill={furS} />
-      <polygon points="156,44 140,24 120,38 130,62" fill={furC} />
-      <polygon points="144,42 137,32 128,40 134,52" fill={furS} />
+      {EARS.map((ear, i) => (
+        <g key={i}>
+          <Shaded part={ear.outer} color={furC} />
+          <Shaded part={ear.inner} color={furS} />
+        </g>
+      ))}
 
       {/* Cabeza facetada */}
-      <polygon points="100,34 146,52 162,98 146,140 100,156 54,140 38,98 54,52" fill={furC} />
-      <polygon points="100,34 146,52 162,98 100,96" fill="#FFFFFF" opacity={0.35} />
-      <polygon points="146,140 100,156 100,96 162,98" fill={furS} opacity={0.6} />
+      <Shaded part={HEAD} color={furC} />
 
-      {/* Hocico, nariz y cara */}
-      <polygon points="80,112 100,102 120,112 116,132 100,140 84,132" fill={furS} />
-      <polygon points="92,110 108,110 100,120" fill={INK} />
-      <Face mood={mood} look={look} />
+      {/* Hocico, nariz redondeada y cara */}
+      <g transform={FACE_UP}>
+        <Shaded part={MUZZLE} color={furC} />
+        <path d="M89 111 Q100 105 111 111 Q110 118 100 121 Q90 118 89 111 Z" fill={INK} />
+        <ellipse cx="95.5" cy="110" rx="3.2" ry="1.6" fill="#FFFFFF" opacity={0.75} />
+        <Face mood={mood} look={look} />
+      </g>
 
       {/* Accesorios */}
       {acc.id === 'lentes' && (
-        <g stroke={acc.color} strokeWidth="4" fill="none">
+        <g stroke={acc.color} strokeWidth="4" fill="none" transform={FACE_UP}>
           <circle cx="78" cy="90" r="14" />
           <circle cx="122" cy="90" r="14" />
           <path d="M92 90 L108 90" />
         </g>
       )}
       {acc.id === 'lentes-sol' && (
-        <g>
+        <g transform={FACE_UP}>
           <path d="M60 82 H94 Q94 102 78 102 Q60 102 60 82 Z" fill={acc.color} />
           <path d="M106 82 H140 Q140 102 122 102 Q106 102 106 82 Z" fill={acc.color} />
           <path d="M94 86 Q100 82 106 86" stroke={acc.color} strokeWidth="4" fill="none" />
@@ -261,31 +497,87 @@ export function BearSvg({ avatar, graduado = false, crop = 'full', mood = 'norma
   );
 }
 
+/* ───────────────────────── Estampados de la ropa ───────────────────────── */
+
+type Ropa = ReturnType<typeof optionOf>;
+
+function ShirtPattern({ ropa }: { ropa: Ropa }) {
+  return (
+    <>
+      {ropa.id === 'pelotero' &&
+        [178, 198, 218, 238].map((y) => <rect key={y} x="20" y={y} width="160" height="6" fill={ropa.accent} />)}
+      {ropa.id === 'bata' && (
+        <>
+          <polygon points="86,156 100,200 100,240 92,240" fill={ropa.accent} />
+          <polygon points="114,156 100,200 100,240 108,240" fill={ropa.accent} />
+        </>
+      )}
+      {ropa.id === 'chaqueta' && <rect x="98" y="160" width="4" height="80" fill={ropa.accent} />}
+      {ropa.id === 'liquiliqui' && (
+        <>
+          {/* Cuello cerrado y botonadura dorada */}
+          <polygon points="84,152 116,152 114,164 86,164" fill={ropa.accent} />
+          <rect x="99" y="164" width="2" height="76" fill={ropa.accent} />
+          {[176, 192, 208, 224].map((y) => (
+            <circle key={y} cx="100" cy={y} r="3" fill="#C9A227" />
+          ))}
+          <rect x="66" y="186" width="20" height="3" rx="1.5" fill={ropa.accent} />
+          <rect x="114" y="186" width="20" height="3" rx="1.5" fill={ropa.accent} />
+        </>
+      )}
+      {ropa.id === 'playera' && (
+        <>
+          {/* Cuello abierto y estampado de flores */}
+          <polygon points="88,156 100,180 112,156" fill="#FFFFFF" opacity={0.9} />
+          {[
+            [72, 186],
+            [124, 182],
+            [90, 214],
+            [130, 222],
+            [64, 226],
+            [110, 200],
+          ].map(([x, y]) => (
+            <g key={`${x}-${y}`} fill={ropa.accent}>
+              <circle cx={x - 3} cy={y} r="3" />
+              <circle cx={x + 3} cy={y} r="3" />
+              <circle cx={x} cy={y - 3} r="3" />
+              <circle cx={x} cy={y + 3} r="3" />
+              <circle cx={x} cy={y} r="2" fill="#FFFFFF" />
+            </g>
+          ))}
+        </>
+      )}
+    </>
+  );
+}
+
 /* ───────────────────────── Objetos en las patas ───────────────────────── */
 
 function HandItem({ id, color, accent = '#000', fur }: { id: string; color: string; accent?: string; fur: string }) {
   if (id === 'arepa') {
     return (
-      <g>
-        {/* Arepa rellena (queso y caraotas), en la pata derecha */}
-        <ellipse cx="150" cy="206" rx="19" ry="14" fill={color} stroke={accent} strokeWidth="2" />
-        <path d="M134 204 Q150 196 166 204 Q150 212 134 204 Z" fill="#3A2416" />
-        <path d="M138 203 Q150 198 162 203" stroke="#FFFFFF" strokeWidth="3" fill="none" strokeLinecap="round" />
-        {[
-          [142, 214],
-          [154, 216],
-          [160, 210],
-          [144, 196],
-        ].map(([x, y]) => (
-          <circle key={`${x}-${y}`} cx={x} cy={y} r="1.6" fill={accent} />
-        ))}
-        <circle cx="153" cy="220" r="9" fill={fur} />
-      </g>
+      <>
+        <g transform="translate(27 10)">
+          {/* Arepa rellena (queso y caraotas), en la pata derecha */}
+          <ellipse cx="150" cy="206" rx="19" ry="14" fill={color} stroke={accent} strokeWidth="2" />
+          <path d="M134 204 Q150 196 166 204 Q150 212 134 204 Z" fill="#3A2416" />
+          <path d="M138 203 Q150 198 162 203" stroke="#FFFFFF" strokeWidth="3" fill="none" strokeLinecap="round" />
+          {[
+            [142, 214],
+            [154, 216],
+            [160, 210],
+            [144, 196],
+          ].map(([x, y]) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="1.6" fill={accent} />
+          ))}
+        </g>
+        <Paw side="R" fur={fur} />
+      </>
     );
   }
   if (id === 'cuatro') {
     return (
-      <g transform="rotate(-28 108 200)">
+      <g transform="translate(0 12) rotate(-28 108 200)">
         {/* Cuatro venezolano cruzado sobre el pecho */}
         <rect x="118" y="194" width="58" height="7" rx="2" fill={accent} />
         <rect x="170" y="191" width="14" height="13" rx="3" fill={accent} />
@@ -304,8 +596,8 @@ function HandItem({ id, color, accent = '#000', fur }: { id: string; color: stri
       <g>
         {/* Una maraca en cada pata */}
         {[
-          [47, 220, -18],
-          [153, 220, 18],
+          [PAW_AT.L[0], PAW_AT.L[1], -18],
+          [PAW_AT.R[0], PAW_AT.R[1], 18],
         ].map(([x, y, r]) => (
           <g key={x} transform={`rotate(${r} ${x} ${y})`}>
             <rect x={x - 2.5} y={y - 26} width="5" height="24" rx="2" fill="#8A5A2B" />
@@ -314,8 +606,8 @@ function HandItem({ id, color, accent = '#000', fur }: { id: string; color: stri
             <circle cx={x - 4} cy={y - 42} r="2" fill="#FFFFFF" opacity={0.7} />
           </g>
         ))}
-        <circle cx="47" cy="220" r="9" fill={fur} />
-        <circle cx="153" cy="220" r="9" fill={fur} />
+        <Paw side="L" fur={fur} />
+        <Paw side="R" fur={fur} />
       </g>
     );
   }
@@ -481,7 +773,6 @@ function Face({ mood, look }: { mood: Mood; look?: Look }) {
         <>
           <RoundEyes look={look} />
           <path d="M100 120 L100 127 M91 127 Q95.5 132 100 127 Q104.5 132 109 127" {...stroke} strokeWidth="2.5" />
-          <Blush />
         </>
       );
   }
