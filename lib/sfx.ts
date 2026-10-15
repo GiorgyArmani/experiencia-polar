@@ -1,16 +1,20 @@
 // Sonidos 16 bits generados en el navegador (Web Audio): ondas cuadradas/triangulares como una consola clásica.
-// Sin archivos que descargar. El volumen es bajo a propósito y se puede silenciar (se recuerda en el navegador).
+// Sin archivos que descargar. El volumen se puede regular o silenciar (se recuerda en el navegador).
 
 type Wave = OscillatorType;
 type Note = [freq: number, dur: number, wave?: Wave, vol?: number];
 
 const MUTE_KEY = 'polar_mute';
+const VOLUME_KEY = 'polar_volume';
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 // Volumen general: los parlantes de teléfono son débiles; los volúmenes de cada sonido son relativos a este.
 const MASTER_VOLUME = 2.6;
 let muted = readMuted();
+// Volumen elegido por el jugador (0 a 1); 1 = el volumen máximo de siempre.
+let volume = readVolume();
 const listeners = new Set<(m: boolean) => void>();
+const volumeListeners = new Set<(v: number) => void>();
 
 function readMuted() {
   try {
@@ -20,6 +24,20 @@ function readMuted() {
   }
 }
 
+function readVolume() {
+  try {
+    const v = typeof window !== 'undefined' ? parseFloat(window.localStorage.getItem(VOLUME_KEY) ?? '') : NaN;
+    return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1;
+  } catch {
+    return 1;
+  }
+}
+
+// El oído percibe el volumen de forma logarítmica: con la curva al cuadrado el deslizador se siente parejo.
+function masterGain() {
+  return MASTER_VOLUME * volume * volume;
+}
+
 function audio(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   if (!ctx) {
@@ -27,7 +45,7 @@ function audio(): AudioContext | null {
     if (!AC) return null;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = MASTER_VOLUME;
+    master.gain.value = masterGain();
     master.connect(ctx.destination);
   }
   // iOS/Chrome arrancan el audio suspendido hasta el primer toque.
@@ -87,9 +105,30 @@ export function onMuteChange(l: (m: boolean) => void) {
   };
 }
 
+export function getVolume() {
+  return volume;
+}
+
+/** Volumen de 0 a 1 (se recuerda en el navegador). */
+export function setVolume(v: number) {
+  volume = Math.min(1, Math.max(0, v));
+  try {
+    window.localStorage.setItem(VOLUME_KEY, String(volume));
+  } catch {}
+  if (master && ctx) master.gain.setValueAtTime(masterGain(), ctx.currentTime);
+  volumeListeners.forEach((l) => l(volume));
+}
+
+export function onVolumeChange(l: (v: number) => void) {
+  volumeListeners.add(l);
+  return () => {
+    volumeListeners.delete(l);
+  };
+}
+
 /** Toca una secuencia de notas (freq 0 = silencio). */
 function play(notes: Note[], gap = 0) {
-  if (muted) return;
+  if (muted || volume === 0) return;
   const ac = audio();
   if (!ac) return;
   let t = ac.currentTime + 0.01;
@@ -114,7 +153,7 @@ function play(notes: Note[], gap = 0) {
 
 /** Barrido de frecuencia (para "bwomp", saltos, etc.). */
 function sweep(from: number, to: number, dur: number, wave: Wave = 'square', vol = 0.06) {
-  if (muted) return;
+  if (muted || volume === 0) return;
   const ac = audio();
   if (!ac) return;
   const t = ac.currentTime + 0.01;
