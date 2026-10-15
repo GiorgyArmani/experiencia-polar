@@ -12,8 +12,8 @@ create table if not exists public.players (
   email             text unique,                  -- opcional
   telefono          text,                         -- ya no se pide
   sede              text not null,
-  oso_nombre        text not null,
-  avatar            jsonb not null default '{}'::jsonb, -- { pelaje, cabeza, ropa, accesorio }
+  oso_nombre        text not null,                -- apodo en el ranking
+  avatar            jsonb not null default '{}'::jsonb, -- { piel, peinado, pelo, ropa, accesorio }
   puntos            integer not null default 0,
   completed         integer[] not null default '{}',
   current_trivia    integer,
@@ -34,6 +34,9 @@ alter table public.players alter column telefono drop not null;
 -- Contrarreloj: cuándo arrancó la trivia en curso y cuándo vio la pregunta actual.
 alter table public.players add column if not exists trivia_started_at timestamptz;
 alter table public.players add column if not exists question_started_at timestamptz;
+
+-- 3 preguntas por estación sorteadas de un banco de 10: índices del banco que le tocaron en la trivia en curso.
+alter table public.players add column if not exists question_ids integer[] not null default '{}';
 
 -- Migración desde la versión PWA (look → avatar). No hace nada en una base nueva.
 alter table public.players add column if not exists avatar jsonb not null default '{}'::jsonb;

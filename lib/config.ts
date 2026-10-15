@@ -47,6 +47,8 @@ export const config = {
   windows: parseWindows(process.env.TRIVIA_WINDOWS),
   // Puntos máximos por respuesta correcta (si responde rápido); baja hasta la mitad si tarda.
   pointsPerCorrect: Math.max(0, Number(process.env.POINTS_PER_CORRECT ?? 100)),
+  // Última estación (la más difícil): puntos que resta cada respuesta incorrecta. 0 = no resta.
+  wrongPenaltyLast: Math.max(0, Number(process.env.WRONG_PENALTY_LAST ?? 50)),
   // Contrarreloj: segundos para responder TODA la trivia.
   triviaSeconds: Math.max(10, Number(process.env.TRIVIA_SECONDS ?? 60)),
   sedes: parseSedes(process.env.SEDES),

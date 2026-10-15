@@ -4,18 +4,18 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { AVATAR_PARTS, DEFAULT_AVATAR, optionOf, stepAvatar, type Avatar, type AvatarPart } from '@/shared/avatar';
+import { AVATAR_PARTS, DEFAULT_AVATAR, optionOf, randomAvatar, stepAvatar, type Avatar, type AvatarPart } from '@/shared/avatar';
 import type { Sede } from '@/shared/types';
-import { BearSvg } from '@/components/BearSvg';
+import { AvatarSvg } from '@/components/AvatarSvg';
 import { Chevron, Logos, Screen, Spinner, Stepper } from '@/components/ui';
 
-const PART_LABEL: Record<AvatarPart, string> = { pelaje: 'Pelaje', cabeza: 'Cabeza', ropa: 'Ropa', accesorio: 'Accesorio' };
+const PART_LABEL: Record<AvatarPart, string> = { piel: 'Piel', peinado: 'Peinado', pelo: 'Color de pelo', ropa: 'Ropa', accesorio: 'Accesorio' };
 
 export default function Registro() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [avatar, setAvatar] = useState<Avatar>(DEFAULT_AVATAR);
-  const [osoNombre, setOsoNombre] = useState('');
+  const [apodo, setApodo] = useState('');
   const [form, setForm] = useState({ nombre: '', cedula: '', email: '', sede: '' });
   const [sedes, setSedes] = useState<Sede[] | null>(null);
   const [error, setError] = useState('');
@@ -40,8 +40,8 @@ export default function Registro() {
   }
 
   function next() {
-    if (!osoNombre.trim()) {
-      setError('Ponle nombre a tu oso para continuar');
+    if (!apodo.trim()) {
+      setError('Escribe tu apodo para continuar');
       return;
     }
     setError('');
@@ -53,7 +53,7 @@ export default function Registro() {
     setSending(true);
     setError('');
     try {
-      await api.register({ ...form, osoNombre: osoNombre.trim(), avatar });
+      await api.register({ ...form, apodo: apodo.trim(), avatar });
       router.push('/reglas');
     } catch (err) {
       setError((err as Error).message);
@@ -65,10 +65,17 @@ export default function Registro() {
     return (
       <Screen>
         <Stepper step={1} />
-        <h1 className="title-display mt-3 text-center text-[30px]">Crea tu oso</h1>
+        <h1 className="title-display mt-3 text-center text-[30px]">Crea tu avatar</h1>
 
-        <div className="mx-auto mt-3 flex aspect-square w-[min(260px,62vw)] items-end justify-center overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky">
-          <BearSvg avatar={avatar} mood="feliz" className="h-[96%]" title={`Tu oso: ${describe(avatar)}`} />
+        <div className="relative mx-auto mt-3 flex aspect-square w-[min(240px,56vw)] items-end justify-center overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky">
+          <AvatarSvg avatar={avatar} mood="feliz" className="h-[94%]" title={`Tu avatar: ${describe(avatar)}`} />
+          <button
+            type="button"
+            onClick={() => setAvatar(randomAvatar())}
+            className="absolute right-2 top-2 rounded-full bg-white px-3 py-1 text-xs font-extrabold text-polar-blue shadow-arrow active:translate-y-[2px] active:shadow-none"
+          >
+            Sorpréndeme
+          </button>
         </div>
 
         <div className="mx-auto mt-3 flex w-[min(314px,86vw)] flex-col gap-2">
@@ -84,15 +91,15 @@ export default function Registro() {
         </div>
 
         <div className="mx-auto mt-4 flex w-[min(314px,80vw)] flex-col gap-1.5">
-          <label htmlFor="oso" className="text-sm font-extrabold uppercase tracking-wide">
-            Ponle nombre a tu oso
+          <label htmlFor="apodo" className="text-sm font-extrabold uppercase tracking-wide">
+            Tu apodo en el ranking
           </label>
           <input
-            id="oso"
-            value={osoNombre}
-            onChange={(e) => setOsoNombre(e.target.value)}
+            id="apodo"
+            value={apodo}
+            onChange={(e) => setApodo(e.target.value)}
             maxLength={24}
-            placeholder="Ej. Copo"
+            placeholder="Ej. Mari"
             autoComplete="off"
             className="h-[54px] rounded-full border-[3px] border-white bg-white px-[22px] text-lg font-bold text-polar-ink shadow-input-blue outline-none placeholder:text-[#8A8A8A]"
           />
@@ -102,7 +109,7 @@ export default function Registro() {
 
         <div className="mx-auto mt-auto grid w-full max-w-[344px] grid-cols-3 gap-3 px-4 pt-5">
           <Link href="/" className="btn-ghost">Atrás</Link>
-          <button type="button" onClick={next} className="btn-game col-span-2">¡Este es mi oso!</button>
+          <button type="button" onClick={next} className="btn-game col-span-2">¡Este soy yo!</button>
         </div>
         <p className="mt-4 text-center text-sm font-semibold">
           ¿Ya jugaste en otro teléfono?{' '}
@@ -123,11 +130,11 @@ export default function Registro() {
       <form id="datos" onSubmit={submit} className="mx-4 mt-3 flex flex-col gap-6 rounded-[20px] bg-white px-6 py-5 text-polar-ink">
         <div className="flex items-center gap-3 border-b border-[#E3E3E3] pb-3.5">
           <span className="block h-[52px] w-[52px] overflow-hidden rounded-full border-[3px] border-polar-blue bg-polar-sky">
-            <BearSvg avatar={avatar} crop="head" className="h-full w-full" />
+            <AvatarSvg avatar={avatar} crop="head" className="h-full w-full" />
           </span>
           <div className="flex flex-col">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#5A5A5A]">Tu oso</span>
-            <span className="text-lg font-extrabold">{osoNombre}</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#5A5A5A]">Tu apodo</span>
+            <span className="text-lg font-extrabold">{apodo}</span>
           </div>
         </div>
         <Field id="cedula" label="Cédula" inputMode="numeric" autoComplete="off" value={form.cedula} onChange={(v) => setForm({ ...form, cedula: v })} placeholder="12345678" />

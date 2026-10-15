@@ -21,7 +21,7 @@ export const api = {
     email: string;
     sede?: string;
     sedeCode?: string;
-    osoNombre: string;
+    apodo: string;
     avatar: Avatar;
   }) => call<RegisterResponse>('/api/register', { method: 'POST', body: JSON.stringify(body) }),
   login: (cedula: string) => call<RegisterResponse>('/api/login', { method: 'POST', body: JSON.stringify({ cedula }) }),

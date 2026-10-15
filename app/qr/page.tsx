@@ -5,7 +5,7 @@ import QRCode from 'qrcode';
 import { QR_INK, qrUrlFor } from '@/shared/qr';
 import { DEFAULT_AVATAR } from '@/shared/avatar';
 import { config } from '@/lib/config';
-import { BearSvg } from '@/components/BearSvg';
+import { AvatarSvg } from '@/components/AvatarSvg';
 import { PrintButton } from './PrintButton';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,7 @@ export const metadata = { title: 'QR · Experiencia UEP' };
 
 const PASOS = [
   { n: 1, t: 'Escanea', d: 'con la cámara de tu teléfono' },
-  { n: 2, t: 'Crea tu oso', d: 'y elige tu localidad' },
+  { n: 2, t: 'Crea tu avatar', d: 'y elige tu localidad' },
   { n: 3, t: 'Responde', d: 'y suma puntos para tu localidad' },
 ];
 
@@ -54,7 +54,7 @@ export default async function QrPoster() {
           </p>
         </header>
 
-        {/* QR con el globo de la UEP al centro, el oso asomado y su globo de diálogo. */}
+        {/* QR con el globo de la UEP al centro, un avatar asomado y su globo de diálogo. */}
         <div className="relative my-auto w-[44%] py-[2%]">
           <div className="rotate-[-1.5deg] rounded-[4cqw] border-[1cqw] border-polar-navy bg-white p-[6%] shadow-[1.6cqw_1.6cqw_0_#004572]">
             <div className="relative">
@@ -70,8 +70,8 @@ export default async function QrPoster() {
               </div>
             </div>
           </div>
-          <div className="absolute -right-[50%] bottom-[4%] aspect-[216/368] w-[44%] rotate-[6deg] overflow-hidden rounded-[3cqw] border-[0.8cqw] border-white bg-polar-sky px-[3%] pt-[6%] shadow-[1cqw_1cqw_0_#004572]">
-            <BearSvg avatar={DEFAULT_AVATAR} mood="feliz" className="h-full w-full" title="Oso polar de la Experiencia UEP" />
+          <div className="absolute -right-[50%] bottom-[4%] aspect-[216/300] w-[44%] rotate-[6deg] overflow-hidden rounded-[3cqw] border-[0.8cqw] border-white bg-polar-sky px-[3%] pt-[6%] shadow-[1cqw_1cqw_0_#004572]">
+            <AvatarSvg avatar={DEFAULT_AVATAR} mood="feliz" className="h-full w-full" title="Avatar de la Experiencia UEP" />
           </div>
           <div className="absolute -left-[50%] top-[24%] -rotate-[8deg] rounded-[2.5cqw] border-[0.6cqw] border-polar-navy bg-white px-[0.7em] py-[0.45em] text-[3.4cqw] font-extrabold leading-tight text-polar-navy shadow-[0.8cqw_0.8cqw_0_#004572]">
             ¡Escanéame!

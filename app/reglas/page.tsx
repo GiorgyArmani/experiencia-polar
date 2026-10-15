@@ -7,13 +7,14 @@ import { primerNombre } from '@/lib/frases';
 import { voiceFor } from '@/lib/sfx';
 import { DEFAULT_AVATAR } from '@/shared/avatar';
 import type { PublicPlayer } from '@/shared/types';
-import { BearSvg } from '@/components/BearSvg';
-import { Speech } from '@/components/BearTalk';
+import { AvatarSvg } from '@/components/AvatarSvg';
+import { Speech } from '@/components/Talk';
 import { Screen } from '@/components/ui';
 
 const PASOS = [
   { t: 'Escanea el QR', d: 'Es el mismo código en todas las estaciones. Cada escaneo te lleva al siguiente paso.' },
-  { t: 'Responde contra reloj', d: 'Tienes 1 minuto para toda la trivia. Mientras más rápido aciertes, más puntos sumas para tu localidad.' },
+  { t: 'Responde contra reloj', d: 'Son 3 preguntas por trivia y tienes 1 minuto para todas. Mientras más rápido aciertes, más puntos sumas para tu localidad.' },
+  { t: '¡Ojo con la última!', d: 'La Trivia 4 es la más difícil: cada respuesta incorrecta resta puntos.' },
   { t: 'Espera la próxima trivia', d: 'Cada trivia abre en su horario. Vuelve al mismo QR cuando abra.' },
   { t: 'Sube en el ranking', d: 'Al terminar las 4 trivias, mira cómo quedó tu localidad.' },
 ];
@@ -29,8 +30,7 @@ export default function Instrucciones() {
       .catch(() => setPlayer(null));
   }, []);
 
-  const oso = player?.osoNombre ?? 'Tu oso';
-  const saludo = player ? `¡Hola, ${primerNombre(player.nombre)}! Soy ${player.osoNombre}. Así se juega:` : '¡Hola! Así se juega:';
+  const saludo = player ? `¡Hola, ${primerNombre(player.nombre)}! Así se juega:` : '¡Hola! Así se juega:';
 
   return (
     <Screen>
@@ -39,14 +39,14 @@ export default function Instrucciones() {
           Instrucciones
         </h1>
 
-        {/* El oso y su globo, lado a lado: el texto nunca lo tapa. */}
+        {/* El avatar y su globo, lado a lado: el texto nunca lo tapa. */}
         <div className="mt-[max(16px,2.5dvh)] flex items-center gap-3">
-          <div className="aspect-[216/368] h-[clamp(118px,19dvh,168px)] shrink-0 overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky px-1 pt-2">
-            <BearSvg avatar={player?.avatar ?? DEFAULT_AVATAR} mood="feliz" className="h-full w-full" title={oso} />
+          <div className="aspect-[216/300] h-[clamp(110px,17dvh,150px)] shrink-0 overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky px-1 pt-2">
+            <AvatarSvg avatar={player?.avatar ?? DEFAULT_AVATAR} mood="feliz" className="h-full w-full" title="Tu avatar" />
           </div>
           <div className="relative min-w-0 flex-1">
-            {player !== undefined && <Speech text={saludo} voice={voiceFor(oso)} className="text-[15px]" />}
-            {/* Colita del globo apuntando al oso. */}
+            {player !== undefined && <Speech text={saludo} voice={voiceFor(player?.apodo ?? '')} className="text-[15px]" />}
+            {/* Colita del globo apuntando al avatar. */}
             <span
               className="absolute -left-[7px] top-5 h-3.5 w-3.5 rotate-45 border-b-[3px] border-l-[3px] border-polar-ink bg-white"
               aria-hidden

@@ -1,22 +1,22 @@
-// Lo que dice el oso, en español venezolano neutral (tuteo, sin modismos fuertes ni regionalismos de otros países).
-// Te habla por tu nombre y reacciona a lo que pasa, para que se sienta tu compañero.
-// `{n}` = tu nombre, `{oso}` = el nombre de tu oso, `{r}` = racha de aciertos.
+// Lo que piensa en voz alta el avatar (que eres tú), en español venezolano neutral
+// (sin modismos fuertes ni regionalismos de otros países). Reacciona a lo que pasa en el juego.
+// `{n}` = tu primer nombre, `{r}` = racha de aciertos.
 
 const POOLS = {
-  pregunta: ['¡Tú puedes, {n}!', 'Leamos con calma…', 'Esta me la sé… creo.', 'Confío en ti, {n}.', 'Vamos juntos, {n}.'],
-  mirando: ['¿Esa? Mmm…', '¿Seguro, {n}?', 'Interesante elección…', 'Mmm, puede ser…'],
+  pregunta: ['¡Yo puedo con esta!', 'Leamos con calma…', 'Esta me la sé… creo.', 'Concentración…', '¡Vamos con todo!'],
+  mirando: ['¿Esa? Mmm…', '¿Será esta?', 'Mmm, puede ser…', 'Déjame pensar…'],
   esperando: ['¡Crucemos los dedos!', 'Ay, ay, ay…', 'No miro, no miro…'],
-  acierto: ['¡Sabía que lo sabías!', '¡Eso, {n}!', '¡Qué cerebrito!', '¡Bien hecho!'],
-  racha: ['¡{r} seguidas! ¡Imparables!', '¡Racha de {r}, {n}!', '¡Vamos con todo! {r} de {r}'],
-  fallo: ['Uy… esa no era.', 'Casi, casi…', 'Ay, se nos escapó.'],
-  animo: ['No pasa nada, {n}. ¡La sacamos juntos!', 'Respira. Tú puedes con esta.', 'Yo sigo creyendo en ti, {n}.'],
-  apurado: ['¡Rápido, {n}, rápido!', '¡Se nos acaba el tiempo!', '¡Vamos, vamos, vamos!'],
-  tiempo: ['¡Uy, se nos acabó el tiempo! Igual lo hicimos muy bien.', '¡Qué carrera, {n}! La próxima vamos más rápido.'],
-  superada: ['¡Lo logramos, {n}! Estoy orgulloso.', '¡Somos un gran equipo!', '¡Trivia superada! ¡Choca esos cinco!'],
-  escanear: ['¡Busquemos el QR, {n}!', 'Tengo buen olfato para los QR…', '¿Dónde estará el QR? ¡Vamos!'],
-  espera: ['Me echo una siesta hasta la próxima… ¡no te olvides de mí!', 'Zzz… avísame cuando abra, {n}.', 'Recargo energía para la próxima.'],
-  final: ['¡Nos graduamos, {n}! Gracias por jugar conmigo.', '¡Lo hicimos juntos! Te voy a extrañar.'],
-  cosquillas: ['¡Ja, ja, cosquillas!', '¡Epa! ¿Qué pasó?', '¡Aquí estoy, {n}!', '¡Hola, {n}!'],
+  acierto: ['¡Lo sabía!', '¡Eso es!', '¡Pan comido!', '¡Bien!'],
+  racha: ['¡{r} seguidas! ¡Imparable!', '¡Racha de {r}!', '¡{r} de {r}! ¡Voy con todo!'],
+  fallo: ['Uy… esa no era.', 'Casi, casi…', 'Ay, se me escapó.'],
+  resta: ['¡Auch! Eso me restó puntos.', 'Uy… a pensar mejor la próxima.', 'Ay, ¡cuidado con la próxima!'],
+  apurado: ['¡Rápido, rápido!', '¡Se me acaba el tiempo!', '¡Vamos, vamos, vamos!'],
+  tiempo: ['¡Uy, se acabó el tiempo! Igual lo hice muy bien.', '¡Qué carrera! La próxima voy más rápido.'],
+  superada: ['¡Lo logré! ¡Qué orgullo!', '¡Trivia superada!', '¡Una menos! ¡Vamos por la siguiente!'],
+  escanear: ['¡A buscar el QR!', '¿Dónde estará el QR? ¡Vamos!', 'Tengo buen ojo para los QR…'],
+  espera: ['Una pausa hasta la próxima trivia…', 'Zzz… ¡que me avisen cuando abra!', 'Recargo energía para la próxima.'],
+  final: ['¡Me gradué! ¡Lo logré!', '¡Las 4 trivias completadas! ¡Qué orgullo!'],
+  cosquillas: ['¡Ja, ja, cosquillas!', '¡Epa! ¿Qué pasó?', '¡Je, je!', '¡Aquí estoy!'],
 } as const;
 
 export type Frase = keyof typeof POOLS;
@@ -24,14 +24,13 @@ export type Frase = keyof typeof POOLS;
 let last = '';
 
 /** Frase al azar del grupo (sin repetir la anterior), con nombre y racha ya puestos. */
-export function frase(kind: Frase, vars: { n: string; oso?: string; r?: number }) {
+export function frase(kind: Frase, vars: { n: string; r?: number }) {
   const pool = POOLS[kind];
   let pick: string = pool[Math.floor(Math.random() * pool.length)];
   if (pool.length > 1 && pick === last) pick = pool[(pool.indexOf(pick as never) + 1) % pool.length];
   last = pick;
   return pick
     .replaceAll('{n}', vars.n)
-    .replaceAll('{oso}', vars.oso ?? '')
     .replaceAll('{r}', String(vars.r ?? 0));
 }
 

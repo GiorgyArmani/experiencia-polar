@@ -26,10 +26,10 @@ export async function POST(req: Request) {
   const email = clean(body.email, 120).toLowerCase() || null;
   // La app envía el código de la localidad elegida; la web envía el nombre.
   const sede = sedeByCode(clean(body.sedeCode, 40)) ?? sedeByName(clean(body.sede));
-  const oso_nombre = clean(body.osoNombre, 24);
+  const oso_nombre = clean(body.apodo, 24);
 
-  if (!oso_nombre) return error('Ponle nombre a tu oso');
-  if (!isValidAvatar(body.avatar)) return error('Termina de vestir a tu oso');
+  if (!oso_nombre) return error('Escribe tu apodo para el ranking');
+  if (!isValidAvatar(body.avatar)) return error('Termina de crear tu avatar');
   if (nombre.split(' ').length < 2 || nombre.length < 5) return error('Escribe tu nombre completo');
   if (cedula.length < 5 || cedula.length > 10) return error('Revisa tu cédula');
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return error('Revisa tu correo (o déjalo vacío)');

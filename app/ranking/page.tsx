@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import type { LeaderboardResponse, LeaderRow } from '@/shared/types';
-import { BearSvg } from '@/components/BearSvg';
+import { AvatarSvg } from '@/components/AvatarSvg';
 
 function Face({ row, size, className = '' }: { row: LeaderRow; size: number; className?: string }) {
   return (
     <span className={`block overflow-hidden rounded-full bg-polar-sky ${className}`} style={{ width: size, height: size }}>
-      <BearSvg avatar={row.avatar} graduado={row.graduado} crop="head" className="h-full w-full" />
+      <AvatarSvg avatar={row.avatar} graduado={row.graduado} crop="head" className="h-full w-full" />
     </span>
   );
 }
@@ -95,7 +95,7 @@ export default function Ranking() {
                   ) : (
                     <span className="rounded-full border-[3px] border-dashed border-[#CFE0F7]/60" style={{ width: size, height: size }} />
                   )}
-                  <span className="max-w-full truncate text-sm font-extrabold">{row?.osoNombre ?? '—'}</span>
+                  <span className="max-w-full truncate text-sm font-extrabold">{row?.apodo ?? '—'}</span>
                   <div className={`flex w-full items-center justify-center rounded-t-[14px] font-display ${h}`}>{place}</div>
                 </div>
               );
@@ -135,7 +135,7 @@ export default function Ranking() {
             <span className="w-7 text-center font-extrabold text-polar-navy">#{data.me.rank}</span>
             <Face row={data.me} size={44} />
             <span className="flex-1 text-[17px] font-extrabold">
-              {data.me.osoNombre} <span className="text-sm font-semibold text-polar-slate">(tú)</span>
+              {data.me.apodo} <span className="text-sm font-semibold text-polar-slate">(tú)</span>
             </span>
             <span className="font-extrabold text-polar-navy">{data.me.puntos} pts</span>
           </div>
@@ -150,7 +150,7 @@ function Row({ row }: { row: LeaderRow }) {
     <li className={`flex min-h-14 items-center gap-3 rounded-2xl py-2 pl-2.5 pr-3.5 ${row.isMe ? 'border-[2.5px] border-polar-yellow bg-polar-cream' : 'bg-white'}`}>
       <span className="w-7 text-center font-extrabold text-polar-slate">{row.rank}</span>
       <Face row={row} size={40} />
-      <span className="flex-1 text-base font-bold">{row.osoNombre}</span>
+      <span className="flex-1 text-base font-bold">{row.apodo}</span>
       <span className="font-bold text-polar-navy">{row.puntos} pts</span>
     </li>
   );

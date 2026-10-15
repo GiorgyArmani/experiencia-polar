@@ -1,6 +1,6 @@
 'use client';
 
-// El oso "habla": el globo se escribe letra a letra con la voz 16 bits del oso.
+// El avatar "habla": el globo se escribe letra a letra con una voz 16 bits.
 import { useEffect, useRef, useState } from 'react';
 import { getVolume, isMuted, onMuteChange, onVolumeChange, setMuted, setVolume, sfx, unlockAudio } from '@/lib/sfx';
 

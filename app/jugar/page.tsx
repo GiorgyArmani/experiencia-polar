@@ -8,11 +8,11 @@ import { api } from '@/lib/api';
 import { qrUrlFor } from '@/shared/qr';
 import type { Avatar } from '@/shared/avatar';
 import type { AnswerResponse, MeResponse } from '@/shared/types';
-import { BearSvg, type Look, type Mood } from '@/components/BearSvg';
-import { SoundToggle, Speech } from '@/components/BearTalk';
-import { BearCard, Bubble, Confetti, Screen, Spinner } from '@/components/ui';
+import { AvatarSvg, type Look, type Mood } from '@/components/AvatarSvg';
+import { SoundToggle, Speech } from '@/components/Talk';
+import { AvatarCard, Confetti, Screen, Spinner } from '@/components/ui';
 import { frase, primerNombre, type Frase } from '@/lib/frases';
-import { sfx, voiceFor } from '@/lib/sfx';
+import { setMusicTempo, sfx, startMusic, stopMusic, voiceFor } from '@/lib/sfx';
 
 const QrScanner = dynamic(() => import('@/components/QrScanner'), { ssr: false });
 
@@ -28,7 +28,7 @@ export default function Jugar() {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState('');
   const offset = useRef(0); // hora del servidor - hora del teléfono
-  const streak = useRef(0); // aciertos seguidos (para que el oso celebre la racha)
+  const streak = useRef(0); // aciertos seguidos (para que el avatar celebre la racha)
   const playing = useRef<number | null>(null); // trivia que estaba jugando (para detectar "se acabó el tiempo")
 
   const apply = useCallback((r: MeResponse) => {
@@ -77,7 +77,7 @@ export default function Jugar() {
   }
 
   const { status, question, player, demoTools } = me;
-  const buddy: Buddy = { name: primerNombre(player.nombre), oso: player.osoNombre, voice: voiceFor(player.osoNombre) };
+  const buddy: Buddy = { name: primerNombre(player.nombre), voice: voiceFor(player.apodo) };
 
   async function onScan(value: string) {
     if (busy) return;
@@ -151,6 +151,7 @@ export default function Jugar() {
         streak={streak.current}
         deadline={status.deadline}
         limitSeconds={status.limitSeconds}
+        penalty={status.wrongPenalty}
         offset={offset.current}
         onTimeUp={() => refresh().catch(() => {})}
         buddy={buddy}
@@ -164,6 +165,7 @@ export default function Jugar() {
         buddy={buddy}
         trivia={status.trivia ?? 1}
         closesAt={status.closesAt}
+        penalty={status.wrongPenalty}
         completed={player.completed}
         total={status.totalTrivias}
         demoTools={demoTools}
@@ -205,30 +207,29 @@ export default function Jugar() {
   );
 }
 
-/* ───────────────────────── El oso compañero ───────────────────────── */
+/* ───────────────────────── El avatar (eres tú) ───────────────────────── */
 
-/** Lo que el oso sabe de ti para hablarte: tu nombre, el suyo y su tono de voz. */
+/** Lo que el avatar necesita para "pensar en voz alta": tu nombre y tu tono de voz. */
 interface Buddy {
   name: string;
-  oso: string;
   voice: number;
 }
 
 /** Frase estable mientras no cambie `key` (no cambia en cada render). */
 function useFrase(kind: Frase, buddy: Buddy, key: unknown, r?: number) {
-  const [text, setText] = useState(() => frase(kind, { n: buddy.name, oso: buddy.oso, r }));
+  const [text, setText] = useState(() => frase(kind, { n: buddy.name, r }));
   const first = useRef(true);
   useEffect(() => {
     if (first.current) {
       first.current = false;
       return;
     }
-    setText(frase(kind, { n: buddy.name, oso: buddy.oso, r }));
+    setText(frase(kind, { n: buddy.name, r }));
   }, [kind, key]);
   return text;
 }
 
-/** Tocar al oso: se ríe, se mueve y te saluda. Devuelve el estado "cosquillas" por un momento. */
+/** Tocar al avatar: se ríe, se mueve y saluda. Devuelve el estado "cosquillas" por un momento. */
 function useTickle(buddy: Buddy) {
   const [tickle, setTickle] = useState<{ n: number; text: string } | null>(null);
   useEffect(() => {
@@ -247,8 +248,8 @@ function useTickle(buddy: Buddy) {
   };
 }
 
-/** El oso, tocable. Respira cuando está quieto y se menea cuando le haces cosquillas. */
-function TapBear({
+/** El avatar, tocable. Respira cuando está quieto y se menea cuando le haces cosquillas. */
+function TapAvatar({
   avatar,
   mood,
   look,
@@ -266,7 +267,7 @@ function TapBear({
   graduado?: boolean;
   tickleKey: number;
   onTickle: () => void;
-  /** "width": el oso ocupa el ancho (tarjetas angostas); "height": el alto. */
+  /** "width": el avatar ocupa el ancho (tarjetas angostas); "height": el alto. */
   fit?: 'width' | 'height';
   className?: string;
   title: string;
@@ -285,7 +286,7 @@ function TapBear({
         key={tickleKey}
         className={`flex h-full w-full origin-bottom items-end justify-center ${anim}`}
       >
-        <BearSvg avatar={avatar} mood={mood} look={look} graduado={graduado} className={fit === 'width' ? 'h-auto w-full' : 'h-full w-auto max-w-full'} />
+        <AvatarSvg avatar={avatar} mood={mood} look={look} graduado={graduado} className={fit === 'width' ? 'h-auto w-full' : 'h-full w-auto max-w-full'} />
       </span>
     </button>
   );
@@ -318,16 +319,21 @@ function Thumb({ avatar, buddy, mood = 'normal' }: { avatar: Avatar; buddy: Budd
   const { tickled, tickleKey, onTickle } = useTickle(buddy);
   return (
     <div className="relative aspect-[105/187] h-[min(187px,22dvh)] shrink-0 overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky">
-      <TapBear
+      <TapAvatar
         avatar={avatar}
         mood={tickled ? 'feliz' : mood}
         tickleKey={tickleKey}
         onTickle={onTickle}
         className="absolute inset-0"
-        title="Tu oso"
+        title="Tu avatar"
       />
     </div>
   );
+}
+
+/** +80 / −50 (con signo menos tipográfico). */
+function signed(n: number) {
+  return n < 0 ? `−${Math.abs(n)}` : `+${n}`;
 }
 
 function hora(iso: string | null) {
@@ -340,6 +346,7 @@ function Camara({
   buddy,
   trivia,
   closesAt,
+  penalty,
   completed,
   total,
   demoTools,
@@ -350,6 +357,7 @@ function Camara({
   buddy: Buddy;
   trivia: number;
   closesAt: string | null;
+  penalty: number;
   completed: number[];
   total: number;
   demoTools: boolean;
@@ -368,6 +376,11 @@ function Camara({
           {closesAt && (
             <span className="self-start rounded-full bg-polar-yellow px-3 py-1.5 text-[13px] font-extrabold text-polar-navy">
               Abierta hasta las {hora(closesAt)}
+            </span>
+          )}
+          {penalty > 0 && (
+            <span className="self-start rounded-full bg-[#E5484D] px-3 py-1.5 text-[13px] font-extrabold text-white">
+              ¡Última y más difícil! Cada incorrecta resta {penalty}
             </span>
           )}
           <Progress completed={completed} total={total} current={trivia} />
@@ -446,6 +459,7 @@ function Trivia({
   streak,
   deadline,
   limitSeconds,
+  penalty,
   offset,
   onTimeUp,
   onAnswer,
@@ -463,11 +477,12 @@ function Trivia({
   streak: number;
   deadline: string | null;
   limitSeconds: number;
+  penalty: number;
   offset: number;
   onTimeUp: () => void;
   onAnswer: (i: number) => void;
 }) {
-  // La opción que estás por elegir: el oso la mira y duda contigo.
+  // La opción que estás por elegir: el avatar la mira y duda contigo.
   const [hover, setHover] = useState<number | null>(null);
   const { tickled, tickleText, tickleKey, onTickle } = useTickle(buddy);
   useEffect(() => setHover(null), [index]);
@@ -479,6 +494,16 @@ function Trivia({
   const hurry = deadline !== null && secs <= 10;
   const critical = deadline !== null && secs <= 5;
   const warn = deadline !== null && (hurry || pct <= 40);
+
+  // Música de fondo (la elegida en /sonidos) mientras dura la trivia; se acelera en los últimos 10 s.
+  useEffect(() => {
+    startMusic();
+    return () => {
+      stopMusic();
+      setMusicTempo(1);
+    };
+  }, []);
+  useEffect(() => setMusicTempo(hurry ? 1.15 : 1), [hurry]);
 
   // Alarma una vez por segundo en los últimos 10.
   const lastTick = useRef<number | null>(null);
@@ -493,7 +518,9 @@ function Trivia({
       ? streak >= 2
         ? 'racha'
         : 'acierto'
-      : 'fallo'
+      : flash.points < 0
+        ? 'resta'
+        : 'fallo'
     : busy
       ? 'esperando'
       : hover !== null
@@ -516,7 +543,7 @@ function Trivia({
         : hover !== null
           ? 'pensar'
           : 'normal';
-  // Las opciones están arriba del oso: mira hacia arriba, de izquierda a derecha según cuál.
+  // Las opciones están arriba del avatar: mira hacia arriba, de izquierda a derecha según cuál.
   const look: Look | undefined = hover !== null ? { x: -0.6 + (hover / Math.max(1, options.length - 1)) * 1.2, y: -1 } : undefined;
 
   function point(i: number) {
@@ -550,6 +577,11 @@ function Trivia({
         <span className="font-extrabold uppercase tracking-wider">Trivia {trivia} de {total}</span>
         <span className="font-bold">Pregunta {index + 1} de {count}</span>
       </div>
+      {penalty > 0 && (
+        <p className="mt-2 self-start rounded-full bg-[#E5484D] px-3 py-1 text-[12px] font-extrabold uppercase tracking-wide text-white">
+          ¡Ojo! Cada incorrecta resta {penalty} puntos
+        </p>
+      )}
       <h1 key={index} className="mt-2 animate-pop title-display text-[clamp(22px,3.8dvh,30px)] leading-[1.1] text-polar-navy">
         {text}
       </h1>
@@ -571,11 +603,11 @@ function Trivia({
           </button>
         ))}
       </div>
-      {/* Escenario: ocupa el espacio libre bajo las opciones. El globo a la izquierda, el oso a la derecha. */}
+      {/* Escenario: ocupa el espacio libre bajo las opciones. El globo a la izquierda, el avatar a la derecha. */}
       <div className="relative -mx-[22px] mt-4 min-h-[150px] flex-1 border-t-4 border-white bg-polar-sky">
         {/*
-          Globo y oso van juntos, pegados abajo: así el globo queda a la altura de la cabeza.
-          El grupo mide lo que el oso (máx. 360px) y el oso no pasa del 55% del ancho:
+          Globo y avatar van juntos, pegados abajo: así el globo queda a la altura de la cabeza.
+          El grupo mide lo que el avatar (máx. 360px) y el avatar no pasa del 55% del ancho:
           al texto siempre le queda su lado y nunca lo tapa.
         */}
         <div className="absolute inset-x-0 bottom-0 flex h-[calc(100%-12px)] max-h-[360px] gap-1 pl-4 pr-2">
@@ -590,26 +622,28 @@ function Trivia({
                 <p className="text-lg font-black uppercase leading-tight">
                   {!flash.correct ? 'Incorrecta' : streak >= 2 ? `¡Racha de ${streak}!` : '¡Correcto!'}
                 </p>
-                <p className="text-sm font-extrabold">{flash.correct ? `+${flash.points} puntos` : '+0 · ¡sigue!'}</p>
+                <p className="text-sm font-extrabold">
+                  {flash.correct ? `+${flash.points} puntos` : flash.points < 0 ? `${signed(flash.points)} puntos` : '+0 · ¡sigue!'}
+                </p>
               </div>
             )}
             <div className="relative">
               <Speech text={tickleText ?? said} voice={buddy.voice} className="text-[15px]" />
-              {/* Colita del globo apuntando al oso. */}
+              {/* Colita del globo apuntando al avatar. */}
               <span
                 className="absolute -right-[7px] top-5 h-3.5 w-3.5 rotate-45 border-r-[3px] border-t-[3px] border-polar-ink bg-white"
                 aria-hidden
               />
             </div>
           </div>
-          <TapBear
+          <TapAvatar
             avatar={avatar}
             mood={mood}
             look={look}
             tickleKey={tickleKey}
             onTickle={onTickle}
-            className="aspect-[216/368] h-full max-w-[55%] shrink-0"
-            title="Tu oso"
+            className="aspect-[216/300] h-full max-w-[55%] shrink-0"
+            title="Tu avatar"
             shake={tickled || flash || busy ? undefined : critical ? 'alarm' : hurry ? 'tremble' : undefined}
           />
         </div>
@@ -646,23 +680,23 @@ function Superada({
       <h1 className="mx-4 flex h-14 items-center justify-center rounded-full bg-polar-yellow title-display text-[26px] text-polar-navy shadow-game">
         {timedOut ? '¡Se acabó el tiempo!' : `¡Trivia ${trivia} superada!`}
       </h1>
-      <BearCard
+      <AvatarCard
         art={
-          <TapBear
+          <TapAvatar
             avatar={avatar}
             mood={tickled ? 'feliz' : timedOut ? 'animo' : 'orgulloso'}
             tickleKey={tickleKey}
             onTickle={onTickle}
             className="h-full w-full"
-            title="Tu oso celebrando"
+            title="Tu avatar celebrando"
           />
         }
-        top={<Speech text={tickleText ?? `${said} +${points} para tu localidad.`} voice={buddy.voice} className="animate-pop text-lg" />}
+        top={<Speech text={tickleText ?? `${said} ${signed(points)} para tu localidad.`} voice={buddy.voice} className="animate-pop text-lg" />}
         className="mt-[3dvh] min-h-[180px] flex-1"
         artClassName="origin-bottom animate-hop"
       >
         <Confetti />
-      </BearCard>
+      </AvatarCard>
       <button
         type="button"
         onClick={() => {
@@ -799,23 +833,23 @@ function Final({ avatar, buddy, puntos, completed, total }: { avatar: Avatar; bu
         <span className="text-sm font-extrabold uppercase tracking-[0.12em]">{completed} de {total} trivias completadas</span>
         <h1 className="title-display text-[clamp(36px,13vw,54px)] leading-none text-white [text-shadow:0_4px_0_#004572]">¡Te graduaste!</h1>
       </div>
-      <BearCard
+      <AvatarCard
         art={
-          <TapBear
+          <TapAvatar
             avatar={avatar}
             graduado
             mood={tickled ? 'feliz' : 'orgulloso'}
             tickleKey={tickleKey}
             onTickle={onTickle}
             className="h-full w-full"
-            title="Tu oso graduado"
+            title="Tu avatar graduado"
           />
         }
         top={<Speech text={tickleText ?? said} voice={buddy.voice} className="text-base" />}
         className="mt-[2.5dvh] min-h-[180px] flex-1"
       >
         <Confetti />
-      </BearCard>
+      </AvatarCard>
       <div className="mx-4 mt-4 grid grid-cols-2 gap-3 rounded-[20px] bg-white px-5 py-3.5 text-polar-ink">
         <div className="flex flex-col">
           <span className="text-[13px] font-semibold text-polar-muted">Tus puntos</span>

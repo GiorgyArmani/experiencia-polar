@@ -1,6 +1,6 @@
 'use client';
 
-// "Ya tengo cuenta": entra con la cédula en otro navegador o teléfono y sigue con su oso y sus puntos.
+// "Ya tengo cuenta": entra con la cédula en otro navegador o teléfono y sigue con su avatar y sus puntos.
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';

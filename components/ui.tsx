@@ -22,7 +22,7 @@ export function Logos({ className = '' }: { className?: string }) {
 /** Stepper del registro (2 pasos). */
 export function Stepper({ step }: { step: 1 | 2 }) {
   const items = [
-    { n: 1, label: 'Tu oso' },
+    { n: 1, label: 'Tu avatar' },
     { n: 2, label: 'Tus datos' },
   ];
   return (
@@ -65,11 +65,11 @@ export function Bubble({ children, className = '' }: { children: ReactNode; clas
 }
 
 /**
- * Tarjeta grande del oso con borde blanco. `art` es el dibujo (BearSvg).
- * Lo que va en `top` (el globo) ocupa su propio espacio arriba: el texto nunca tapa al oso,
+ * Tarjeta grande del avatar con borde blanco. `art` es el dibujo (AvatarSvg).
+ * Lo que va en `top` (el globo) ocupa su propio espacio arriba: el texto nunca tapa al avatar,
  * que se encoge para caber en lo que queda.
  */
-export function BearCard({
+export function AvatarCard({
   art,
   top,
   className = '',
@@ -80,7 +80,7 @@ export function BearCard({
   top?: ReactNode;
   className?: string;
   artClassName?: string;
-  /** Adornos de fondo (confeti), detrás del oso. */
+  /** Adornos de fondo (confeti), detrás del avatar. */
   children?: ReactNode;
 }) {
   return (

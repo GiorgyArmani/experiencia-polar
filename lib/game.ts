@@ -1,7 +1,7 @@
 // Reglas del juego. Todo se decide en el servidor con la hora del servidor,
 // así nadie avanza cambiando la hora del teléfono.
 import 'server-only';
-import { getTrivia, TOTAL_TRIVIAS } from './trivias';
+import { drawQuestions, getTrivia, questionIdsFor, TOTAL_TRIVIAS } from './trivias';
 import { isExperienceQr } from '@/shared/qr';
 import type { GameStatus, Player, PublicPlayer, QuestionView } from '@/shared/types';
 import { config } from './config';
@@ -11,7 +11,7 @@ export function toPublic(p: Player): PublicPlayer {
   return {
     nombre: p.nombre,
     sede: p.sede,
-    osoNombre: p.oso_nombre,
+    apodo: p.oso_nombre,
     avatar: p.avatar,
     puntos: p.puntos,
     completed: p.completed ?? [],
@@ -46,6 +46,18 @@ export function speedPoints(p: Player, now = new Date()) {
   return Math.round(config.pointsPerCorrect * (1 - 0.5 * slow));
 }
 
+/** Puntos que resta cada incorrecta en esa trivia: solo la última (la más difícil) resta. */
+export function wrongPenalty(trivia: number | null) {
+  return trivia === TOTAL_TRIVIAS ? config.wrongPenaltyLast : 0;
+}
+
+/** Preguntas del banco que le tocaron en la trivia en curso. */
+export function playerQuestions(p: Player) {
+  const t = p.current_trivia ? getTrivia(p.current_trivia) : undefined;
+  if (!t) return null;
+  return { trivia: t, ids: questionIdsFor(t, p.question_ids) };
+}
+
 /** Cambios para cerrar la trivia en curso (terminó las preguntas o se le acabó el tiempo). */
 export function finishPatch(p: Player, extra: Partial<Player> = {}): Partial<Player> {
   return {
@@ -53,6 +65,7 @@ export function finishPatch(p: Player, extra: Partial<Player> = {}): Partial<Pla
     completed: [...new Set([...(p.completed ?? []), p.current_trivia!])].sort((a, b) => a - b),
     current_trivia: null,
     current_question: 0,
+    question_ids: [],
     missed: false,
     trivia_started_at: null,
     question_started_at: null,
@@ -78,6 +91,11 @@ function nextTrivia(p: Player): number | null {
 }
 
 export function computeStatus(p: Player, now = new Date()): GameStatus {
+  const s = baseStatus(p, now);
+  return { ...s, wrongPenalty: wrongPenalty(s.trivia) };
+}
+
+function baseStatus(p: Player, now: Date): Omit<GameStatus, 'wrongPenalty'> {
   const base = {
     totalTrivias: TOTAL_TRIVIAS,
     serverNow: now.toISOString(),
@@ -122,15 +140,14 @@ function closesAtFor(trivia: number): string | null {
 }
 
 export function questionView(p: Player): QuestionView | null {
-  if (!p.current_trivia) return null;
-  const t = getTrivia(p.current_trivia);
-  if (!t) return null;
-  const q = t.questions[p.current_question];
+  const pq = playerQuestions(p);
+  if (!pq) return null;
+  const q = pq.trivia.bank[pq.ids[p.current_question]];
   if (!q) return null;
   return {
-    trivia: t.id,
+    trivia: pq.trivia.id,
     index: p.current_question,
-    total: t.questions.length,
+    total: pq.ids.length,
     text: q.text,
     options: [...q.options],
   };
@@ -145,12 +162,15 @@ export async function scanQr(p: Player): Promise<ScanResult> {
   if (status.phase === 'locked') return { ok: false, error: 'Esta trivia todavía no abre', status: 409 };
   if (status.phase === 'final' || !status.trivia) return { ok: false, error: 'Ya completaste todas las trivias', status: 409 };
 
+  const trivia = getTrivia(status.trivia);
+  if (!trivia) return { ok: false, error: 'Trivia no encontrada', status: 404 };
   const store = getStore();
   const updated = await store.updatePlayer(
     p.id,
     {
       current_trivia: status.trivia,
       current_question: 0,
+      question_ids: drawQuestions(trivia),
       missed: false,
       trivia_puntos: 0,
       // Arranca el reloj: desde ya corren los segundos de la trivia.

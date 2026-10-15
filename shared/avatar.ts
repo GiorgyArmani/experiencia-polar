@@ -1,5 +1,5 @@
-// Avatar del oso: lo comparten el servidor (validación), la web (SVG 2D)
-// y la app nativa (modelo 3D low poly). Cada opción trae sus colores.
+// Avatar del jugador (una persona, estilo cabezón y redondito): lo comparten el servidor (validación)
+// y la web (SVG 2D). Cada opción trae sus colores.
 
 export interface Option {
   id: string;
@@ -8,23 +8,34 @@ export interface Option {
   accent?: string;
 }
 
-export const PELAJES = [
-  { id: 'blanco', label: 'Blanco', color: '#F7FAFC', accent: '#DCE6EE' },
-  { id: 'crema', label: 'Crema', color: '#F6EBD9', accent: '#E3D1B4' },
-  { id: 'hielo', label: 'Hielo', color: '#E4F1FB', accent: '#BFD8EC' },
+export const PIELES = [
+  { id: 'clara', label: 'Clara', color: '#FFE2CC', accent: '#F2BFA0' },
+  { id: 'rosada', label: 'Rosada', color: '#F9D0B4', accent: '#E8A988' },
+  { id: 'triguena', label: 'Trigueña', color: '#E7B186', accent: '#CC8E62' },
+  { id: 'morena', label: 'Morena', color: '#C68A5C', accent: '#A66C42' },
+  { id: 'canela', label: 'Canela', color: '#9C6542', accent: '#7E4C2E' },
+  { id: 'oscura', label: 'Oscura', color: '#6E4630', accent: '#55331F' },
 ] as const satisfies readonly Option[];
 
-export const CABEZAS = [
-  { id: 'nada', label: 'Nada', color: '#000000' },
-  { id: 'gorra', label: 'Gorra', color: '#2A7EEB', accent: '#FF8D28' },
-  { id: 'melena', label: 'Melena', color: '#F2E6D0', accent: '#E0CFAE' },
-  { id: 'lazo', label: 'Lazo', color: '#E8476A', accent: '#B8304F' },
-  { id: 'gorro', label: 'Gorro de lana', color: '#FF8D28', accent: '#FFFFFF' },
-  { id: 'audifonos', label: 'Audífonos', color: '#1E1E1E', accent: '#2A7EEB' },
-  { id: 'playa', label: 'Sombrero de playa', color: '#E9C77B', accent: '#E8476A' },
-  { id: 'llanero', label: 'Sombrero llanero', color: '#6B4423', accent: '#3E2614' },
-  { id: 'tricolor', label: 'Gorra tricolor', color: '#FFD23F', accent: '#1F4FB5' },
-  { id: 'cayena', label: 'Flor de cayena', color: '#E5233B', accent: '#FFD23F' },
+export const PEINADOS = [
+  { id: 'corto', label: 'Corto', color: '' },
+  { id: 'rapado', label: 'Rapado', color: '' },
+  { id: 'rizado', label: 'Rizado', color: '' },
+  { id: 'afro', label: 'Afro', color: '' },
+  { id: 'cola', label: 'Cola de caballo', color: '' },
+  { id: 'mono', label: 'Moño', color: '' },
+  { id: 'trenzas', label: 'Trenzas', color: '' },
+  { id: 'largo', label: 'Largo', color: '' },
+] as const satisfies readonly Option[];
+
+export const PELOS = [
+  { id: 'negro', label: 'Negro', color: '#2E2624', accent: '#1B1514' },
+  { id: 'castano', label: 'Castaño', color: '#5B3A26', accent: '#412818' },
+  { id: 'claro', label: 'Castaño claro', color: '#9A6A3E', accent: '#7A512C' },
+  { id: 'rubio', label: 'Rubio', color: '#EAC46E', accent: '#C9A04A' },
+  { id: 'pelirrojo', label: 'Pelirrojo', color: '#E07A35', accent: '#BC5D20' },
+  { id: 'canoso', label: 'Canoso', color: '#D9D9D9', accent: '#B5B5B5' },
+  { id: 'rosado', label: 'Rosado', color: '#F49AB9', accent: '#D97598' },
 ] as const satisfies readonly Option[];
 
 export const ROPAS = [
@@ -35,41 +46,46 @@ export const ROPAS = [
   { id: 'bata', label: 'Bata', color: '#F4F4F4', accent: '#9FB3C8' },
   { id: 'liquiliqui', label: 'Liqui liqui', color: '#F3EEDF', accent: '#C9B98F' },
   { id: 'playera', label: 'Camisa playera', color: '#1FB5A8', accent: '#FFD23F' },
+  { id: 'vestido', label: 'Vestido de lunares', color: '#E5233B', accent: '#FFFFFF' },
 ] as const satisfies readonly Option[];
 
 export const ACCESORIOS = [
   { id: 'nada', label: 'Nada', color: '#000000' },
   { id: 'lentes', label: 'Lentes', color: '#1E1E1E' },
-  { id: 'bufanda', label: 'Bufanda', color: '#E8476A', accent: '#FFFFFF' },
-  { id: 'corbatin', label: 'Corbatín', color: '#FF8D28' },
   { id: 'lentes-sol', label: 'Lentes de sol', color: '#1E1E1E', accent: '#FF8D28' },
-  { id: 'arepa', label: 'Arepa', color: '#F0D9A0', accent: '#C9913F' },
-  { id: 'cuatro', label: 'Cuatro', color: '#C8833B', accent: '#7A4A1F' },
-  { id: 'maracas', label: 'Maracas', color: '#E5233B', accent: '#FFD23F' },
+  { id: 'gorra', label: 'Gorra', color: '#2A7EEB', accent: '#FF8D28' },
+  { id: 'gorro', label: 'Gorro de lana', color: '#FF8D28', accent: '#FFFFFF' },
+  { id: 'llanero', label: 'Sombrero llanero', color: '#6B4423', accent: '#3E2614' },
+  { id: 'cayena', label: 'Flor de cayena', color: '#E5233B', accent: '#FFD23F' },
+  { id: 'lazo', label: 'Lazo', color: '#E8476A', accent: '#B8304F' },
+  { id: 'audifonos', label: 'Audífonos', color: '#1E1E1E', accent: '#2A7EEB' },
 ] as const satisfies readonly Option[];
 
-export type PelajeId = (typeof PELAJES)[number]['id'];
-export type CabezaId = (typeof CABEZAS)[number]['id'];
+export type PielId = (typeof PIELES)[number]['id'];
+export type PeinadoId = (typeof PEINADOS)[number]['id'];
+export type PeloId = (typeof PELOS)[number]['id'];
 export type RopaId = (typeof ROPAS)[number]['id'];
 export type AccesorioId = (typeof ACCESORIOS)[number]['id'];
 
 export interface Avatar {
-  pelaje: PelajeId;
-  cabeza: CabezaId;
+  piel: PielId;
+  peinado: PeinadoId;
+  pelo: PeloId;
   ropa: RopaId;
   accesorio: AccesorioId;
 }
 
 export const AVATAR_PARTS = {
-  pelaje: PELAJES,
-  cabeza: CABEZAS,
+  piel: PIELES,
+  peinado: PEINADOS,
+  pelo: PELOS,
   ropa: ROPAS,
   accesorio: ACCESORIOS,
 } as const;
 
 export type AvatarPart = keyof typeof AVATAR_PARTS;
 
-export const DEFAULT_AVATAR: Avatar = { pelaje: 'blanco', cabeza: 'nada', ropa: 'azul', accesorio: 'nada' };
+export const DEFAULT_AVATAR: Avatar = { piel: 'triguena', peinado: 'corto', pelo: 'castano', ropa: 'azul', accesorio: 'nada' };
 
 /** Normaliza lo que venga del cliente o de la BD: cualquier valor desconocido cae al default. */
 export function parseAvatar(raw: unknown): Avatar {
@@ -79,7 +95,7 @@ export function parseAvatar(raw: unknown): Avatar {
     const ok = AVATAR_PARTS[k].some((o) => o.id === v);
     return (ok ? v : DEFAULT_AVATAR[k]) as Avatar[K];
   };
-  return { pelaje: pick('pelaje'), cabeza: pick('cabeza'), ropa: pick('ropa'), accesorio: pick('accesorio') };
+  return { piel: pick('piel'), peinado: pick('peinado'), pelo: pick('pelo'), ropa: pick('ropa'), accesorio: pick('accesorio') };
 }
 
 export function isValidAvatar(raw: unknown): boolean {
@@ -98,4 +114,10 @@ export function stepAvatar(a: Avatar, part: AvatarPart, dir: 1 | -1): Avatar {
   const i = list.findIndex((o) => o.id === a[part]);
   const next = list[(i + dir + list.length) % list.length];
   return { ...a, [part]: next.id };
+}
+
+/** Un avatar al azar (botón "Sorpréndeme" del registro). */
+export function randomAvatar(): Avatar {
+  const any = <K extends AvatarPart>(k: K) => AVATAR_PARTS[k][Math.floor(Math.random() * AVATAR_PARTS[k].length)].id as Avatar[K];
+  return { piel: any('piel'), peinado: any('peinado'), pelo: any('pelo'), ropa: any('ropa'), accesorio: any('accesorio') };
 }

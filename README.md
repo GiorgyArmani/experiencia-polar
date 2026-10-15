@@ -20,14 +20,19 @@ Los dos dominios apuntan al **mismo** despliegue del servidor (`middleware.ts` e
 
 Hay **un solo QR** (el mismo en todas las sedes). Lo que dispara cada escaneo depende del progreso del jugador:
 
-1. **1.er escaneo → onboarding**: diseña su oso (pelaje, cabeza, ropa, accesorio + nombre, modelo 3D low poly)
+1. **1.er escaneo → onboarding**: crea su avatar, una persona estilo cabezón (piel, peinado, color de pelo, ropa, accesorio) + apodo para el ranking,
    y llena sus datos: **cédula**, nombre completo, correo (opcional) y **localidad** (130, en `lib/localidades.ts`). Se guarda en `players`.
-2. **2.º escaneo → abre la trivia** disponible, **contrarreloj**: `TRIVIA_SECONDS` (60) para responder todas las preguntas.
+2. **2.º escaneo → abre la trivia** disponible, **contrarreloj**: `TRIVIA_SECONDS` (60) para responder sus 3 preguntas,
+   sorteadas al azar del banco de 10 de esa estación (40 en total, en `lib/trivias.ts`; 12 por jugador).
    Correcta = de 100 a 50 puntos según la rapidez en esa pregunta (100 si responde en ≤ 3 s, baja en línea recta hasta 50 a los 15 s).
-   Incorrecta = 0 y pasa a la siguiente. Si se acaba el tiempo, la trivia se cierra con lo que sumó.
+   Incorrecta = 0 y pasa a la siguiente; en la **última estación** resta `WRONG_PENALTY_LAST` (50), sin bajar el total de 0.
+   Si se acaba el tiempo, la trivia se cierra con lo que sumó.
 3. **Espera** con contador hasta que abra la siguiente trivia.
 4. **Siguiente escaneo → siguiente trivia**, y así hasta la última.
-6. Tras la última: **oso graduado** (birrete y toga) → **leaderboard** de su sede.
+6. Tras la última: **avatar graduado** (birrete y toga) → **leaderboard** de su sede.
+
+Música y efectos: `/sonidos` muestra las opciones (4 músicas, 3 paquetes de efectos) para escucharlas y elegir; lo elegido
+se guarda en ese navegador. Los valores por defecto están en `DEFAULT_MUSIC` y `DEFAULT_PACK` de `lib/sfx.ts`.
 
 El oso acompaña cada pantalla con reacciones: `celebrar`, `duda`, `pensar`, `error` (+ `idle`).
 Cada pantalla está armada como una página de cómic: viñetas (`Panel`), cartuchos de narración (`Caption`)
@@ -51,7 +56,7 @@ y globos de diálogo (`Bubble`) en `mobile/src/components/comic.tsx`.
 Uno solo, el mismo en todas las sedes y para todas las trivias. Contiene `<APP_URL>/q/POLAR`
 (hoy `https://experiencia-polar.vercel.app/q/POLAR`). El servidor lo genera con el dominio de `APP_URL`:
 
-- `<APP_URL>/qr` → **afiche A4** con el estilo Polar (oso, logos, pasos) y botón "Imprimir afiche"
+- `<APP_URL>/qr` → **afiche A4** con el estilo Polar (avatar, logos, pasos) y botón "Imprimir afiche"
 - `<APP_URL>/qr/imagen` → solo el QR en SVG; `?format=png&size=2048` en PNG (agrega `&download` para descargarlo)
 
 Si cambia el dominio (p. ej. a `experienciapolar.aulaciete.com`), hay que **reimprimir el QR** y compilar la app de nuevo con ese dominio.
@@ -73,6 +78,7 @@ Si cambia el dominio (p. ej. a `experienciapolar.aulaciete.com`), hay que **reim
 | `TRIVIA_WINDOWS` | JSON con `opensAt` / `closesAt` de cada trivia (modo `schedule`), zona `-04:00`. |
 | `POINTS_PER_CORRECT` | Puntos máximos por respuesta correcta (respuesta rápida); el mínimo es la mitad. |
 | `TRIVIA_SECONDS` | Segundos para responder toda la trivia (defecto 60). |
+| `WRONG_PENALTY_LAST` | Puntos que resta cada incorrecta en la última estación (defecto 50; 0 = no resta). |
 | `APP_STORE_URL`, `PLAY_STORE_URL` | Botones de la página del QR. |
 | `APPLE_TEAM_ID`, `ANDROID_SHA256_CERT` | Habilitan `/.well-known/apple-app-site-association` y `assetlinks.json`. |
 | `NEXT_PUBLIC_DEMO` | `true` muestra "Simular escaneo" y "Saltar espera" (web y app). **`false` el día del evento.** Se fija al compilar. |

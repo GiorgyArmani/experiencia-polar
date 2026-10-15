@@ -12,7 +12,7 @@ const TOP = 10;
 function row(p: Player, rank: number, meId: string | undefined): LeaderRow {
   return {
     rank,
-    osoNombre: p.oso_nombre,
+    apodo: p.oso_nombre,
     avatar: p.avatar,
     puntos: p.puntos,
     graduado: p.completed.length > 0 && computeStatus(p).phase === 'final',

@@ -13,12 +13,13 @@ export interface Player {
   email: string | null; // opcional: no todos tienen correo corporativo
   telefono: string | null; // ya no se pide (versiones anteriores)
   sede: string; // nombre de la localidad
-  oso_nombre: string;
+  oso_nombre: string; // apodo que sale en el ranking (la columna conserva su nombre de cuando el avatar era un oso)
   avatar: Avatar;
   puntos: number;
   completed: number[];
   current_trivia: number | null;
   current_question: number;
+  question_ids: number[]; // preguntas del banco que le tocaron en la trivia en curso (sorteadas al escanear)
   missed: boolean; // sin uso desde que la trivia es contrarreloj (fallar pasa a la siguiente)
   trivia_puntos: number; // puntos de la trivia en curso o la última terminada
   trivia_started_at: string | null; // arranca el reloj de la trivia (al escanear)
@@ -32,7 +33,7 @@ export interface Player {
 export interface PublicPlayer {
   nombre: string;
   sede: string;
-  osoNombre: string;
+  apodo: string;
   avatar: Avatar;
   puntos: number;
   completed: number[];
@@ -52,6 +53,7 @@ export interface GameStatus {
   closesAt: string | null; // si está abierta, hasta cuándo
   deadline: string | null; // jugando: hasta cuándo hay para terminar la trivia (contrarreloj)
   limitSeconds: number; // tiempo total de cada trivia
+  wrongPenalty: number; // puntos que resta cada incorrecta en la trivia abierta o en curso (0 = no resta)
   totalTrivias: number;
   serverNow: string;
 }
@@ -95,7 +97,7 @@ export interface AnswerResponse {
 
 export interface LeaderRow {
   rank: number;
-  osoNombre: string;
+  apodo: string;
   avatar: Avatar;
   puntos: number;
   graduado: boolean;
