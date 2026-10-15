@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     const existing = await store.getPlayerByCedula(cedula);
     if (existing) {
       if (norm(existing.nombre).split(' ')[0] !== norm(nombre).split(' ')[0]) {
-        return error('Esa cédula ya está registrada con otro nombre', 409);
+        return error('Esa cédula ya está registrada. Toca «Entra con tu cédula» para recuperar tu partida.', 409);
       }
       setPlayerCookie(existing.id);
       const res: RegisterResponse = { ...meResponse(existing), recovered: true, token: existing.id };

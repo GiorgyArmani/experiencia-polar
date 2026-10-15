@@ -24,6 +24,7 @@ export const api = {
     osoNombre: string;
     avatar: Avatar;
   }) => call<RegisterResponse>('/api/register', { method: 'POST', body: JSON.stringify(body) }),
+  login: (cedula: string) => call<RegisterResponse>('/api/login', { method: 'POST', body: JSON.stringify({ cedula }) }),
   scan: (value: string) => call<MeResponse>('/api/scan', { method: 'POST', body: JSON.stringify({ value }) }),
   answer: (option: number, index: number) =>
     call<AnswerResponse>('/api/answer', { method: 'POST', body: JSON.stringify({ option, index }) }),

@@ -104,6 +104,12 @@ export default function Registro() {
           <Link href="/" className="btn-ghost">Atrás</Link>
           <button type="button" onClick={next} className="btn-game col-span-2">¡Este es mi oso!</button>
         </div>
+        <p className="mt-4 text-center text-sm font-semibold">
+          ¿Ya jugaste en otro teléfono?{' '}
+          <Link href="/entrar" className="font-extrabold underline">
+            Entra con tu cédula
+          </Link>
+        </p>
         <Logos className="mt-2 pb-4" />
       </Screen>
     );

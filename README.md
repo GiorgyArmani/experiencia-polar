@@ -42,7 +42,9 @@ y globos de diálogo (`Bubble`) en `mobile/src/components/comic.tsx`.
 - Un doble toque no suma dos veces (la actualización es condicional a la pregunta actual).
 - El reloj lo lleva el servidor (`trivia_started_at`, `question_started_at`), con 2 s de margen por la latencia. Si el jugador
   cierra la pestaña, la trivia se cierra sola en su siguiente petición al vencer el tiempo.
-- Recuperar la partida en otro teléfono: misma **cédula** y mismo primer nombre (sin importar acentos ni mayúsculas).
+- Sin contraseñas: la sesión vive en una cookie (400 días, se renueva sola). En otro navegador o teléfono, **«Ya tengo cuenta»**
+  (`/entrar`) recupera la partida **solo con la cédula**. Si el QR se abrió sin sesión, la portada ofrece registrarse o entrar,
+  y al entrar se cumple ese escaneo (abre la trivia disponible).
 
 ## Códigos QR
 
