@@ -12,8 +12,8 @@
 
 export const QR_CODE = 'POLAR';
 
-/** Color de los módulos del QR impreso: azul marino Polar (oscuro para que lo lea cualquier cámara). */
-export const QR_INK = '#0B2A66';
+/** Color de los módulos del QR impreso: azul oscuro UEP (oscuro para que lo lea cualquier cámara). */
+export const QR_INK = '#004572';
 
 /** Código que trae el QR (en mayúsculas) o null si el texto no tiene el formato de la experiencia. */
 function codeFromQr(raw: string): string | null {

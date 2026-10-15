@@ -18,11 +18,11 @@ export async function GET(req: Request) {
     const width = Math.min(4096, Math.max(256, Number(params.get('size')) || 2048));
     const png = await QRCode.toBuffer(url, { ...opts, width });
     return new Response(new Uint8Array(png), {
-      headers: { 'Content-Type': 'image/png', 'Content-Disposition': `${download}; filename="qr-polar.png"` },
+      headers: { 'Content-Type': 'image/png', 'Content-Disposition': `${download}; filename="qr-experiencia-uep.png"` },
     });
   }
   const svg = await QRCode.toString(url, { ...opts, type: 'svg' });
   return new Response(svg, {
-    headers: { 'Content-Type': 'image/svg+xml', 'Content-Disposition': `${download}; filename="qr-polar.svg"` },
+    headers: { 'Content-Type': 'image/svg+xml', 'Content-Disposition': `${download}; filename="qr-experiencia-uep.svg"` },
   });
 }
