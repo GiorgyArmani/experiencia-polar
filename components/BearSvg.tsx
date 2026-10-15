@@ -58,6 +58,40 @@ export function BearSvg({ avatar, graduado = false, crop = 'full', mood = 'norma
             </>
           )}
           {ropa.id === 'chaqueta' && <rect x="98" y="160" width="4" height="80" fill={ropa.accent} />}
+          {ropa.id === 'liquiliqui' && (
+            <>
+              {/* Cuello cerrado y botonadura dorada */}
+              <polygon points="84,152 116,152 114,164 86,164" fill={ropa.accent} />
+              <rect x="99" y="164" width="2" height="76" fill={ropa.accent} />
+              {[176, 192, 208, 224].map((y) => (
+                <circle key={y} cx="100" cy={y} r="3" fill="#C9A227" />
+              ))}
+              <rect x="66" y="186" width="20" height="3" rx="1.5" fill={ropa.accent} />
+              <rect x="114" y="186" width="20" height="3" rx="1.5" fill={ropa.accent} />
+            </>
+          )}
+          {ropa.id === 'playera' && (
+            <>
+              {/* Cuello abierto y estampado de flores */}
+              <polygon points="88,156 100,180 112,156" fill="#FFFFFF" opacity={0.9} />
+              {[
+                [72, 186],
+                [124, 182],
+                [90, 214],
+                [130, 222],
+                [64, 226],
+                [110, 200],
+              ].map(([x, y]) => (
+                <g key={`${x}-${y}`} fill={ropa.accent}>
+                  <circle cx={x - 3} cy={y} r="3" />
+                  <circle cx={x + 3} cy={y} r="3" />
+                  <circle cx={x} cy={y - 3} r="3" />
+                  <circle cx={x} cy={y + 3} r="3" />
+                  <circle cx={x} cy={y} r="2" fill="#FFFFFF" />
+                </g>
+              ))}
+            </>
+          )}
           {/* Brazos */}
           <polygon points="60,170 40,214 54,222 70,186" fill={ropa.color} />
           <polygon points="140,170 160,214 146,222 130,186" fill={ropa.color} />
@@ -94,6 +128,16 @@ export function BearSvg({ avatar, graduado = false, crop = 'full', mood = 'norma
           <circle cx="78" cy="90" r="14" />
           <circle cx="122" cy="90" r="14" />
           <path d="M92 90 L108 90" />
+        </g>
+      )}
+      {acc.id === 'lentes-sol' && (
+        <g>
+          <path d="M60 82 H94 Q94 102 78 102 Q60 102 60 82 Z" fill={acc.color} />
+          <path d="M106 82 H140 Q140 102 122 102 Q106 102 106 82 Z" fill={acc.color} />
+          <path d="M94 86 Q100 82 106 86" stroke={acc.color} strokeWidth="4" fill="none" />
+          <path d="M60 84 L46 80 M140 84 L154 80" stroke={acc.color} strokeWidth="4" strokeLinecap="round" />
+          {/* Reflejo */}
+          <path d="M66 86 L74 86 M112 86 L120 86" stroke={acc.accent} strokeWidth="3" strokeLinecap="round" opacity={0.9} />
         </g>
       )}
       {acc.id === 'bufanda' && (
@@ -148,6 +192,61 @@ export function BearSvg({ avatar, graduado = false, crop = 'full', mood = 'norma
           <rect x="152" y="80" width="18" height="30" rx="6" fill={cabeza.accent} />
         </>
       )}
+      {cabeza?.id === 'playa' && (
+        <>
+          {/* Sombrero de paja de ala ancha, con cinta y flor */}
+          <ellipse cx="100" cy="54" rx="76" ry="15" fill={cabeza.color} />
+          <path d="M64 54 Q64 16 100 16 Q136 16 136 54 Z" fill={cabeza.color} />
+          <path d="M70 30 Q100 22 130 30 M66 42 Q100 34 134 42" stroke="#C9A55A" strokeWidth="1.5" fill="none" />
+          <path d="M64 46 Q100 40 136 46 L136 54 Q100 48 64 54 Z" fill={cabeza.accent} />
+          <ellipse cx="100" cy="58" rx="76" ry="9" fill="none" stroke="#C9A55A" strokeWidth="1.5" />
+          <g fill="#FFD23F">
+            <circle cx="126" cy="46" r="4" />
+            <circle cx="132" cy="46" r="4" />
+            <circle cx="129" cy="42" r="4" />
+            <circle cx="129" cy="50" r="4" />
+          </g>
+          <circle cx="129" cy="46" r="2.5" fill="#FFFFFF" />
+        </>
+      )}
+      {cabeza?.id === 'llanero' && (
+        <>
+          {/* Sombrero llanero: ala ancha recta y copa con hendidura */}
+          <ellipse cx="100" cy="56" rx="72" ry="12" fill={cabeza.color} />
+          <path d="M70 56 L76 22 Q100 14 124 22 L130 56 Z" fill={cabeza.color} />
+          <path d="M86 20 Q100 28 114 20" stroke={cabeza.accent} strokeWidth="3" fill="none" />
+          <rect x="70" y="44" width="60" height="7" fill={cabeza.accent} />
+        </>
+      )}
+      {cabeza?.id === 'tricolor' && (
+        <>
+          {/* Gorra con los colores de la bandera y sus 8 estrellas */}
+          <clipPath id="gorra-tricolor">
+            <polygon points="52,60 66,30 100,20 134,30 148,60" />
+          </clipPath>
+          <g clipPath="url(#gorra-tricolor)">
+            <rect x="40" y="10" width="120" height="24" fill="#FFD23F" />
+            <rect x="40" y="34" width="120" height="13" fill="#1F4FB5" />
+            <rect x="40" y="47" width="120" height="20" fill="#D62839" />
+          </g>
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <circle key={i} cx={82 + i * 5.2} cy={41 - Math.sin((i / 7) * Math.PI) * 4} r="1.6" fill="#FFFFFF" />
+          ))}
+          <polygon points="100,56 160,56 172,68 104,68" fill="#1F4FB5" />
+          <circle cx="100" cy="22" r="5" fill="#D62839" />
+        </>
+      )}
+      {cabeza?.id === 'cayena' && (
+        <g>
+          {/* Flor de cayena detrás de la oreja */}
+          {[0, 72, 144, 216, 288].map((r) => (
+            <ellipse key={r} cx="134" cy="30" rx="8" ry="13" fill={cabeza.color} transform={`rotate(${r} 134 40)`} />
+          ))}
+          <circle cx="134" cy="40" r="5" fill="#9E1328" />
+          <path d="M134 40 L146 26" stroke={cabeza.accent} strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="147" cy="25" r="3" fill={cabeza.accent} />
+        </g>
+      )}
       {graduado && (
         <>
           <polygon points="100,8 162,30 100,52 38,30" fill="#0B2A66" />
@@ -156,8 +255,71 @@ export function BearSvg({ avatar, graduado = false, crop = 'full', mood = 'norma
           <circle cx="150" cy="62" r="5" fill="#FFD23F" />
         </>
       )}
+
+      {crop === 'full' && <HandItem id={acc.id} color={acc.color} accent={acc.accent} fur={furC} />}
     </svg>
   );
+}
+
+/* ───────────────────────── Objetos en las patas ───────────────────────── */
+
+function HandItem({ id, color, accent = '#000', fur }: { id: string; color: string; accent?: string; fur: string }) {
+  if (id === 'arepa') {
+    return (
+      <g>
+        {/* Arepa rellena (queso y caraotas), en la pata derecha */}
+        <ellipse cx="150" cy="206" rx="19" ry="14" fill={color} stroke={accent} strokeWidth="2" />
+        <path d="M134 204 Q150 196 166 204 Q150 212 134 204 Z" fill="#3A2416" />
+        <path d="M138 203 Q150 198 162 203" stroke="#FFFFFF" strokeWidth="3" fill="none" strokeLinecap="round" />
+        {[
+          [142, 214],
+          [154, 216],
+          [160, 210],
+          [144, 196],
+        ].map(([x, y]) => (
+          <circle key={`${x}-${y}`} cx={x} cy={y} r="1.6" fill={accent} />
+        ))}
+        <circle cx="153" cy="220" r="9" fill={fur} />
+      </g>
+    );
+  }
+  if (id === 'cuatro') {
+    return (
+      <g transform="rotate(-28 108 200)">
+        {/* Cuatro venezolano cruzado sobre el pecho */}
+        <rect x="118" y="194" width="58" height="7" rx="2" fill={accent} />
+        <rect x="170" y="191" width="14" height="13" rx="3" fill={accent} />
+        <circle cx="96" cy="198" r="20" fill={color} />
+        <circle cx="116" cy="198" r="15" fill={color} />
+        <circle cx="106" cy="198" r="6" fill="#2A1A0E" />
+        <rect x="80" y="194" width="5" height="8" rx="1" fill={accent} />
+        {[195, 197, 199, 201].map((y) => (
+          <path key={y} d={`M82 ${y} L182 ${y}`} stroke="#F4F4F4" strokeWidth="0.7" opacity={0.85} />
+        ))}
+      </g>
+    );
+  }
+  if (id === 'maracas') {
+    return (
+      <g>
+        {/* Una maraca en cada pata */}
+        {[
+          [47, 220, -18],
+          [153, 220, 18],
+        ].map(([x, y, r]) => (
+          <g key={x} transform={`rotate(${r} ${x} ${y})`}>
+            <rect x={x - 2.5} y={y - 26} width="5" height="24" rx="2" fill="#8A5A2B" />
+            <ellipse cx={x} cy={y - 36} rx="11" ry="13" fill={color} />
+            <path d={`M${x - 10} ${y - 38} Q${x} ${y - 32} ${x + 10} ${y - 38}`} stroke={accent} strokeWidth="3" fill="none" />
+            <circle cx={x - 4} cy={y - 42} r="2" fill="#FFFFFF" opacity={0.7} />
+          </g>
+        ))}
+        <circle cx="47" cy="220" r="9" fill={fur} />
+        <circle cx="153" cy="220" r="9" fill={fur} />
+      </g>
+    );
+  }
+  return null;
 }
 
 /* ───────────────────────── Cara ───────────────────────── */

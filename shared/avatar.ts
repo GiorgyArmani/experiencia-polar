@@ -21,6 +21,10 @@ export const CABEZAS = [
   { id: 'lazo', label: 'Lazo', color: '#E8476A', accent: '#B8304F' },
   { id: 'gorro', label: 'Gorro de lana', color: '#FF8D28', accent: '#FFFFFF' },
   { id: 'audifonos', label: 'Audífonos', color: '#1E1E1E', accent: '#2A7EEB' },
+  { id: 'playa', label: 'Sombrero de playa', color: '#E9C77B', accent: '#E8476A' },
+  { id: 'llanero', label: 'Sombrero llanero', color: '#6B4423', accent: '#3E2614' },
+  { id: 'tricolor', label: 'Gorra tricolor', color: '#FFD23F', accent: '#1F4FB5' },
+  { id: 'cayena', label: 'Flor de cayena', color: '#E5233B', accent: '#FFD23F' },
 ] as const satisfies readonly Option[];
 
 export const ROPAS = [
@@ -29,6 +33,8 @@ export const ROPAS = [
   { id: 'pelotero', label: 'Pelotero', color: '#FFFFFF', accent: '#0B2A66' },
   { id: 'chaqueta', label: 'Chaqueta', color: '#FF8D28', accent: '#C9620A' },
   { id: 'bata', label: 'Bata', color: '#F4F4F4', accent: '#9FB3C8' },
+  { id: 'liquiliqui', label: 'Liqui liqui', color: '#F3EEDF', accent: '#C9B98F' },
+  { id: 'playera', label: 'Camisa playera', color: '#1FB5A8', accent: '#FFD23F' },
 ] as const satisfies readonly Option[];
 
 export const ACCESORIOS = [
@@ -36,6 +42,10 @@ export const ACCESORIOS = [
   { id: 'lentes', label: 'Lentes', color: '#1E1E1E' },
   { id: 'bufanda', label: 'Bufanda', color: '#E8476A', accent: '#FFFFFF' },
   { id: 'corbatin', label: 'Corbatín', color: '#FF8D28' },
+  { id: 'lentes-sol', label: 'Lentes de sol', color: '#1E1E1E', accent: '#FF8D28' },
+  { id: 'arepa', label: 'Arepa', color: '#F0D9A0', accent: '#C9913F' },
+  { id: 'cuatro', label: 'Cuatro', color: '#C8833B', accent: '#7A4A1F' },
+  { id: 'maracas', label: 'Maracas', color: '#E5233B', accent: '#FFD23F' },
 ] as const satisfies readonly Option[];
 
 export type PelajeId = (typeof PELAJES)[number]['id'];
