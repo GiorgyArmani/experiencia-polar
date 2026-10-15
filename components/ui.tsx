@@ -10,13 +10,11 @@ export function Screen({ children, className = '' }: { children: ReactNode; clas
   );
 }
 
-/** Logos de Universidad y Fundación Empresas Polar. */
+/** Logo de la Universidad Empresas Polar (solo ese, por pedido de la UEP). */
 export function Logos({ className = '' }: { className?: string }) {
   return (
-    <div className={`flex items-center justify-center gap-5 py-3 ${className}`}>
-      <Image src="/logos/universidad.png" alt="Universidad Empresas Polar" width={88} height={88} className="h-[88px] w-[88px] object-contain" priority />
-      <span className="h-12 w-px bg-white/50" aria-hidden />
-      <Image src="/logos/fundacion.png" alt="Fundación Empresas Polar" width={150} height={50} className="h-[50px] w-[150px] object-contain" priority />
+    <div className={`flex items-center justify-center py-3 ${className}`}>
+      <Image src="/logos/universidad.png" alt="Universidad Empresas Polar" width={88} height={88} className="h-[min(88px,12dvh)] w-auto object-contain" priority />
     </div>
   );
 }
@@ -42,7 +40,7 @@ export function Stepper({ step }: { step: 1 | 2 }) {
                   done
                     ? 'flex h-[34px] w-[34px] items-center justify-center rounded-full bg-white text-polar-blue'
                     : now
-                      ? 'flex h-[34px] w-[34px] items-center justify-center rounded-full bg-polar-orange text-[15px] font-extrabold shadow-[0_0_0_4px_rgba(255,141,40,0.35)]'
+                      ? 'flex h-[34px] w-[34px] items-center justify-center rounded-full bg-polar-yellow text-[15px] font-extrabold text-polar-navy shadow-[0_0_0_4px_rgba(255,204,83,0.45)]'
                       : 'flex h-[34px] w-[34px] items-center justify-center rounded-full border-2 border-white/70 text-[15px] font-bold'
                 }
               >
@@ -66,22 +64,32 @@ export function Bubble({ children, className = '' }: { children: ReactNode; clas
   );
 }
 
-/** Tarjeta grande del oso con borde blanco. `art` es el dibujo (BearSvg). */
+/**
+ * Tarjeta grande del oso con borde blanco. `art` es el dibujo (BearSvg).
+ * Lo que va en `top` (el globo) ocupa su propio espacio arriba: el texto nunca tapa al oso,
+ * que se encoge para caber en lo que queda.
+ */
 export function BearCard({
   art,
+  top,
   className = '',
   artClassName = '',
   children,
 }: {
   art: ReactNode;
+  top?: ReactNode;
   className?: string;
   artClassName?: string;
+  /** Adornos de fondo (confeti), detrás del oso. */
   children?: ReactNode;
 }) {
   return (
-    <div className={`relative overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky ${className}`}>
-      <div className={`absolute inset-x-0 bottom-0 top-[18%] flex justify-center ${artClassName}`}>{art}</div>
+    <div className={`relative flex flex-col overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky ${className}`}>
       {children}
+      {top && <div className="relative z-10 shrink-0 px-3 pt-3">{top}</div>}
+      <div className="relative min-h-0 flex-1">
+        <div className={`absolute inset-0 flex justify-center pt-2 ${artClassName}`}>{art}</div>
+      </div>
     </div>
   );
 }
@@ -89,15 +97,15 @@ export function BearCard({
 /** Lluvia de confeti para las celebraciones. */
 export function Confetti() {
   const bits = [
-    { l: 8, w: 10, h: 18, c: '#FF8D28', d: 3.2, s: 0 },
+    { l: 8, w: 10, h: 18, c: '#004572', d: 3.2, s: 0 },
     { l: 22, w: 12, h: 12, c: '#FFFFFF', d: 2.6, s: 0.4, r: true },
-    { l: 35, w: 8, h: 16, c: '#0B2A66', d: 3.6, s: 1.1 },
-    { l: 48, w: 10, h: 18, c: '#FFD23F', d: 2.9, s: 0.2 },
-    { l: 61, w: 12, h: 12, c: '#FF8D28', d: 3.3, s: 1.6, r: true },
+    { l: 35, w: 8, h: 16, c: '#00428D', d: 3.6, s: 1.1 },
+    { l: 48, w: 10, h: 18, c: '#FFCC53', d: 2.9, s: 0.2 },
+    { l: 61, w: 12, h: 12, c: '#004572', d: 3.3, s: 1.6, r: true },
     { l: 72, w: 8, h: 16, c: '#FFFFFF', d: 2.7, s: 0.9 },
-    { l: 85, w: 10, h: 18, c: '#0B2A66', d: 3.1, s: 0.6 },
-    { l: 15, w: 8, h: 14, c: '#FFD23F', d: 3.8, s: 2 },
-    { l: 66, w: 10, h: 10, c: '#FFD23F', d: 3.4, s: 2.4, r: true },
+    { l: 85, w: 10, h: 18, c: '#00428D', d: 3.1, s: 0.6 },
+    { l: 15, w: 8, h: 14, c: '#FFCC53', d: 3.8, s: 2 },
+    { l: 66, w: 10, h: 10, c: '#FFCC53', d: 3.4, s: 2.4, r: true },
   ];
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>

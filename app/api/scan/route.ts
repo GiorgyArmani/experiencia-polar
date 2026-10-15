@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   if (!p) return error('Regístrate primero', 401);
 
   const { value } = (await req.json().catch(() => ({}))) as { value?: string };
-  if (typeof value !== 'string' || !isExperienceQr(value)) return error('Ese no es un QR de la Experiencia Polar');
+  if (typeof value !== 'string' || !isExperienceQr(value)) return error('Ese no es un QR de la Experiencia UEP');
 
   const r = await scanQr(p);
   return r.ok ? json(meResponse(r.player)) : error(r.error, r.status);

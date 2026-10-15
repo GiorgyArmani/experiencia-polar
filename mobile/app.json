@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Experiencia Polar",
+    "name": "Experiencia UEP",
     "slug": "experiencia-polar",
     "scheme": "experienciapolar",
     "version": "1.0.0",
@@ -59,7 +59,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Experiencia Polar usa la c�mara para leer los c�digos QR de la trivia.",
+          "cameraPermission": "Experiencia UEP usa la c�mara para leer los c�digos QR de la trivia.",
           "recordAudioAndroid": false
         }
       ],

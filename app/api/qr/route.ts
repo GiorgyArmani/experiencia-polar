@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   const { value } = (await req.json().catch(() => ({}))) as { value?: string };
-  if (typeof value !== 'string' || !isExperienceQr(value)) return error('Ese no es un QR de la Experiencia Polar', 404);
+  if (typeof value !== 'string' || !isExperienceQr(value)) return error('Ese no es un QR de la Experiencia UEP', 404);
   const res: QrResponse = { sedes: config.sedes };
   return json(res);
 }

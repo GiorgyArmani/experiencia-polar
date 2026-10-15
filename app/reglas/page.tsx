@@ -9,10 +9,10 @@ import { BearSvg } from '@/components/BearSvg';
 import { Logos, Screen } from '@/components/ui';
 
 const REGLAS = [
-  { t: 'Busca el QR de la Experiencia Polar', d: 'Es el mismo código en todas las estaciones. Escanéalo con la cámara de tu teléfono: cada escaneo te lleva al siguiente paso.' },
+  { t: 'Busca el QR de la Experiencia UEP', d: 'Es el mismo código en todas las estaciones. Escanéalo con la cámara de tu teléfono: cada escaneo te lleva al siguiente paso.' },
   { t: 'Responde contra reloj', d: 'Tienes 1 minuto para toda la trivia. Mientras más rápido aciertes, más puntos sumas para tu localidad.' },
   { t: 'Espera la próxima trivia', d: 'Cada trivia abre en su horario. Vuelve al mismo QR cuando abra.' },
-  { t: 'Gana premios', d: 'Al terminar las 4 trivias se revela el ranking de tu localidad.' },
+  { t: 'Sube en el ranking', d: 'Al terminar las 4 trivias se revela el ranking de tu localidad.' },
 ];
 
 export default function Reglas() {
@@ -24,7 +24,7 @@ export default function Reglas() {
 
   return (
     <Screen>
-      <h1 className="mx-9 mt-14 flex h-[45px] items-center rounded-full bg-polar-orange px-6 text-lg font-extrabold">Reglas</h1>
+      <h1 className="mx-9 mt-14 flex h-[45px] items-center rounded-full bg-polar-yellow px-6 text-lg font-extrabold text-polar-navy">Instrucciones</h1>
 
       <div className="mx-9 mt-5 rounded-[20px] bg-white px-[22px] py-5 text-polar-ink">
         <div className="flex items-center gap-3.5 border-b border-[#E3E3E3] pb-3.5">

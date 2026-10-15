@@ -65,7 +65,7 @@ export default function Registro() {
     return (
       <Screen>
         <Stepper step={1} />
-        <h1 className="mt-3 text-center text-[26px] font-black uppercase">Crea tu oso</h1>
+        <h1 className="title-display mt-3 text-center text-[30px]">Crea tu oso</h1>
 
         <div className="mx-auto mt-3 flex aspect-square w-[min(260px,62vw)] items-end justify-center overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky">
           <BearSvg avatar={avatar} mood="feliz" className="h-[96%]" title={`Tu oso: ${describe(avatar)}`} />
@@ -118,7 +118,7 @@ export default function Registro() {
   return (
     <Screen>
       <Stepper step={2} />
-      <h1 className="mt-3 text-center text-[26px] font-black uppercase">Tus datos</h1>
+      <h1 className="title-display mt-3 text-center text-[30px]">Tus datos</h1>
 
       <form id="datos" onSubmit={submit} className="mx-4 mt-3 flex flex-col gap-6 rounded-[20px] bg-white px-6 py-5 text-polar-ink">
         <div className="flex items-center gap-3 border-b border-[#E3E3E3] pb-3.5">
@@ -142,7 +142,7 @@ export default function Registro() {
             ))}
           </select>
         </div>
-        <p className="-mt-2 text-[13px] text-polar-muted">Usamos tus datos solo para el juego y la entrega de premios.</p>
+        <p className="-mt-2 text-[13px] text-polar-muted">Usamos tus datos solo para el juego.</p>
       </form>
 
       {error && <p role="alert" className="mx-6 mt-3 rounded-xl bg-polar-ink px-4 py-2 text-sm font-bold">{error}</p>}

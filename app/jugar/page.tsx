@@ -285,7 +285,7 @@ function TapBear({
         key={tickleKey}
         className={`flex h-full w-full origin-bottom items-end justify-center ${anim}`}
       >
-        <BearSvg avatar={avatar} mood={mood} look={look} graduado={graduado} className={fit === 'width' ? 'h-auto w-full' : 'h-full w-auto'} />
+        <BearSvg avatar={avatar} mood={mood} look={look} graduado={graduado} className={fit === 'width' ? 'h-auto w-full' : 'h-full w-auto max-w-full'} />
       </span>
     </button>
   );
@@ -303,7 +303,7 @@ function Progress({ completed, total, current }: { completed: number[]; total: n
           <span
             key={n}
             className={`flex h-7 min-w-[34px] items-center justify-center rounded-full px-2 text-[13px] font-extrabold ${
-              done ? 'bg-polar-blue text-white' : now ? 'bg-polar-orange text-white' : 'bg-white text-[#3D3D3D]'
+              done ? 'bg-polar-blue text-white' : now ? 'bg-polar-yellow text-polar-navy' : 'bg-white text-[#3D3D3D]'
             }`}
           >
             {done ? `✓ ${n}` : n}
@@ -317,13 +317,12 @@ function Progress({ completed, total, current }: { completed: number[]; total: n
 function Thumb({ avatar, buddy, mood = 'normal' }: { avatar: Avatar; buddy: Buddy; mood?: Mood }) {
   const { tickled, tickleKey, onTickle } = useTickle(buddy);
   return (
-    <div className="relative h-[187px] w-[105px] shrink-0 overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky">
+    <div className="relative aspect-[105/187] h-[min(187px,22dvh)] shrink-0 overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky">
       <TapBear
         avatar={avatar}
         mood={tickled ? 'feliz' : mood}
         tickleKey={tickleKey}
         onTickle={onTickle}
-        fit="width"
         className="absolute inset-0"
         title="Tu oso"
       />
@@ -365,9 +364,9 @@ function Camara({
       <div className="relative z-10 flex items-start gap-3">
         <Thumb avatar={avatar} buddy={buddy} mood={busy ? 'sorpresa' : 'normal'} />
         <div className="flex flex-col gap-2 pr-14 pt-7">
-          <Speech text={`${text} Es la Trivia ${trivia}.`} voice={buddy.voice} />
+          <Speech text={`${text} Es la Trivia ${trivia}.`} voice={buddy.voice} className="text-[15px]" />
           {closesAt && (
-            <span className="self-start rounded-full bg-polar-orange px-3 py-1.5 text-[13px] font-extrabold text-polar-ink">
+            <span className="self-start rounded-full bg-polar-yellow px-3 py-1.5 text-[13px] font-extrabold text-polar-navy">
               Abierta hasta las {hora(closesAt)}
             </span>
           )}
@@ -375,12 +374,13 @@ function Camara({
         </div>
       </div>
 
-      <div className="pointer-events-none relative z-10 mx-auto mt-[12vh] h-[240px] w-[240px]" aria-hidden>
+      {/* El visor se encoge en pantallas bajas o angostas para que todo quepa sin desplazarse. */}
+      <div className="pointer-events-none relative z-10 mx-auto mt-[6dvh] aspect-square w-[min(240px,28dvh,70vw)]" aria-hidden>
         <span className="absolute left-0 top-0 h-[50px] w-[50px] rounded-tl-[20px] border-l-[6px] border-t-[6px] border-white" />
         <span className="absolute right-0 top-0 h-[50px] w-[50px] rounded-tr-[20px] border-r-[6px] border-t-[6px] border-white" />
         <span className="absolute bottom-0 left-0 h-[50px] w-[50px] rounded-bl-[20px] border-b-[6px] border-l-[6px] border-white" />
         <span className="absolute bottom-0 right-0 h-[50px] w-[50px] rounded-br-[20px] border-b-[6px] border-r-[6px] border-white" />
-        <span className="absolute inset-x-4 h-1 animate-scan rounded bg-polar-orange" />
+        <span className="absolute inset-x-4 h-1 animate-scan rounded bg-polar-yellow" />
       </div>
       <p className="relative z-10 mt-4 text-center text-sm font-semibold text-white drop-shadow">
         {busy ? 'Leyendo…' : 'Apunta la cámara al código QR'}
@@ -389,12 +389,12 @@ function Camara({
       <div className="relative z-10 mt-auto flex flex-col gap-3 p-5">
         {demoTools && (
           <button type="button" onClick={() => onScan(qrUrlFor(window.location.origin))} className="btn-game">
-            Simular escaneo (demo)
+            Simular escaneo
           </button>
         )}
         <nav className="grid grid-cols-2 gap-[3px]">
           <Link href="/reglas" className="flex h-[52px] items-center justify-center rounded-l-[26px] rounded-r-md bg-polar-lav text-[15px] font-bold text-polar-lav-ink">
-            Reglas
+            Instrucciones
           </Link>
           <Link href="/ranking" className="flex h-[52px] items-center justify-center rounded-l-md rounded-r-[26px] bg-polar-lav-dark text-[15px] font-bold text-white">
             Ranking
@@ -540,7 +540,7 @@ function Trivia({
         <div className="h-3 flex-1 overflow-hidden rounded-full bg-white">
           <div
             className={`h-full rounded-full transition-[width,background-color] duration-200 ease-linear ${
-              hurry ? 'bg-[#E5484D]' : warn ? 'bg-[#F5B400]' : 'bg-polar-orange'
+              hurry ? 'bg-[#E5484D]' : warn ? 'bg-[#FF9F1C]' : 'bg-polar-yellow'
             } ${critical ? 'animate-pulse' : ''}`}
             style={{ width: `${pct}%` }}
           />
@@ -550,10 +550,10 @@ function Trivia({
         <span className="font-extrabold uppercase tracking-wider">Trivia {trivia} de {total}</span>
         <span className="font-bold">Pregunta {index + 1} de {count}</span>
       </div>
-      <h1 key={index} className="mt-2 animate-pop text-[26px] font-black uppercase leading-[1.1]">
+      <h1 key={index} className="mt-2 animate-pop title-display text-[clamp(22px,3.8dvh,30px)] leading-[1.1] text-polar-navy">
         {text}
       </h1>
-      <div className="mt-4 flex flex-col gap-3" onPointerLeave={() => setHover(null)}>
+      <div className="mt-[2dvh] flex flex-col gap-[min(12px,1.5dvh)]" onPointerLeave={() => setHover(null)}>
         {options.map((o, i) => (
           <button
             key={`${index}-${i}`}
@@ -563,46 +563,60 @@ function Trivia({
             onPointerDown={() => point(i)}
             onFocus={() => point(i)}
             onClick={() => onAnswer(i)}
-            className={`flex min-h-[52px] items-center rounded-full px-6 py-2 text-left text-[17px] font-bold text-white shadow-game-sm transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-70 ${
-              hover === i ? 'bg-polar-orange-dark' : 'bg-polar-orange'
+            className={`flex min-h-[clamp(44px,7.5dvh,52px)] items-center rounded-full px-6 py-1.5 text-left text-[17px] font-bold text-polar-navy shadow-game-sm transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-70 ${
+              hover === i ? 'bg-polar-yellow-dark' : 'bg-polar-yellow'
             }`}
           >
             {o}
           </button>
         ))}
       </div>
-      <div className="relative mx-auto mt-auto h-[32vh] max-h-[380px] w-[230px] overflow-hidden rounded-t-[20px] border-4 border-b-0 border-white bg-polar-sky">
-        <TapBear
-          avatar={avatar}
-          mood={mood}
-          look={look}
-          tickleKey={tickleKey}
-          onTickle={onTickle}
-          fit="width"
-          className="absolute inset-0"
-          title="Tu oso"
-          shake={tickled || flash || busy ? undefined : critical ? 'alarm' : hurry ? 'tremble' : undefined}
-        />
+      {/* Escenario: ocupa el espacio libre bajo las opciones. El globo a la izquierda, el oso a la derecha. */}
+      <div className="relative -mx-[22px] mt-4 min-h-[150px] flex-1 border-t-4 border-white bg-polar-sky">
+        {/*
+          Globo y oso van juntos, pegados abajo: así el globo queda a la altura de la cabeza.
+          El grupo mide lo que el oso (máx. 360px) y el oso no pasa del 55% del ancho:
+          al texto siempre le queda su lado y nunca lo tapa.
+        */}
+        <div className="absolute inset-x-0 bottom-0 flex h-[calc(100%-12px)] max-h-[360px] gap-1 pl-4 pr-2">
+          <div className="mt-[6%] flex min-w-0 flex-1 flex-col gap-2 self-start">
+            {flash && (
+              <div
+                role="status"
+                className={`animate-pop self-start rounded-[16px] border-[3px] border-white px-4 py-1.5 text-white ${
+                  flash.correct ? 'bg-polar-blue shadow-arrow' : 'bg-polar-ink shadow-[0_4px_0_#000]'
+                }`}
+              >
+                <p className="text-lg font-black uppercase leading-tight">
+                  {!flash.correct ? 'Incorrecta' : streak >= 2 ? `¡Racha de ${streak}!` : '¡Correcto!'}
+                </p>
+                <p className="text-sm font-extrabold">{flash.correct ? `+${flash.points} puntos` : '+0 · ¡sigue!'}</p>
+              </div>
+            )}
+            <div className="relative">
+              <Speech text={tickleText ?? said} voice={buddy.voice} className="text-[15px]" />
+              {/* Colita del globo apuntando al oso. */}
+              <span
+                className="absolute -right-[7px] top-5 h-3.5 w-3.5 rotate-45 border-r-[3px] border-t-[3px] border-polar-ink bg-white"
+                aria-hidden
+              />
+            </div>
+          </div>
+          <TapBear
+            avatar={avatar}
+            mood={mood}
+            look={look}
+            tickleKey={tickleKey}
+            onTickle={onTickle}
+            className="aspect-[216/368] h-full max-w-[55%] shrink-0"
+            title="Tu oso"
+            shake={tickled || flash || busy ? undefined : critical ? 'alarm' : hurry ? 'tremble' : undefined}
+          />
+        </div>
       </div>
       {/* Borde rojo que parpadea en los últimos segundos. */}
       {critical && !flash && (
         <div className="pointer-events-none absolute inset-0 z-10 animate-pulse rounded-[22px] border-[6px] border-[#E5484D]" aria-hidden />
-      )}
-      <Speech text={tickleText ?? said} voice={buddy.voice} className="absolute bottom-[27vh] right-5 max-w-[60%] text-[15px]" />
-
-      {flash && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-[34vh] z-20 flex justify-center" role="status">
-          <div
-            className={`animate-pop rounded-[20px] border-4 border-white px-6 py-3 text-center text-white ${
-              flash.correct ? 'bg-polar-blue shadow-arrow' : 'bg-polar-ink shadow-[0_5px_0_#000]'
-            }`}
-          >
-            <p className="text-[22px] font-black uppercase">
-              {!flash.correct ? 'Incorrecta' : streak >= 2 ? `¡Racha de ${streak}!` : '¡Correcto!'}
-            </p>
-            <p className="text-base font-extrabold">{flash.correct ? `+${flash.points} puntos` : '+0 · ¡sigue!'}</p>
-          </div>
-        </div>
       )}
     </div>
   );
@@ -629,7 +643,7 @@ function Superada({
   const said = useFrase(timedOut ? 'tiempo' : 'superada', buddy, trivia);
   return (
     <div className="flex flex-1 flex-col px-[18px] pb-4 pt-16">
-      <h1 className="mx-4 flex h-14 items-center justify-center rounded-full bg-polar-orange text-[22px] font-black uppercase shadow-game">
+      <h1 className="mx-4 flex h-14 items-center justify-center rounded-full bg-polar-yellow title-display text-[26px] text-polar-navy shadow-game">
         {timedOut ? '¡Se acabó el tiempo!' : `¡Trivia ${trivia} superada!`}
       </h1>
       <BearCard
@@ -643,11 +657,11 @@ function Superada({
             title="Tu oso celebrando"
           />
         }
-        className="mt-6 flex-1"
+        top={<Speech text={tickleText ?? `${said} +${points} para tu localidad.`} voice={buddy.voice} className="animate-pop text-lg" />}
+        className="mt-[3dvh] min-h-[180px] flex-1"
         artClassName="origin-bottom animate-hop"
       >
         <Confetti />
-        <Speech text={tickleText ?? `${said} +${points} para tu localidad.`} voice={buddy.voice} className="absolute inset-x-4 top-4 animate-pop text-lg" />
       </BearCard>
       <button
         type="button"
@@ -720,18 +734,18 @@ function Espera({
     <div className="relative m-3 flex min-h-[calc(100dvh-24px)] flex-1 flex-col rounded-[22px] bg-polar-cam text-polar-ink">
       <div className="flex items-start gap-3">
         <Thumb avatar={avatar} buddy={buddy} mood="dormido" />
-        <Speech text={said} voice={buddy.voice} className="mr-14 mt-7" />
+        <Speech text={said} voice={buddy.voice} className="mr-14 mt-7 text-[15px]" />
       </div>
 
-      <div className="mx-auto mt-10 grid w-[320px] max-w-[85%] grid-cols-4 gap-2">
+      <div className="mx-auto mt-[4dvh] grid w-[320px] max-w-[85%] grid-cols-4 gap-2">
         {Array.from({ length: total }, (_, i) => i + 1).map((n) => {
           const done = completed.includes(n);
           const next = n === trivia;
           return (
             <span
               key={n}
-              className={`flex h-16 items-center justify-center rounded-2xl text-lg font-black ${
-                done ? 'bg-polar-blue text-white' : next ? 'bg-polar-orange text-white' : 'bg-white text-[#3D3D3D]'
+              className={`flex h-[min(64px,8dvh)] items-center justify-center rounded-2xl text-lg font-black ${
+                done ? 'bg-polar-blue text-white' : next ? 'bg-polar-yellow text-polar-navy' : 'bg-white text-[#3D3D3D]'
               }`}
             >
               {done ? `✓ ${n}` : n}
@@ -740,14 +754,15 @@ function Espera({
         })}
       </div>
 
-      <div className="mx-auto mt-6 flex w-[320px] max-w-[85%] flex-col items-center gap-1.5 rounded-[20px] bg-white p-5 text-center">
+      <div className="mx-auto mt-[3dvh] flex w-[320px] max-w-[85%] flex-col items-center gap-1.5 rounded-[20px] bg-white px-4 py-[min(20px,2.5dvh)] text-center">
         <span className="text-[13px] font-extrabold uppercase tracking-wider text-polar-muted">La Trivia {trivia} abre en</span>
-        <span className="text-[52px] font-black tabular-nums tracking-wide">{clock}</span>
+        <span className="text-[clamp(32px,min(13vw,7.5dvh),52px)] font-black leading-tight tabular-nums tracking-wide">{clock}</span>
         {opensAt && <span className="text-sm text-polar-muted">Abre a las {hora(opensAt)} · Escanea el mismo QR</span>}
       </div>
 
-      <div className="mx-auto mt-6 flex w-[320px] max-w-[85%] flex-col items-center gap-3">
-        <div className="flex h-14 w-full items-center justify-center rounded-full border-2 border-dashed border-[#8A8A8A] text-base font-bold text-[#3D3D3D]">
+      <div className="mx-auto mt-[3dvh] flex w-[320px] max-w-[85%] flex-col items-center gap-2">
+        {/* En pantallas muy bajas sobra: el reloj ya dice que está bloqueada. */}
+        <div className="flex h-12 w-full [@media(max-height:600px)]:hidden items-center justify-center rounded-full border-2 border-dashed border-[#8A8A8A] text-base font-bold text-[#3D3D3D]">
           Bloqueada hasta que abra
         </div>
         {demoTools && (
@@ -757,9 +772,9 @@ function Espera({
         )}
       </div>
 
-      <nav className="mx-auto mb-5 mt-auto grid w-[260px] grid-cols-2 gap-[3px]">
+      <nav className="mx-auto mb-5 mt-auto grid w-[260px] grid-cols-2 gap-[3px] pt-4">
         <Link href="/reglas" className="flex h-[52px] items-center justify-center rounded-l-[26px] rounded-r-md bg-polar-lav text-[15px] font-bold text-polar-lav-ink">
-          Reglas
+          Instrucciones
         </Link>
         <Link href="/ranking" className="flex h-[52px] items-center justify-center rounded-l-md rounded-r-[26px] bg-polar-lav-dark text-[15px] font-bold text-white">
           Ranking
@@ -782,7 +797,7 @@ function Final({ avatar, buddy, puntos, completed, total }: { avatar: Avatar; bu
     <div className="flex flex-1 flex-col px-[18px] pb-4 pt-16">
       <div className="flex flex-col items-center gap-1 text-center">
         <span className="text-sm font-extrabold uppercase tracking-[0.12em]">{completed} de {total} trivias completadas</span>
-        <h1 className="text-[44px] font-black uppercase leading-none text-polar-ink">¡Te graduaste!</h1>
+        <h1 className="title-display text-[clamp(36px,13vw,54px)] leading-none text-white [text-shadow:0_4px_0_#004572]">¡Te graduaste!</h1>
       </div>
       <BearCard
         art={
@@ -796,10 +811,10 @@ function Final({ avatar, buddy, puntos, completed, total }: { avatar: Avatar; bu
             title="Tu oso graduado"
           />
         }
-        className="mt-5 flex-1"
+        top={<Speech text={tickleText ?? said} voice={buddy.voice} className="text-base" />}
+        className="mt-[2.5dvh] min-h-[180px] flex-1"
       >
         <Confetti />
-        <Speech text={tickleText ?? said} voice={buddy.voice} className="absolute inset-x-4 top-4 text-base" />
       </BearCard>
       <div className="mx-4 mt-4 grid grid-cols-2 gap-3 rounded-[20px] bg-white px-5 py-3.5 text-polar-ink">
         <div className="flex flex-col">

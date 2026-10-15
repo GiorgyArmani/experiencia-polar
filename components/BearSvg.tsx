@@ -288,6 +288,8 @@ export function BearSvg({ avatar, graduado = false, crop = 'full', mood = 'norma
   return (
     <svg
       viewBox={crop === 'head' ? '28 6 144 144' : '-8 0 216 368'}
+      // Si la caja sobra de alto, el oso se queda parado abajo (no flota en el medio).
+      preserveAspectRatio={crop === 'head' ? undefined : 'xMidYMax meet'}
       className={className}
       role={title ? 'img' : undefined}
       aria-label={title}
@@ -760,7 +762,7 @@ function Face({ mood, look }: { mood: Mood; look?: Look }) {
           <path d="M114 90 Q122 96 130 90" {...stroke} strokeWidth="3.5" />
           <ellipse cx="100" cy="131" rx="4" ry="3" fill={INK} />
           <Blush />
-          <g fill="#0B2A66" fontWeight="900" fontFamily="Inter, sans-serif">
+          <g fill="#0B2A66" fontWeight="900" fontFamily="Poppins, sans-serif">
             <text x="148" y="56" fontSize="16" className="animate-zzz" style={blinkStyle}>z</text>
             <text x="156" y="44" fontSize="20" className="animate-zzz" style={{ ...blinkStyle, animationDelay: '0.8s' }}>z</text>
             <text x="166" y="30" fontSize="24" className="animate-zzz" style={{ ...blinkStyle, animationDelay: '1.6s' }}>Z</text>

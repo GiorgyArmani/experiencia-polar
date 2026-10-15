@@ -14,7 +14,7 @@ export default function Bienvenida() {
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>
           <Image source={require('../../assets/icon.png')} style={styles.logo} />
-          <Text style={styles.title}>Experiencia{'\n'}Polar</Text>
+          <Text style={styles.title}>Experiencia{'\n'}UEP</Text>
         </View>
 
         <Panel tilt={-1.2} style={styles.big} innerStyle={styles.fill}>
@@ -28,7 +28,7 @@ export default function Bienvenida() {
         <Panel tilt={1} bg={C.yellow} style={styles.small} innerStyle={styles.smallInner}>
           <Text style={styles.mission}>Tu misión</Text>
           <Text style={styles.missionText}>
-            Busca el QR de la Experiencia Polar: cada vez que lo escanees desbloqueas el siguiente paso. Responde las trivias y gradúa a tu oso.
+            Busca el QR de la Experiencia UEP: cada vez que lo escanees desbloqueas el siguiente paso. Responde las trivias y gradúa a tu oso.
           </Text>
         </Panel>
 

@@ -42,7 +42,7 @@ export default function OnboardingQr() {
             <Bear3D avatar={draft.avatar} reaction={msg ? 'error' : 'pensar'} style={styles.fill} />
           </Panel>
           <Bubble tail="left" style={styles.bubble}>
-            {msg || '¿Dónde estará? Apunta la cámara al código QR de la Experiencia Polar.'}
+            {msg || '¿Dónde estará? Apunta la cámara al código QR de la Experiencia UEP.'}
           </Bubble>
         </View>
 

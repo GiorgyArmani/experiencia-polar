@@ -47,7 +47,7 @@ export default function Entrar() {
 
   return (
     <Screen>
-      <h1 className="mt-16 text-center text-[30px] font-black uppercase leading-tight">
+      <h1 className="title-display mt-16 text-center text-[34px] leading-tight">
         ¡Qué bueno
         <br />
         verte otra vez!

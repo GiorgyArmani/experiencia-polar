@@ -95,7 +95,7 @@ export default function OnboardingDatos() {
                   })}
                 </View>
               </View>
-              <Text style={styles.note}>Usamos tus datos solo para el juego y la entrega de premios.</Text>
+              <Text style={styles.note}>Usamos tus datos solo para el juego.</Text>
             </Panel>
 
             <GameButton label={sending ? 'Registrando…' : 'Terminar registro'} onPress={submit} disabled={sending} />

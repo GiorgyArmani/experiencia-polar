@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { Logos, Screen } from '@/components/ui';
+import { Screen } from '@/components/ui';
 
 export default function Inicio() {
   const [registered, setRegistered] = useState<boolean | null>(null);
@@ -22,11 +22,11 @@ export default function Inicio() {
 
   const header = (
     <>
-      <Image src="/logos/universidad.png" alt="Universidad Empresas Polar" width={200} height={200} priority className="h-[200px] w-[200px] object-contain" />
-      <h1 className="text-[50px] font-extrabold uppercase leading-[1.08] text-polar-ink">
+      <Image src="/logos/universidad.png" alt="Universidad Empresas Polar" width={200} height={200} priority className="h-[min(200px,26dvh)] w-auto object-contain" />
+      <h1 className="title-display text-[clamp(44px,16vw,64px)] leading-[1.02] text-white [text-shadow:0_5px_0_#004572]">
         Experiencia
         <br />
-        Polar
+        UEP
       </h1>
     </>
   );
@@ -58,7 +58,6 @@ export default function Inicio() {
           </div>
         )}
       </div>
-      <Logos className="pb-4" />
     </Screen>
   );
 }

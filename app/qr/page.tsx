@@ -7,7 +7,7 @@ import { config } from '@/lib/config';
 import { PrintButton } from './PrintButton';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'QR · Experiencia Polar' };
+export const metadata = { title: 'QR · Experiencia UEP' };
 
 const PASOS = [
   { n: 1, t: 'Escanea', d: 'con la cámara de tu teléfono' },
@@ -42,13 +42,13 @@ export default async function QrPoster() {
           <span className="rounded-full bg-white/15 px-[1em] py-[0.35em] text-[2.6cqw] font-extrabold uppercase tracking-[0.18em]">
             Universidad Empresas Polar
           </span>
-          <h1 className="mt-[0.25em] text-[12.5cqw] font-black uppercase leading-[0.92] tracking-tight [text-shadow:0_0.06em_0_#1B5FBF]">
+          <h1 className="mt-[0.25em] title-display text-[14cqw] leading-[0.95] [text-shadow:0_0.06em_0_#004572]">
             Experiencia
             <br />
-            Polar
+            UEP
           </h1>
-          <p className="mt-[0.7em] -rotate-2 rounded-full bg-polar-orange px-[1.1em] py-[0.4em] text-[4cqw] font-black uppercase shadow-[0_0.25em_0_#C9620A]">
-            Escanea · Juega · Gana
+          <p className="mt-[0.7em] -rotate-2 rounded-full bg-polar-yellow px-[1.1em] py-[0.4em] text-[4cqw] font-black uppercase text-polar-navy shadow-[0_0.25em_0_#D29B22]">
+            Escanea · Juega · Aprende
           </p>
         </header>
 
@@ -78,7 +78,7 @@ export default async function QrPoster() {
         <ol className="relative mt-auto grid w-full grid-cols-3 gap-[3%] pt-[5%]">
           {PASOS.map((p) => (
             <li key={p.n} className="flex flex-col items-center rounded-[3cqw] bg-polar-card px-[6%] py-[8%] text-center">
-              <span className="flex h-[1.9em] w-[1.9em] items-center justify-center rounded-full bg-polar-orange text-[3.4cqw] font-black">
+              <span className="flex h-[1.9em] w-[1.9em] items-center justify-center rounded-full bg-polar-yellow text-[3.4cqw] font-black text-polar-navy">
                 {p.n}
               </span>
               <span className="mt-[0.4em] text-[3.2cqw] font-black uppercase leading-tight">{p.t}</span>
@@ -89,8 +89,6 @@ export default async function QrPoster() {
 
         <footer className="relative mt-[4%] flex w-full items-center justify-center gap-[5%] rounded-[3cqw] bg-polar-navy px-[5%] py-[2.5%]">
           <Image src="/logos/universidad.png" alt="Universidad Empresas Polar" width={88} height={88} className="h-auto w-[12%] object-contain" />
-          <span className="h-[8cqw] w-px bg-white/30" aria-hidden />
-          <Image src="/logos/fundacion.png" alt="Fundación Empresas Polar" width={150} height={50} className="h-auto w-[30%] object-contain" />
         </footer>
       </article>
 
