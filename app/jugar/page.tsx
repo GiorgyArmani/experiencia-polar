@@ -258,6 +258,7 @@ function TapBear({
   fit = 'height',
   className = '',
   title,
+  shake,
 }: {
   avatar: Avatar;
   mood: Mood;
@@ -269,7 +270,10 @@ function TapBear({
   fit?: 'width' | 'height';
   className?: string;
   title: string;
+  /** Tiembla porque se acaba el tiempo. */
+  shake?: 'tremble' | 'alarm';
 }) {
+  const anim = shake === 'alarm' ? 'animate-alarm' : shake === 'tremble' ? 'animate-tremble' : tickleKey ? 'animate-wiggle' : 'animate-breathe';
   return (
     <button
       type="button"
@@ -279,7 +283,7 @@ function TapBear({
     >
       <span
         key={tickleKey}
-        className={`flex h-full w-full origin-bottom items-end justify-center ${tickleKey ? 'animate-wiggle' : 'animate-breathe'}`}
+        className={`flex h-full w-full origin-bottom items-end justify-center ${anim}`}
       >
         <BearSvg avatar={avatar} mood={mood} look={look} graduado={graduado} className={fit === 'width' ? 'h-auto w-full' : 'h-full w-auto'} />
       </span>
@@ -470,15 +474,18 @@ function Trivia({
 
   const ms = useCountdown(deadline, offset, onTimeUp);
   const secs = Math.ceil(ms / 1000);
-  const hurry = deadline !== null && secs <= 10;
   const pct = deadline ? Math.min(100, (ms / (limitSeconds * 1000)) * 100) : 100;
+  // La presión sube por etapas: aviso (queda poco) → apuro (10 s) → alarma (5 s).
+  const hurry = deadline !== null && secs <= 10;
+  const critical = deadline !== null && secs <= 5;
+  const warn = deadline !== null && (hurry || pct <= 40);
 
-  // Tic-tac en los últimos 5 segundos.
+  // Alarma una vez por segundo en los últimos 10.
   const lastTick = useRef<number | null>(null);
   useEffect(() => {
-    if (!deadline || secs > 5 || secs <= 0 || lastTick.current === secs) return;
+    if (!deadline || secs > 10 || secs <= 0 || lastTick.current === secs) return;
     lastTick.current = secs;
-    sfx.tick(secs);
+    sfx.alarm(secs);
   }, [secs, deadline]);
 
   const state: Frase = flash
@@ -504,7 +511,7 @@ function Trivia({
           ? 'orgulloso'
           : 'sorpresa'
         : 'triste'
-      : busy || hurry
+      : busy || warn
         ? 'nervioso'
         : hover !== null
           ? 'pensar'
@@ -532,7 +539,9 @@ function Trivia({
         </span>
         <div className="h-3 flex-1 overflow-hidden rounded-full bg-white">
           <div
-            className={`h-full rounded-full transition-[width] duration-200 ease-linear ${hurry ? 'bg-[#E5484D]' : 'bg-polar-orange'}`}
+            className={`h-full rounded-full transition-[width,background-color] duration-200 ease-linear ${
+              hurry ? 'bg-[#E5484D]' : warn ? 'bg-[#F5B400]' : 'bg-polar-orange'
+            } ${critical ? 'animate-pulse' : ''}`}
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -572,8 +581,13 @@ function Trivia({
           fit="width"
           className="absolute inset-0"
           title="Tu oso"
+          shake={tickled || flash || busy ? undefined : critical ? 'alarm' : hurry ? 'tremble' : undefined}
         />
       </div>
+      {/* Borde rojo que parpadea en los últimos segundos. */}
+      {critical && !flash && (
+        <div className="pointer-events-none absolute inset-0 z-10 animate-pulse rounded-[22px] border-[6px] border-[#E5484D]" aria-hidden />
+      )}
       <Speech text={tickleText ?? said} voice={buddy.voice} className="absolute bottom-[27vh] right-5 max-w-[60%] text-[15px]" />
 
       {flash && (

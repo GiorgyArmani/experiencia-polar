@@ -215,8 +215,15 @@ export const sfx = {
       ],
       0.02,
     ),
-  /** Tic-tac de los últimos segundos (más agudo cuanto menos queda). */
-  tick: (secsLeft: number) => play([[secsLeft <= 2 ? N.C6 : N.G5, 0.05, 'square', 0.05]]),
+  /**
+   * Alarma de los últimos segundos, una vez por segundo: "bip-bip" desde los 10 s
+   * y alarma de reloj despertador (más rápida y aguda) en los últimos 5.
+   */
+  alarm: (secsLeft: number) => {
+    if (secsLeft > 5) return play([[N.A5, 0.07, 'square', 0.045], [0, 0.05], [N.A5, 0.07, 'square', 0.045]]);
+    const bip: Note = [secsLeft <= 2 ? N.E6 : N.C6, 0.06, 'square', 0.06];
+    play([bip, bip, bip, bip], 0.035);
+  },
   /** Se acabó el tiempo. */
   timeUp: () => play([[N.G5, 0.12], [N.E5, 0.12], [N.C5, 0.12], [N.G4, 0.4]], 0.02),
   /** Risita al tocar al oso. */

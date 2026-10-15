@@ -78,6 +78,9 @@ const config: Config = {
         hop: 'hop 1.4s ease-in-out infinite',
         pop: 'pop 0.6s ease-out both',
         shake: 'shake 1.2s ease-in-out 0.2s 2',
+        // El oso tiembla cuando se acaba el tiempo (más rápido en los últimos segundos).
+        tremble: 'shake 0.9s ease-in-out infinite',
+        alarm: 'shake 0.4s ease-in-out infinite',
       },
     },
   },
