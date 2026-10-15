@@ -507,7 +507,8 @@ function HairFront({ id, hair, hairS, hat }: { id: string; hair: string; hairS: 
         </g>
       );
     case 'afro':
-      return <path d="M38 94 C36 54 66 38 100 38 C134 38 164 54 162 94 C150 72 128 64 100 64 C72 64 50 72 38 94 Z" fill={hair} />;
+      // Tiene que tapar toda la coronilla (la cabeza llega hasta y=32), si no se asoma el contorno de la cabeza.
+      return <path d="M33 96 C28 40 62 22 100 22 C138 22 172 40 167 96 C152 72 128 64 100 64 C72 64 48 72 33 96 Z" fill={hair} />;
     case 'largo':
     case 'mono':
     case 'trenzas':
