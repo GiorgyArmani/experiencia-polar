@@ -6,6 +6,9 @@ type Note = [freq: number, dur: number, wave?: Wave, vol?: number];
 
 const MUTE_KEY = 'polar_mute';
 let ctx: AudioContext | null = null;
+let master: GainNode | null = null;
+// Volumen general: los parlantes de teléfono son débiles; los volúmenes de cada sonido son relativos a este.
+const MASTER_VOLUME = 2.6;
 let muted = readMuted();
 const listeners = new Set<(m: boolean) => void>();
 
@@ -23,15 +26,46 @@ function audio(): AudioContext | null {
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AC) return null;
     ctx = new AC();
+    master = ctx.createGain();
+    master.gain.value = MASTER_VOLUME;
+    master.connect(ctx.destination);
   }
   // iOS/Chrome arrancan el audio suspendido hasta el primer toque.
   if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   return ctx;
 }
 
-/** Llamar en el primer toque del usuario para desbloquear el audio en iOS. */
+/**
+ * Desbloquea el audio. Los navegadores móviles solo lo permiten dentro de un gesto "real"
+ * (touchend / click / keydown; pointerdown NO cuenta en iOS ni en Chrome Android).
+ */
 export function unlockAudio() {
-  audio();
+  if (typeof window === 'undefined') return;
+  // iOS 17+: que suene aunque el iPhone tenga el interruptor de silencio (como un video).
+  const nav = navigator as Navigator & { audioSession?: { type: string } };
+  if (nav.audioSession) {
+    try {
+      nav.audioSession.type = 'playback';
+    } catch {}
+  }
+  const ac = audio();
+  if (!ac) return;
+  // Un sonido vacío dentro del gesto termina de "despertar" el audio en Safari.
+  const buffer = ac.createBuffer(1, 1, 22050);
+  const src = ac.createBufferSource();
+  src.buffer = buffer;
+  src.connect(ac.destination);
+  src.start(0);
+}
+
+// Desbloqueo automático en el primer toque de cualquier pantalla (se quita cuando el audio ya corre).
+if (typeof window !== 'undefined') {
+  const events = ['touchend', 'click', 'keydown'] as const;
+  const onGesture = () => {
+    unlockAudio();
+    if (ctx?.state === 'running') events.forEach((e) => window.removeEventListener(e, onGesture, true));
+  };
+  events.forEach((e) => window.addEventListener(e, onGesture, true));
 }
 
 export function isMuted() {
@@ -70,7 +104,7 @@ function play(notes: Note[], gap = 0) {
       gain.gain.linearRampToValueAtTime(vol, t + 0.005);
       gain.gain.setValueAtTime(vol, t + dur * 0.7);
       gain.gain.linearRampToValueAtTime(0, t + dur);
-      osc.connect(gain).connect(ac.destination);
+      osc.connect(gain).connect(master ?? ac.destination);
       osc.start(t);
       osc.stop(t + dur + 0.02);
     }
@@ -91,7 +125,7 @@ function sweep(from: number, to: number, dur: number, wave: Wave = 'square', vol
   osc.frequency.exponentialRampToValueAtTime(to, t + dur);
   gain.gain.setValueAtTime(vol, t);
   gain.gain.linearRampToValueAtTime(0, t + dur);
-  osc.connect(gain).connect(ac.destination);
+  osc.connect(gain).connect(master ?? ac.destination);
   osc.start(t);
   osc.stop(t + dur + 0.02);
 }

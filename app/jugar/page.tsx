@@ -12,7 +12,7 @@ import { BearSvg, type Look, type Mood } from '@/components/BearSvg';
 import { SoundToggle, Speech } from '@/components/BearTalk';
 import { BearCard, Bubble, Confetti, Screen, Spinner } from '@/components/ui';
 import { frase, primerNombre, type Frase } from '@/lib/frases';
-import { sfx, unlockAudio, voiceFor } from '@/lib/sfx';
+import { sfx, voiceFor } from '@/lib/sfx';
 
 const QrScanner = dynamic(() => import('@/components/QrScanner'), { ssr: false });
 
@@ -192,7 +192,7 @@ export default function Jugar() {
 
   return (
     <Screen className="relative overflow-hidden">
-      <div onPointerDownCapture={unlockAudio} className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col">
         {content}
       </div>
       <SoundToggle className="absolute right-5 top-5 z-40" />
