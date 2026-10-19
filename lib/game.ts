@@ -12,7 +12,7 @@ export function toPublic(p: Player): PublicPlayer {
     nombre: p.nombre,
     sede: p.sede,
     apodo: p.oso_nombre,
-    avatar: p.avatar,
+    icono: p.avatar,
     puntos: p.puntos,
     completed: p.completed ?? [],
     triviaPuntos: p.trivia_puntos ?? 0,
@@ -100,6 +100,7 @@ function baseStatus(p: Player, now: Date): Omit<GameStatus, 'wrongPenalty'> {
     totalTrivias: TOTAL_TRIVIAS,
     serverNow: now.toISOString(),
     deadline: deadlineOf(p)?.toISOString() ?? null,
+    startsAt: p.current_trivia ? p.trivia_started_at : null,
     limitSeconds: config.triviaSeconds,
   };
 
@@ -159,12 +160,14 @@ export type ScanResult = { ok: true; player: Player } | { ok: false; error: stri
 export async function scanQr(p: Player): Promise<ScanResult> {
   const status = computeStatus(p);
   if (status.phase === 'playing') return { ok: true, player: p };
-  if (status.phase === 'locked') return { ok: false, error: 'Esta trivia todavía no abre', status: 409 };
-  if (status.phase === 'final' || !status.trivia) return { ok: false, error: 'Ya completaste todas las trivias', status: 409 };
+  if (status.phase === 'locked') return { ok: false, error: 'Este nivel todavía no abre', status: 409 };
+  if (status.phase === 'final' || !status.trivia) return { ok: false, error: 'Ya completaste todos los niveles', status: 409 };
 
   const trivia = getTrivia(status.trivia);
   if (!trivia) return { ok: false, error: 'Trivia no encontrada', status: 404 };
   const store = getStore();
+  // El reloj arranca después del mapa: primero se ve cómo el ícono camina hasta la estación.
+  const startsAt = new Date(Date.now() + config.introSeconds * 1000).toISOString();
   const updated = await store.updatePlayer(
     p.id,
     {
@@ -173,9 +176,8 @@ export async function scanQr(p: Player): Promise<ScanResult> {
       question_ids: drawQuestions(trivia),
       missed: false,
       trivia_puntos: 0,
-      // Arranca el reloj: desde ya corren los segundos de la trivia.
-      trivia_started_at: new Date().toISOString(),
-      question_started_at: new Date().toISOString(),
+      trivia_started_at: startsAt,
+      question_started_at: startsAt,
     },
     { current_trivia: null },
   );

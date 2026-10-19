@@ -1,5 +1,5 @@
 // Llamadas del navegador a las API routes.
-import type { Avatar } from '@/shared/avatar';
+import type { Icono } from '@/shared/icono';
 import type { AnswerResponse, LeaderboardResponse, MeResponse, RegisterResponse } from '@/shared/types';
 
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
@@ -22,7 +22,7 @@ export const api = {
     sede?: string;
     sedeCode?: string;
     apodo: string;
-    avatar: Avatar;
+    icono: Icono;
   }) => call<RegisterResponse>('/api/register', { method: 'POST', body: JSON.stringify(body) }),
   login: (cedula: string) => call<RegisterResponse>('/api/login', { method: 'POST', body: JSON.stringify({ cedula }) }),
   scan: (value: string) => call<MeResponse>('/api/scan', { method: 'POST', body: JSON.stringify({ value }) }),

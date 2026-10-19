@@ -4,19 +4,16 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { primerNombre } from '@/lib/frases';
-import { voiceFor } from '@/lib/sfx';
-import { DEFAULT_AVATAR } from '@/shared/avatar';
 import type { PublicPlayer } from '@/shared/types';
-import { AvatarSvg } from '@/components/AvatarSvg';
-import { Speech } from '@/components/Talk';
 import { Screen } from '@/components/ui';
 
 const PASOS = [
-  { t: 'Escanea el QR', d: 'Es el mismo código en todas las estaciones. Cada escaneo te lleva al siguiente paso.' },
-  { t: 'Responde contra reloj', d: 'Son 3 preguntas por trivia y tienes 1 minuto para todas. Mientras más rápido aciertes, más puntos sumas para tu localidad.' },
-  { t: '¡Ojo con la última!', d: 'La Trivia 4 es la más difícil: cada respuesta incorrecta resta puntos.' },
-  { t: 'Espera la próxima trivia', d: 'Cada trivia abre en su horario. Vuelve al mismo QR cuando abra.' },
-  { t: 'Sube en el ranking', d: 'Al terminar las 4 trivias, mira cómo quedó tu localidad.' },
+  { t: 'Escanea el QR', d: 'Es el mismo código en todas las estaciones. Cada escaneo abre el mapa y te lleva al siguiente nivel.' },
+  { t: 'Recorre los 4 niveles', d: 'Plataforma UEP, Biblioteca UEP, Unidad Móvil y Líneas educativas: cada estación es un nivel del mapa.' },
+  { t: 'Responde contra reloj', d: 'Son hasta 3 preguntas por nivel y tienes 1 minuto para todas. Mientras más rápido aciertes, más puntos sumas para tu localidad.' },
+  { t: '¡Ojo con el último!', d: 'El Nivel 4 es el más difícil: cada respuesta incorrecta resta puntos.' },
+  { t: 'Espera el próximo nivel', d: 'Cada nivel abre en su horario. Vuelve al mismo QR cuando abra.' },
+  { t: 'Sube en el ranking', d: 'Al terminar los 4 niveles te gradúas. Mira cómo quedó tu localidad.' },
 ];
 
 export default function Instrucciones() {
@@ -35,24 +32,11 @@ export default function Instrucciones() {
   return (
     <Screen>
       <div className="flex flex-1 flex-col justify-center px-5 pt-[max(24px,4dvh)]">
-        <h1 className="title-display text-center text-[clamp(34px,11vw,44px)] leading-none text-white [text-shadow:0_4px_0_#004572]">
+        <h1 className="title-display text-center text-[clamp(34px,11vw,44px)] leading-none text-white [text-shadow:0_4px_0_#0E0C4E]">
           Instrucciones
         </h1>
 
-        {/* El avatar y su globo, lado a lado: el texto nunca lo tapa. */}
-        <div className="mt-[max(16px,2.5dvh)] flex items-center gap-3">
-          <div className="aspect-[216/300] h-[clamp(110px,17dvh,150px)] shrink-0 overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky px-1 pt-2">
-            <AvatarSvg avatar={player?.avatar ?? DEFAULT_AVATAR} mood="feliz" className="h-full w-full" title="Tu avatar" />
-          </div>
-          <div className="relative min-w-0 flex-1">
-            {player !== undefined && <Speech text={saludo} voice={voiceFor(player?.apodo ?? '')} className="text-[15px]" />}
-            {/* Colita del globo apuntando al avatar. */}
-            <span
-              className="absolute -left-[7px] top-5 h-3.5 w-3.5 rotate-45 border-b-[3px] border-l-[3px] border-polar-ink bg-white"
-              aria-hidden
-            />
-          </div>
-        </div>
+        <p className="mt-[max(12px,2dvh)] min-h-[1.5em] text-center text-lg font-extrabold">{player !== undefined && saludo}</p>
 
         <ol className="mt-[max(16px,2.5dvh)] flex flex-col gap-2.5 pb-4">
           {PASOS.map((p, i) => (

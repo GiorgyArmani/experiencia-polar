@@ -3,9 +3,8 @@
 // Lineamientos UEP: solo el logo de la Universidad, paleta y tipografías UEP, sin mencionar premios.
 import QRCode from 'qrcode';
 import { QR_INK, qrUrlFor } from '@/shared/qr';
-import { DEFAULT_AVATAR } from '@/shared/avatar';
 import { config } from '@/lib/config';
-import { AvatarSvg } from '@/components/AvatarSvg';
+import { PlayerIcon } from '@/components/PlayerIcon';
 import { PrintButton } from './PrintButton';
 
 export const dynamic = 'force-dynamic';
@@ -13,8 +12,8 @@ export const metadata = { title: 'QR · Experiencia UEP' };
 
 const PASOS = [
   { n: 1, t: 'Escanea', d: 'con la cámara de tu teléfono' },
-  { n: 2, t: 'Crea tu avatar', d: 'y elige tu localidad' },
-  { n: 3, t: 'Responde', d: 'y suma puntos para tu localidad' },
+  { n: 2, t: 'Elige tu ícono', d: 'y tu localidad' },
+  { n: 3, t: 'Juega', d: 'los 4 niveles y suma puntos' },
 ];
 
 export default async function QrPoster() {
@@ -42,11 +41,11 @@ export default async function QrPoster() {
 
         <header className="relative flex flex-col items-center px-[7%] text-center">
           {/* Logo oficial de la Universidad (versión a color sobre blanco). */}
-          <div className="rounded-[3cqw] bg-white px-[2.4cqw] py-[1.4cqw] shadow-[0_0.8cqw_0_#004572]">
+          <div className="rounded-[3cqw] bg-white px-[2.4cqw] py-[1.4cqw] shadow-[0_0.8cqw_0_#0E0C4E]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logos/uep.svg" alt="Universidad Empresas Polar" className="block h-[15cqw] w-auto" />
           </div>
-          <h1 className="title-display mt-[0.3em] whitespace-nowrap text-[12.5cqw] leading-none [text-shadow:0_0.06em_0_#004572]">
+          <h1 className="title-display mt-[0.3em] whitespace-nowrap text-[12.5cqw] leading-none [text-shadow:0_0.06em_0_#0E0C4E]">
             Experiencia UEP
           </h1>
           <p className="mt-[0.6em] -rotate-2 rounded-full bg-polar-yellow px-[1.1em] py-[0.35em] font-display text-[4.6cqw] uppercase tracking-wide text-polar-navy shadow-[0_0.2em_0_#D29B22]">
@@ -54,9 +53,9 @@ export default async function QrPoster() {
           </p>
         </header>
 
-        {/* QR con el globo de la UEP al centro, un avatar asomado y su globo de diálogo. */}
+        {/* QR con el globo de la UEP al centro, íconos de jugador alrededor y un globo de diálogo. */}
         <div className="relative my-auto w-[44%] py-[2%]">
-          <div className="rotate-[-1.5deg] rounded-[4cqw] border-[1cqw] border-polar-navy bg-white p-[6%] shadow-[1.6cqw_1.6cqw_0_#004572]">
+          <div className="rotate-[-1.5deg] rounded-[4cqw] border-[1cqw] border-polar-navy bg-white p-[6%] shadow-[1.6cqw_1.6cqw_0_#0E0C4E]">
             <div className="relative">
               <div
                 className="[&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
@@ -70,10 +69,13 @@ export default async function QrPoster() {
               </div>
             </div>
           </div>
-          <div className="absolute -right-[50%] bottom-[4%] aspect-[216/300] w-[44%] rotate-[6deg] overflow-hidden rounded-[3cqw] border-[0.8cqw] border-white bg-polar-sky px-[3%] pt-[6%] shadow-[1cqw_1cqw_0_#004572]">
-            <AvatarSvg avatar={DEFAULT_AVATAR} mood="feliz" className="h-full w-full" title="Avatar de la Experiencia UEP" />
+          <div className="absolute -right-[46%] bottom-[2%] flex w-[40%] rotate-[8deg] flex-col items-center gap-[0.6cqw]" aria-hidden>
+            <PlayerIcon icono={{ simbolo: 'birrete', color: 'amarillo' }} className="w-[78%] border-[0.9cqw]" />
           </div>
-          <div className="absolute -left-[50%] top-[24%] -rotate-[8deg] rounded-[2.5cqw] border-[0.6cqw] border-polar-navy bg-white px-[0.7em] py-[0.45em] text-[3.4cqw] font-extrabold leading-tight text-polar-navy shadow-[0.8cqw_0.8cqw_0_#004572]">
+          <div className="absolute -left-[38%] bottom-[12%] w-[24%] -rotate-[10deg]" aria-hidden>
+            <PlayerIcon icono={{ simbolo: 'estrella', color: 'rojo' }} className="w-full border-[0.8cqw]" />
+          </div>
+          <div className="absolute -left-[50%] top-[24%] -rotate-[8deg] rounded-[2.5cqw] border-[0.6cqw] border-polar-navy bg-white px-[0.7em] py-[0.45em] text-[3.4cqw] font-extrabold leading-tight text-polar-navy shadow-[0.8cqw_0.8cqw_0_#0E0C4E]">
             ¡Escanéame!
           </div>
         </div>

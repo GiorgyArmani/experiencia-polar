@@ -4,17 +4,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { AVATAR_PARTS, DEFAULT_AVATAR, optionOf, randomAvatar, stepAvatar, type Avatar, type AvatarPart } from '@/shared/avatar';
+import { COLORES, DEFAULT_ICONO, SIMBOLOS, simboloLabel, type Icono } from '@/shared/icono';
 import type { Sede } from '@/shared/types';
-import { AvatarSvg } from '@/components/AvatarSvg';
-import { Chevron, Logos, Screen, Spinner, Stepper } from '@/components/ui';
-
-const PART_LABEL: Record<AvatarPart, string> = { piel: 'Piel', peinado: 'Peinado', pelo: 'Color de pelo', ropa: 'Ropa', accesorio: 'Accesorio' };
+import { PlayerIcon, SimboloSvg } from '@/components/PlayerIcon';
+import { Logos, Screen, Spinner, Stepper } from '@/components/ui';
+import { Destello } from '@/components/Cargando';
 
 export default function Registro() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
-  const [avatar, setAvatar] = useState<Avatar>(DEFAULT_AVATAR);
+  const [icono, setIcono] = useState<Icono>(DEFAULT_ICONO);
   const [apodo, setApodo] = useState('');
   const [form, setForm] = useState({ nombre: '', cedula: '', email: '', sede: '' });
   const [sedes, setSedes] = useState<Sede[] | null>(null);
@@ -53,7 +52,7 @@ export default function Registro() {
     setSending(true);
     setError('');
     try {
-      await api.register({ ...form, apodo: apodo.trim(), avatar });
+      await api.register({ ...form, apodo: apodo.trim(), icono });
       router.push('/reglas');
     } catch (err) {
       setError((err as Error).message);
@@ -65,32 +64,56 @@ export default function Registro() {
     return (
       <Screen>
         <Stepper step={1} />
-        <h1 className="title-display mt-3 text-center text-[30px]">Crea tu avatar</h1>
+        <h1 className="title-display mt-3 text-center text-[30px]">Elige tu ícono</h1>
 
-        <div className="relative mx-auto mt-3 flex aspect-square w-[min(240px,56vw)] items-end justify-center overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky">
-          <AvatarSvg avatar={avatar} mood="feliz" className="h-[94%]" title={`Tu avatar: ${describe(avatar)}`} />
-          <button
-            type="button"
-            onClick={() => setAvatar(randomAvatar())}
-            className="absolute right-2 top-2 rounded-full bg-white px-3 py-1 text-xs font-extrabold text-polar-blue shadow-arrow active:translate-y-[2px] active:shadow-none"
-          >
-            Sorpréndeme
-          </button>
+        <div className="mx-auto mt-3 flex items-center justify-center">
+          <PlayerIcon key={`${icono.simbolo}-${icono.color}`} icono={icono} size={136} className="animate-pop border-[5px]" title={`Tu ícono: ${simboloLabel(icono.simbolo)}`} />
         </div>
 
-        <div className="mx-auto mt-3 flex w-[min(314px,86vw)] flex-col gap-2">
-          {(Object.keys(AVATAR_PARTS) as AvatarPart[]).map((part) => (
-            <PartRow
-              key={part}
-              label={PART_LABEL[part]}
-              value={optionOf(part, avatar[part]).label}
-              onPrev={() => setAvatar(stepAvatar(avatar, part, -1))}
-              onNext={() => setAvatar(stepAvatar(avatar, part, 1))}
-            />
-          ))}
-        </div>
+        <fieldset className="mx-auto mt-4 w-[min(340px,90vw)]">
+          <legend className="mb-2 text-sm font-extrabold uppercase tracking-wide">Símbolo</legend>
+          <div className="grid grid-cols-5 gap-2">
+            {SIMBOLOS.map((s) => {
+              const on = s.id === icono.simbolo;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setIcono({ ...icono, simbolo: s.id })}
+                  aria-label={s.label}
+                  aria-pressed={on}
+                  className={`flex aspect-square items-center justify-center rounded-2xl transition-transform active:translate-y-[2px] ${
+                    on ? 'bg-polar-yellow text-polar-navy shadow-game-sm' : 'bg-polar-card text-white'
+                  }`}
+                >
+                  <SimboloSvg id={s.id} bg={on ? '#FFCC53' : '#003088'} className="h-[56%] w-[56%]" />
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
 
-        <div className="mx-auto mt-4 flex w-[min(314px,80vw)] flex-col gap-1.5">
+        <fieldset className="mx-auto mt-4 w-[min(340px,90vw)]">
+          <legend className="mb-2 text-sm font-extrabold uppercase tracking-wide">Color</legend>
+          <div className="grid grid-cols-8 gap-1.5">
+            {COLORES.map((c) => {
+              const on = c.id === icono.color;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setIcono({ ...icono, color: c.id })}
+                  aria-label={c.label}
+                  aria-pressed={on}
+                  className={`aspect-square w-full rounded-full border-[3px] ${on ? 'border-white ring-4 ring-polar-yellow' : 'border-white/70'}`}
+                  style={{ background: c.bg }}
+                />
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <div className="mx-auto mt-5 flex w-[min(340px,90vw)] flex-col gap-1.5">
           <label htmlFor="apodo" className="text-sm font-extrabold uppercase tracking-wide">
             Tu apodo en el ranking
           </label>
@@ -105,7 +128,7 @@ export default function Registro() {
           />
         </div>
 
-        {error && <p role="alert" className="mx-auto mt-2 w-[min(314px,80vw)] text-sm font-bold text-polar-ink">{error}</p>}
+        {error && <p role="alert" className="mx-auto mt-2 w-[min(340px,90vw)] text-sm font-bold text-polar-ink">{error}</p>}
 
         <div className="mx-auto mt-auto grid w-full max-w-[344px] grid-cols-3 gap-3 px-4 pt-5">
           <Link href="/" className="btn-ghost">Atrás</Link>
@@ -129,9 +152,7 @@ export default function Registro() {
 
       <form id="datos" onSubmit={submit} className="mx-4 mt-3 flex flex-col gap-6 rounded-[20px] bg-white px-6 py-5 text-polar-ink">
         <div className="flex items-center gap-3 border-b border-[#E3E3E3] pb-3.5">
-          <span className="block h-[52px] w-[52px] overflow-hidden rounded-full border-[3px] border-polar-blue bg-polar-sky">
-            <AvatarSvg avatar={avatar} crop="head" className="h-full w-full" />
-          </span>
+          <PlayerIcon icono={icono} size={52} />
           <div className="flex flex-col">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#5A5A5A]">Tu apodo</span>
             <span className="text-lg font-extrabold">{apodo}</span>
@@ -157,34 +178,17 @@ export default function Registro() {
       <div className="mx-auto mt-auto grid w-full max-w-[344px] grid-cols-3 gap-3 px-4 pt-5">
         <button type="button" onClick={() => setStep(1)} className="btn-ghost">Atrás</button>
         <button type="submit" form="datos" disabled={sending} className="btn-game col-span-2">
-          {sending ? 'Registrando…' : 'Terminar registro'}
+          {sending ? (
+            <>
+              <Destello size={20} color="#0E0C4E" /> Registrando…
+            </>
+          ) : (
+            'Terminar registro'
+          )}
         </button>
       </div>
       <Logos className="mt-2 pb-4" />
     </Screen>
-  );
-}
-
-function describe(a: Avatar) {
-  return (Object.keys(AVATAR_PARTS) as AvatarPart[]).map((p) => `${PART_LABEL[p]} ${optionOf(p, a[p]).label}`).join(', ');
-}
-
-function PartRow({ label, value, onPrev, onNext }: { label: string; value: string; onPrev: () => void; onNext: () => void }) {
-  const btn =
-    'flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-polar-blue shadow-arrow transition-transform active:translate-y-[3px] active:shadow-none';
-  return (
-    <div className="flex items-center gap-2">
-      <button type="button" onClick={onPrev} aria-label={`${label} anterior`} className={btn}>
-        <Chevron dir="left" size={22} />
-      </button>
-      <div className="flex h-11 flex-1 flex-col items-center justify-center rounded-full bg-polar-card leading-tight" aria-live="polite">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-[#DCEBFF]">{label}</span>
-        <span className="text-[15px] font-extrabold">{value}</span>
-      </div>
-      <button type="button" onClick={onNext} aria-label={`${label} siguiente`} className={btn}>
-        <Chevron dir="right" size={22} />
-      </button>
-    </div>
   );
 }
 

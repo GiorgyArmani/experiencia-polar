@@ -5,7 +5,7 @@
 import 'server-only';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
-import { parseAvatar, type Avatar } from '@/shared/avatar';
+import { parseIcono, type Icono } from '@/shared/icono';
 import type { Player } from '@/shared/types';
 import { config } from './config';
 
@@ -16,7 +16,7 @@ export interface NewPlayer {
   telefono: string | null;
   sede: string;
   oso_nombre: string;
-  avatar: Avatar;
+  avatar: Icono;
 }
 
 /** Condición para actualizar: si el jugador ya no está en ese estado, no se toca (evita dobles toques). */
@@ -66,7 +66,7 @@ function fromRow(row: Record<string, unknown> | null | undefined): Player | null
   if (!row) return null;
   return {
     ...(row as unknown as Player),
-    avatar: parseAvatar(row.avatar),
+    avatar: parseIcono(row.avatar),
     completed: (row.completed as number[] | null) ?? [],
     question_ids: (row.question_ids as number[] | null) ?? [],
     last_completed_at: iso(row.last_completed_at),

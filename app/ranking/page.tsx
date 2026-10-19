@@ -4,13 +4,11 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import type { LeaderboardResponse, LeaderRow } from '@/shared/types';
-import { AvatarSvg } from '@/components/AvatarSvg';
+import { PlayerIcon } from '@/components/PlayerIcon';
 
 function Face({ row, size, className = '' }: { row: LeaderRow; size: number; className?: string }) {
   return (
-    <span className={`block overflow-hidden rounded-full bg-polar-sky ${className}`} style={{ width: size, height: size }}>
-      <AvatarSvg avatar={row.avatar} graduado={row.graduado} crop="head" className="h-full w-full" />
-    </span>
+    <PlayerIcon icono={row.icono} graduado={row.graduado} size={size} className={className} title={row.apodo} />
   );
 }
 
@@ -62,7 +60,7 @@ export default function Ranking() {
           </Link>
           <div className="flex flex-col">
             <h1 className="title-display text-[30px] leading-none">Ranking</h1>
-            <span className="text-sm text-[#CFE0F7]">
+            <span className="text-sm text-[#CFE3F7]">
               {tab === 'sede' ? data?.sede ?? 'Tu localidad' : 'Localidades por puntos acumulados'}
             </span>
           </div>
@@ -91,9 +89,9 @@ export default function Ranking() {
               return (
                 <div key={place} className="flex flex-col items-center gap-1.5">
                   {row ? (
-                    <Face row={row} size={size} className={`border-[3px] ${place === 1 ? 'border-polar-yellow' : 'border-[#CFE0F7]'}`} />
+                    <Face row={row} size={size} className={`border-[3px] ${place === 1 ? 'border-polar-yellow' : 'border-[#CFE3F7]'}`} />
                   ) : (
-                    <span className="rounded-full border-[3px] border-dashed border-[#CFE0F7]/60" style={{ width: size, height: size }} />
+                    <span className="rounded-full border-[3px] border-dashed border-[#CFE3F7]/60" style={{ width: size, height: size }} />
                   )}
                   <span className="max-w-full truncate text-sm font-extrabold">{row?.apodo ?? '—'}</span>
                   <div className={`flex w-full items-center justify-center rounded-t-[14px] font-display ${h}`}>{place}</div>

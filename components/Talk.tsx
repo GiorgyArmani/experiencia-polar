@@ -1,36 +1,8 @@
 'use client';
 
-// El avatar "habla": el globo se escribe letra a letra con una voz 16 bits.
+// Control de sonido del juego (música y efectos de 16 bits).
 import { useEffect, useRef, useState } from 'react';
 import { getVolume, isMuted, onMuteChange, onVolumeChange, setMuted, setVolume, sfx, unlockAudio } from '@/lib/sfx';
-
-export function Speech({ text, voice, className = '' }: { text: string; voice: number; className?: string }) {
-  const [shown, setShown] = useState(0);
-
-  useEffect(() => {
-    setShown(0);
-    let i = 0;
-    const id = setInterval(() => {
-      i += 1;
-      setShown(i);
-      // Un blip cada dos letras (no en espacios) suena a "voz" sin saturar.
-      if (i % 2 === 0 && text[i - 1] && text[i - 1] !== ' ') sfx.voice(voice);
-      if (i >= text.length) clearInterval(id);
-    }, 32);
-    return () => clearInterval(id);
-  }, [text, voice]);
-
-  return (
-    <div
-      className={`grid rounded-[18px] border-[3px] border-polar-ink bg-white px-3.5 py-2.5 text-base font-extrabold leading-snug text-polar-ink ${className}`}
-      aria-live="polite"
-    >
-      {/* El texto completo reserva el espacio (invisible); en la misma celda va lo que ya "dijo". */}
-      <span className="invisible [grid-area:1/1]">{text}</span>
-      <span className="[grid-area:1/1]">{text.slice(0, shown)}</span>
-    </div>
-  );
-}
 
 function SpeakerIcon({ silent, low }: { silent: boolean; low?: boolean }) {
   return (

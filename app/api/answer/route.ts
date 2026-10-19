@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   if (!p.current_trivia) return error('Esta trivia ya terminó. Escanea el QR para la siguiente.', 409);
 
   const { option, index } = (await req.json().catch(() => ({}))) as { option?: number; index?: number };
-  if (typeof option !== 'number' || option < 0 || option > 3) return error('Respuesta inválida');
+  if (typeof option !== 'number' || !Number.isInteger(option) || option < 0) return error('Respuesta inválida');
   // Evita respuestas duplicadas (doble toque o pestaña vieja).
   if (typeof index === 'number' && index !== p.current_question) return error('Esa pregunta ya fue respondida', 409);
 
@@ -23,9 +23,14 @@ export async function POST(req: Request) {
   const bankIndex = pq?.ids[p.current_question];
   const q = pq && bankIndex !== undefined ? pq.trivia.bank[bankIndex] : undefined;
   if (!pq || bankIndex === undefined || !q) return error('Pregunta no encontrada', 404);
+  if (option >= q.options.length) return error('Respuesta inválida');
   const trivia = pq.trivia;
 
   const now = new Date();
+  // Mientras se muestra el mapa todavía no se puede responder.
+  if (p.trivia_started_at && now.getTime() < new Date(p.trivia_started_at).getTime() - 500) {
+    return error('El nivel aún no empieza', 409);
+  }
   const correct = option === q.correct;
   const pointsEarned = correct ? speedPoints(p, now) : -Math.min(wrongPenalty(trivia.id), p.puntos);
   const scored = { puntos: p.puntos + pointsEarned, trivia_puntos: (p.trivia_puntos ?? 0) + pointsEarned };

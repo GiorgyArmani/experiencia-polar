@@ -1,4 +1,4 @@
-import { isValidAvatar, parseAvatar } from '@/shared/avatar';
+import { isValidIcono, parseIcono } from '@/shared/icono';
 import type { RegisterResponse } from '@/shared/types';
 import { sedeByCode, sedeByName } from '@/lib/config';
 import { error, json, meResponse } from '@/lib/http';
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const oso_nombre = clean(body.apodo, 24);
 
   if (!oso_nombre) return error('Escribe tu apodo para el ranking');
-  if (!isValidAvatar(body.avatar)) return error('Termina de crear tu avatar');
+  if (!isValidIcono(body.icono)) return error('Elige tu ícono');
   if (nombre.split(' ').length < 2 || nombre.length < 5) return error('Escribe tu nombre completo');
   if (cedula.length < 5 || cedula.length > 10) return error('Revisa tu cédula');
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return error('Revisa tu correo (o déjalo vacío)');
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       telefono: null,
       sede: sede.name,
       oso_nombre,
-      avatar: parseAvatar(body.avatar),
+      avatar: parseIcono(body.icono),
     });
     setPlayerCookie(player.id);
     const res: RegisterResponse = { ...meResponse(player), recovered: false, token: player.id };

@@ -49,6 +49,8 @@ export const config = {
   pointsPerCorrect: Math.max(0, Number(process.env.POINTS_PER_CORRECT ?? 100)),
   // Última estación (la más difícil): puntos que resta cada respuesta incorrecta. 0 = no resta.
   wrongPenaltyLast: Math.max(0, Number(process.env.WRONG_PENALTY_LAST ?? 50)),
+  // Segundos del mapa (tu ícono camina hasta la estación) antes de que arranque el reloj del nivel.
+  introSeconds: Math.min(15, Math.max(0, Number(process.env.INTRO_SECONDS ?? 6))),
   // Contrarreloj: segundos para responder TODA la trivia.
   triviaSeconds: Math.max(10, Number(process.env.TRIVIA_SECONDS ?? 60)),
   sedes: parseSedes(process.env.SEDES),

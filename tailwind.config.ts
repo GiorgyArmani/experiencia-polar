@@ -5,23 +5,28 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Paleta de la UEP (brand book): azul claro #0079C7, azules oscuros #004572 / #00428D, amarillo #FFCC53.
+        // Paleta del Juego Aniversario UEP (Elementos EP): índigo #0E0C4E, azul rey #0351A3, azul acero #4587C5,
+        // azul brillante #008CFD, amarillo #FFCC53, gris claro #F4F4F4; acentos cian #00C3DA y lima #DEDE00.
         polar: {
-          blue: '#0079C7',
-          card: '#006AAE',
-          shadow: '#004572',
+          blue: '#0351A3',
+          bright: '#008CFD',
+          steel: '#4587C5',
+          card: '#003088',
+          shadow: '#0E0C4E',
           yellow: '#FFCC53',
           'yellow-dark': '#E5AC2E',
+          cyan: '#00C3DA',
+          lime: '#DEDE00',
           ink: '#1E1E1E',
-          cam: '#D9D9D9',
-          sky: '#B5DDF4',
-          lav: '#DCEFFB',
-          'lav-ink': '#004572',
-          'lav-dark': '#00428D',
+          cam: '#E4E9F1',
+          sky: '#C4E2FF',
+          lav: '#E3F1FF',
+          'lav-ink': '#0E0C4E',
+          'lav-dark': '#0E0C4E',
           muted: '#49454F',
-          navy: '#004572',
-          'navy-2': '#00428D',
-          ice: '#EAF3FB',
+          navy: '#0E0C4E',
+          'navy-2': '#003088',
+          ice: '#F4F4F4',
           cream: '#FFF6DD',
           slate: '#4A5872',
         },
@@ -34,8 +39,8 @@ const config: Config = {
       boxShadow: {
         game: '0 5px 0 #D29B22',
         'game-sm': '0 4px 0 #D29B22',
-        arrow: '0 5px 0 #004572',
-        'input-blue': '0 4px 0 #004572',
+        arrow: '0 5px 0 #0E0C4E',
+        'input-blue': '0 4px 0 #0E0C4E',
       },
       keyframes: {
         blink: { '0%,92%,100%': { transform: 'scaleY(1)' }, '95%': { transform: 'scaleY(0.1)' } },
@@ -44,6 +49,7 @@ const config: Config = {
         wiggle: { '0%,100%': { transform: 'rotate(0deg)' }, '25%': { transform: 'rotate(-6deg)' }, '75%': { transform: 'rotate(6deg)' } },
         sweat: { '0%': { transform: 'translateY(0)', opacity: '0' }, '20%': { opacity: '1' }, '100%': { transform: 'translateY(10px)', opacity: '0' } },
         scan: { '0%,100%': { top: '10%' }, '50%': { top: '86%' } },
+        walk: { '0%,100%': { transform: 'translateY(0) rotate(-4deg)' }, '50%': { transform: 'translateY(-14%) rotate(4deg)' } },
         hop: {
           '0%,100%': { transform: 'translateY(0) scale(1)' },
           '35%': { transform: 'translateY(-26px) scale(1.02)' },
@@ -76,10 +82,11 @@ const config: Config = {
         wiggle: 'wiggle 0.5s ease-in-out 2',
         sweat: 'sweat 1.4s ease-in infinite',
         scan: 'scan 2.6s ease-in-out infinite',
+        walk: 'walk 0.38s ease-in-out infinite',
         hop: 'hop 1.4s ease-in-out infinite',
         pop: 'pop 0.6s ease-out both',
         shake: 'shake 1.2s ease-in-out 0.2s 2',
-        // El oso tiembla cuando se acaba el tiempo (más rápido en los últimos segundos).
+        // El ícono tiembla cuando se acaba el tiempo (más rápido en los últimos segundos).
         tremble: 'shake 0.9s ease-in-out infinite',
         alarm: 'shake 0.4s ease-in-out infinite',
       },

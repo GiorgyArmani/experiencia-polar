@@ -1,5 +1,5 @@
 // Contrato de la API: lo comparten el servidor (Next.js), la web y la app nativa (Expo).
-import type { Avatar } from './avatar';
+import type { Icono } from './icono';
 
 export interface Sede {
   code: string; // ?sede=<code> en el leaderboard
@@ -13,8 +13,8 @@ export interface Player {
   email: string | null; // opcional: no todos tienen correo corporativo
   telefono: string | null; // ya no se pide (versiones anteriores)
   sede: string; // nombre de la localidad
-  oso_nombre: string; // apodo que sale en el ranking (la columna conserva su nombre de cuando el avatar era un oso)
-  avatar: Avatar;
+  oso_nombre: string; // apodo que sale en el ranking (la columna conserva su nombre de cuando había un oso)
+  avatar: Icono; // ícono del jugador (la columna conserva el nombre "avatar")
   puntos: number;
   completed: number[];
   current_trivia: number | null;
@@ -34,7 +34,7 @@ export interface PublicPlayer {
   nombre: string;
   sede: string;
   apodo: string;
-  avatar: Avatar;
+  icono: Icono;
   puntos: number;
   completed: number[];
   triviaPuntos: number; // puntos de la trivia en curso o la última terminada
@@ -52,6 +52,7 @@ export interface GameStatus {
   opensAt: string | null; // si está bloqueada, cuándo abre
   closesAt: string | null; // si está abierta, hasta cuándo
   deadline: string | null; // jugando: hasta cuándo hay para terminar la trivia (contrarreloj)
+  startsAt: string | null; // jugando: cuándo arranca el reloj (antes se muestra el mapa)
   limitSeconds: number; // tiempo total de cada trivia
   wrongPenalty: number; // puntos que resta cada incorrecta en la trivia abierta o en curso (0 = no resta)
   totalTrivias: number;
@@ -98,7 +99,7 @@ export interface AnswerResponse {
 export interface LeaderRow {
   rank: number;
   apodo: string;
-  avatar: Avatar;
+  icono: Icono;
   puntos: number;
   graduado: boolean;
   isMe: boolean;

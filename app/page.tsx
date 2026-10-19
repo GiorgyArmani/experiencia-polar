@@ -23,7 +23,7 @@ export default function Inicio() {
   const header = (
     <>
       <Image src="/logos/universidad.png" alt="Universidad Empresas Polar" width={200} height={200} priority className="h-[min(200px,26dvh)] w-auto object-contain" />
-      <h1 className="title-display text-[clamp(44px,16vw,64px)] leading-[1.02] text-white [text-shadow:0_5px_0_#004572]">
+      <h1 className="title-display text-[clamp(44px,16vw,64px)] leading-[1.02] text-white [text-shadow:0_5px_0_#0E0C4E]">
         Experiencia
         <br />
         UEP

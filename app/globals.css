@@ -12,7 +12,7 @@
 
 html,
 body {
-  background: #0079c7;
+  background: #0351A3;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -50,6 +50,12 @@ body {
   10% { opacity: 1; }
   100% { transform: translateY(700px) rotate(540deg); opacity: 1; }
 }
+
+/* Animaciones de carga (components/Cargando.tsx). */
+@keyframes spin-ring { to { transform: rotate(360deg); } }
+@keyframes pulse-dot { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.6); } }
+@keyframes fill-line { 0% { width: 0; margin-left: 0; } 50% { width: 100%; margin-left: 0; } 100% { width: 0; margin-left: 100%; } }
+.animate-spin-slow { animation: spin-ring 1.4s linear infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

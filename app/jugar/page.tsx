@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { qrUrlFor } from '@/shared/qr';
-import type { Avatar } from '@/shared/avatar';
+import { estacion, nivelLabel } from '@/shared/estaciones';
+import type { Icono } from '@/shared/icono';
 import type { AnswerResponse, MeResponse } from '@/shared/types';
-import { AvatarSvg, type Look, type Mood } from '@/components/AvatarSvg';
-import { SoundToggle, Speech } from '@/components/Talk';
-import { AvatarCard, Confetti, Screen, Spinner } from '@/components/ui';
-import { frase, primerNombre, type Frase } from '@/lib/frases';
-import { setMusicTempo, sfx, startMusic, stopMusic, voiceFor } from '@/lib/sfx';
+import { lastStop, META, WorldMap } from '@/components/WorldMap';
+import { SoundToggle } from '@/components/Talk';
+import { Screen, Spinner } from '@/components/ui';
+import { Anillos, Destello, Franjas } from '@/components/Cargando';
+import { setMusicTempo, sfx, startMusic, stopMusic } from '@/lib/sfx';
 
 const QrScanner = dynamic(() => import('@/components/QrScanner'), { ssr: false });
 
@@ -27,8 +28,9 @@ export default function Jugar() {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState('');
+  const [, rerender] = useState(0);
   const offset = useRef(0); // hora del servidor - hora del teléfono
-  const streak = useRef(0); // aciertos seguidos (para que el avatar celebre la racha)
+  const streak = useRef(0); // aciertos seguidos (para celebrar la racha)
   const playing = useRef<number | null>(null); // trivia que estaba jugando (para detectar "se acabó el tiempo")
 
   const apply = useCallback((r: MeResponse) => {
@@ -50,7 +52,7 @@ export default function Jugar() {
     refresh()
       .then(() => {})
       .catch(() => setToast('Sin conexión. Revisa tu internet.'));
-    // Aviso que deja /q/POLAR cuando el escaneo no pudo abrir una trivia.
+    // Aviso que deja /q/POLAR cuando el escaneo no pudo abrir un nivel.
     const aviso = new URLSearchParams(window.location.search).get('aviso');
     if (aviso) {
       setToast(aviso);
@@ -77,14 +79,17 @@ export default function Jugar() {
   }
 
   const { status, question, player, demoTools } = me;
-  const buddy: Buddy = { name: primerNombre(player.nombre), voice: voiceFor(player.apodo) };
 
   async function onScan(value: string) {
     if (busy) return;
     setBusy(true);
+    sfx.scan();
+    const t0 = Date.now();
     try {
-      apply(await api.scan(value));
-      sfx.scan();
+      const r = await api.scan(value);
+      // Que la animación de carga alcance a verse (~1 s) antes de pasar al mapa.
+      await new Promise((ok) => setTimeout(ok, Math.max(0, 1000 - (Date.now() - t0))));
+      apply(r);
     } catch (e) {
       setToast((e as Error).message);
       sfx.nope();
@@ -122,24 +127,44 @@ export default function Jugar() {
     }
   }
 
+  // Recién escaneado: el reloj del nivel todavía no arranca y se muestra el mapa.
+  const startsAt = status.phase === 'playing' && status.startsAt ? new Date(status.startsAt).getTime() : 0;
+  const inIntro = startsAt > Date.now() + offset.current;
+
   let content: React.ReactNode;
   if (overlay?.kind === 'superada') {
-    const isLast = status.phase === 'final';
+    const next = status.trivia ?? 0;
     content = (
       <Superada
-        avatar={player.avatar}
-        buddy={buddy}
+        icono={player.icono}
         trivia={overlay.trivia}
+        completed={player.completed}
         points={overlay.points}
         timedOut={overlay.timedOut}
-        nextLabel={isLast ? 'Ver mi resultado final' : `Ver cuándo abre la Trivia ${status.trivia ?? ''}`}
+        nextLabel={
+          status.phase === 'final'
+            ? 'Ver mi resultado final'
+            : status.phase === 'scan'
+              ? `Ir al Nivel ${next}`
+              : `Ver cuándo abre el Nivel ${next}`
+        }
         onNext={() => setOverlay(null)}
+      />
+    );
+  } else if (status.phase === 'playing' && question && inIntro) {
+    content = (
+      <Intro
+        icono={player.icono}
+        trivia={question.trivia}
+        completed={player.completed}
+        startsAt={startsAt}
+        offset={offset.current}
+        onStart={() => rerender((n) => n + 1)}
       />
     );
   } else if (status.phase === 'playing' && question) {
     content = (
       <Trivia
-        avatar={player.avatar}
         trivia={question.trivia}
         total={status.totalTrivias}
         index={question.index}
@@ -154,15 +179,13 @@ export default function Jugar() {
         penalty={status.wrongPenalty}
         offset={offset.current}
         onTimeUp={() => refresh().catch(() => {})}
-        buddy={buddy}
         onAnswer={onAnswer}
       />
     );
   } else if (status.phase === 'scan') {
     content = (
       <Camara
-        avatar={player.avatar}
-        buddy={buddy}
+        icono={player.icono}
         trivia={status.trivia ?? 1}
         closesAt={status.closesAt}
         penalty={status.wrongPenalty}
@@ -176,27 +199,23 @@ export default function Jugar() {
   } else if (status.phase === 'locked') {
     content = (
       <Espera
-        avatar={player.avatar}
-        buddy={buddy}
+        icono={player.icono}
         trivia={status.trivia ?? 1}
         opensAt={status.opensAt}
         offset={offset.current}
         completed={player.completed}
-        total={status.totalTrivias}
         demoTools={demoTools}
         onOpen={() => refresh().catch(() => {})}
         onSkip={() => api.skip().then(apply).catch((e) => setToast(e.message))}
       />
     );
   } else {
-    content = <Final avatar={player.avatar} buddy={buddy} puntos={player.puntos} completed={player.completed.length} total={status.totalTrivias} />;
+    content = <Final icono={player.icono} puntos={player.puntos} completed={player.completed} total={status.totalTrivias} />;
   }
 
   return (
     <Screen className="relative overflow-hidden">
-      <div className="flex flex-1 flex-col">
-        {content}
-      </div>
+      <div className="flex flex-1 flex-col">{content}</div>
       <SoundToggle className="absolute right-5 top-5 z-40" />
       {toast && (
         <div role="alert" className="fixed inset-x-4 bottom-6 z-50 mx-auto max-w-[400px] rounded-2xl bg-polar-ink px-4 py-3 text-center text-sm font-bold">
@@ -204,91 +223,6 @@ export default function Jugar() {
         </div>
       )}
     </Screen>
-  );
-}
-
-/* ───────────────────────── El avatar (eres tú) ───────────────────────── */
-
-/** Lo que el avatar necesita para "pensar en voz alta": tu nombre y tu tono de voz. */
-interface Buddy {
-  name: string;
-  voice: number;
-}
-
-/** Frase estable mientras no cambie `key` (no cambia en cada render). */
-function useFrase(kind: Frase, buddy: Buddy, key: unknown, r?: number) {
-  const [text, setText] = useState(() => frase(kind, { n: buddy.name, r }));
-  const first = useRef(true);
-  useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    setText(frase(kind, { n: buddy.name, r }));
-  }, [kind, key]);
-  return text;
-}
-
-/** Tocar al avatar: se ríe, se mueve y saluda. Devuelve el estado "cosquillas" por un momento. */
-function useTickle(buddy: Buddy) {
-  const [tickle, setTickle] = useState<{ n: number; text: string } | null>(null);
-  useEffect(() => {
-    if (!tickle) return;
-    const t = setTimeout(() => setTickle(null), 1800);
-    return () => clearTimeout(t);
-  }, [tickle]);
-  return {
-    tickled: tickle !== null,
-    tickleText: tickle?.text ?? null,
-    tickleKey: tickle?.n ?? 0,
-    onTickle: () => {
-      sfx.giggle();
-      setTickle({ n: Date.now(), text: frase('cosquillas', { n: buddy.name }) });
-    },
-  };
-}
-
-/** El avatar, tocable. Respira cuando está quieto y se menea cuando le haces cosquillas. */
-function TapAvatar({
-  avatar,
-  mood,
-  look,
-  graduado,
-  tickleKey,
-  onTickle,
-  fit = 'height',
-  className = '',
-  title,
-  shake,
-}: {
-  avatar: Avatar;
-  mood: Mood;
-  look?: Look;
-  graduado?: boolean;
-  tickleKey: number;
-  onTickle: () => void;
-  /** "width": el avatar ocupa el ancho (tarjetas angostas); "height": el alto. */
-  fit?: 'width' | 'height';
-  className?: string;
-  title: string;
-  /** Tiembla porque se acaba el tiempo. */
-  shake?: 'tremble' | 'alarm';
-}) {
-  const anim = shake === 'alarm' ? 'animate-alarm' : shake === 'tremble' ? 'animate-tremble' : tickleKey ? 'animate-wiggle' : 'animate-breathe';
-  return (
-    <button
-      type="button"
-      onClick={onTickle}
-      aria-label={`${title}. Tócalo para saludarlo`}
-      className={`flex items-end justify-center ${className}`}
-    >
-      <span
-        key={tickleKey}
-        className={`flex h-full w-full origin-bottom items-end justify-center ${anim}`}
-      >
-        <AvatarSvg avatar={avatar} mood={mood} look={look} graduado={graduado} className={fit === 'width' ? 'h-auto w-full' : 'h-full w-auto max-w-full'} />
-      </span>
-    </button>
   );
 }
 
@@ -315,22 +249,6 @@ function Progress({ completed, total, current }: { completed: number[]; total: n
   );
 }
 
-function Thumb({ avatar, buddy, mood = 'normal' }: { avatar: Avatar; buddy: Buddy; mood?: Mood }) {
-  const { tickled, tickleKey, onTickle } = useTickle(buddy);
-  return (
-    <div className="relative aspect-[105/187] h-[min(187px,22dvh)] shrink-0 overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky">
-      <TapAvatar
-        avatar={avatar}
-        mood={tickled ? 'feliz' : mood}
-        tickleKey={tickleKey}
-        onTickle={onTickle}
-        className="absolute inset-0"
-        title="Tu avatar"
-      />
-    </div>
-  );
-}
-
 /** +80 / −50 (con signo menos tipográfico). */
 function signed(n: number) {
   return n < 0 ? `−${Math.abs(n)}` : `+${n}`;
@@ -341,9 +259,57 @@ function hora(iso: string | null) {
   return new Date(iso).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
 }
 
+/** Cartel de nivel estilo consola: "NIVEL 2" y el nombre de la estación. */
+function NivelBanner({ trivia, className = '' }: { trivia: number; className?: string }) {
+  return (
+    <div className={`flex flex-col items-center text-center ${className}`}>
+      <span className="rounded-full bg-polar-navy px-4 py-1 font-display text-[15px] uppercase tracking-[0.18em] text-polar-yellow">
+        Nivel {trivia}
+      </span>
+      <span className="title-display mt-1 text-[clamp(28px,9vw,38px)] leading-none text-white [text-shadow:0_4px_0_#0E0C4E]">
+        {estacion(trivia)?.nombre ?? `Estación ${trivia}`}
+      </span>
+    </div>
+  );
+}
+
+/** Botones de abajo: mapa, instrucciones y ranking. */
+function Nav({ onMap, className = '' }: { onMap?: () => void; className?: string }) {
+  const base = 'flex h-[52px] items-center justify-center text-[15px] font-bold';
+  return (
+    <nav className={`grid gap-[3px] ${onMap ? 'grid-cols-3' : 'grid-cols-2'} ${className}`}>
+      {onMap && (
+        <button type="button" onClick={onMap} className={`${base} rounded-l-[26px] rounded-r-md bg-polar-yellow text-polar-navy`}>
+          Mapa
+        </button>
+      )}
+      <Link href="/reglas" className={`${base} ${onMap ? 'rounded-md' : 'rounded-l-[26px] rounded-r-md'} bg-polar-lav text-polar-lav-ink`}>
+        Instrucciones
+      </Link>
+      <Link href="/ranking" className={`${base} rounded-l-md rounded-r-[26px] bg-polar-lav-dark text-white`}>
+        Ranking
+      </Link>
+    </nav>
+  );
+}
+
+/** Mapa en una hoja que sube desde abajo (desde la cámara). */
+function MapSheet({ icono, completed, current, onClose }: { icono: Icono; completed: number[]; current: number; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" role="dialog" aria-modal="true" aria-label="Mapa" onClick={onClose}>
+      <div className="w-full max-w-[440px] rounded-t-[28px] bg-polar-blue px-4 pb-6 pt-4" onClick={(e) => e.stopPropagation()}>
+        <p className="title-display text-center text-2xl">Tu recorrido</p>
+        <WorldMap icono={icono} completed={completed} current={current} to={lastStop(completed)} className="mt-3 max-w-[min(340px,62dvh)]" />
+        <button type="button" onClick={onClose} className="btn-game mx-auto mt-4 w-full max-w-[300px]">
+          Seguir buscando el QR
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Camara({
-  avatar,
-  buddy,
+  icono,
   trivia,
   closesAt,
   penalty,
@@ -353,8 +319,7 @@ function Camara({
   busy,
   onScan,
 }: {
-  avatar: Avatar;
-  buddy: Buddy;
+  icono: Icono;
   trivia: number;
   closesAt: string | null;
   penalty: number;
@@ -364,23 +329,23 @@ function Camara({
   busy: boolean;
   onScan: (v: string) => void;
 }) {
-  const text = useFrase('escanear', buddy, trivia);
+  const [map, setMap] = useState(false);
   return (
     <div className="relative m-3 flex min-h-[calc(100dvh-24px)] flex-1 flex-col overflow-hidden rounded-[22px] bg-[#1E1E1E]">
-      <QrScanner onScan={onScan} paused={busy} />
+      <QrScanner onScan={onScan} paused={busy || map} />
 
-      <div className="relative z-10 flex items-start gap-3">
-        <Thumb avatar={avatar} buddy={buddy} mood={busy ? 'sorpresa' : 'normal'} />
-        <div className="flex flex-col gap-2 pr-14 pt-7">
-          <Speech text={`${text} Es la Trivia ${trivia}.`} voice={buddy.voice} className="text-[15px]" />
+      <div className="relative z-10 flex flex-col gap-2 p-4 pr-16">
+        <span className="text-[12px] font-extrabold uppercase tracking-[0.16em] text-polar-yellow">Busca el QR · Nivel {trivia}</span>
+        <span className="title-display text-[clamp(24px,7.5vw,32px)] leading-none text-white">{estacion(trivia)?.nombre}</span>
+        <div className="flex flex-col gap-2">
           {closesAt && (
             <span className="self-start rounded-full bg-polar-yellow px-3 py-1.5 text-[13px] font-extrabold text-polar-navy">
-              Abierta hasta las {hora(closesAt)}
+              Abierto hasta las {hora(closesAt)}
             </span>
           )}
           {penalty > 0 && (
             <span className="self-start rounded-full bg-[#E5484D] px-3 py-1.5 text-[13px] font-extrabold text-white">
-              ¡Última y más difícil! Cada incorrecta resta {penalty}
+              ¡Último y más difícil! Cada incorrecta resta {penalty}
             </span>
           )}
           <Progress completed={completed} total={total} current={trivia} />
@@ -388,16 +353,25 @@ function Camara({
       </div>
 
       {/* El visor se encoge en pantallas bajas o angostas para que todo quepa sin desplazarse. */}
-      <div className="pointer-events-none relative z-10 mx-auto mt-[6dvh] aspect-square w-[min(240px,28dvh,70vw)]" aria-hidden>
+      <div className="pointer-events-none relative z-10 mx-auto mt-[4dvh] aspect-square w-[min(240px,28dvh,70vw)]" aria-hidden>
         <span className="absolute left-0 top-0 h-[50px] w-[50px] rounded-tl-[20px] border-l-[6px] border-t-[6px] border-white" />
         <span className="absolute right-0 top-0 h-[50px] w-[50px] rounded-tr-[20px] border-r-[6px] border-t-[6px] border-white" />
         <span className="absolute bottom-0 left-0 h-[50px] w-[50px] rounded-bl-[20px] border-b-[6px] border-l-[6px] border-white" />
         <span className="absolute bottom-0 right-0 h-[50px] w-[50px] rounded-br-[20px] border-b-[6px] border-r-[6px] border-white" />
         <span className="absolute inset-x-4 h-1 animate-scan rounded bg-polar-yellow" />
       </div>
-      <p className="relative z-10 mt-4 text-center text-sm font-semibold text-white drop-shadow">
+      <p className="relative z-10 mt-4 flex items-center justify-center gap-2 text-center text-sm font-semibold text-white drop-shadow">
+        {busy && <Destello size={18} />}
         {busy ? 'Leyendo…' : 'Apunta la cámara al código QR'}
       </p>
+      {/* QR leído: carga con los anillos mientras se abre el nivel. */}
+      {busy && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-polar-navy/85" role="status" aria-live="polite">
+          <Anillos size={170} light={false} />
+          <Franjas />
+          <span className="text-sm font-extrabold uppercase tracking-[0.18em] text-white">Abriendo el nivel…</span>
+        </div>
+      )}
 
       <div className="relative z-10 mt-auto flex flex-col gap-3 p-5">
         {demoTools && (
@@ -405,14 +379,73 @@ function Camara({
             Simular escaneo
           </button>
         )}
-        <nav className="grid grid-cols-2 gap-[3px]">
-          <Link href="/reglas" className="flex h-[52px] items-center justify-center rounded-l-[26px] rounded-r-md bg-polar-lav text-[15px] font-bold text-polar-lav-ink">
-            Instrucciones
-          </Link>
-          <Link href="/ranking" className="flex h-[52px] items-center justify-center rounded-l-md rounded-r-[26px] bg-polar-lav-dark text-[15px] font-bold text-white">
-            Ranking
-          </Link>
-        </nav>
+        <Nav onMap={() => setMap(true)} />
+      </div>
+      {map && <MapSheet icono={icono} completed={completed} current={trivia} onClose={() => setMap(false)} />}
+    </div>
+  );
+}
+
+/**
+ * Recién escaneado: el mapa del mundo, tu ícono camina hasta la estación y arranca el nivel.
+ * El reloj del nivel empieza cuando termina esta pantalla (lo decide el servidor con `startsAt`).
+ */
+function Intro({
+  icono,
+  trivia,
+  completed,
+  startsAt,
+  offset,
+  onStart,
+}: {
+  icono: Icono;
+  trivia: number;
+  completed: number[];
+  startsAt: number;
+  offset: number;
+  onStart: () => void;
+}) {
+  const calc = () => Math.max(0, startsAt - (Date.now() + offset));
+  const [left, setLeft] = useState(calc);
+  const [arrived, setArrived] = useState(false);
+  const started = useRef(false);
+  const start = useRef(onStart);
+  start.current = onStart;
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const ms = calc();
+      setLeft(ms);
+      if (ms === 0 && !started.current) {
+        started.current = true;
+        sfx.cheer();
+        start.current();
+      }
+    }, 100);
+    return () => clearInterval(id);
+  }, [startsAt, offset]);
+
+  const secs = Math.ceil(left / 1000);
+  return (
+    <div className="flex flex-1 flex-col px-4 pb-5 pt-14">
+      <NivelBanner trivia={trivia} className="animate-pop" />
+      <WorldMap
+        icono={icono}
+        completed={completed}
+        current={trivia}
+        from={lastStop(completed.filter((n) => n < trivia))}
+        to={trivia}
+        onArrive={() => setArrived(true)}
+        className="mt-3 max-w-[min(360px,56dvh)]"
+      />
+      <div className="mt-auto flex flex-col items-center gap-1 pt-3 text-center" aria-live="polite">
+        <span className="text-sm font-extrabold uppercase tracking-[0.14em] text-[#DCEBFF]">
+          {arrived ? '¡Prepárate!' : 'Camino a la estación…'}
+        </span>
+        <span key={secs} className="title-display animate-pop text-[clamp(40px,8dvh,64px)] leading-none text-polar-yellow [text-shadow:0_4px_0_#0E0C4E]">
+          {secs > 3 ? 'Listo…' : secs > 0 ? secs : '¡YA!'}
+        </span>
+        <span className="text-[13px] font-semibold text-white/85">El reloj empieza al entrar al nivel</span>
       </div>
     </div>
   );
@@ -446,8 +479,6 @@ function useCountdown(deadline: string | null, offset: number, onZero: () => voi
 }
 
 function Trivia({
-  avatar,
-  buddy,
   trivia,
   total,
   index,
@@ -464,8 +495,6 @@ function Trivia({
   onTimeUp,
   onAnswer,
 }: {
-  avatar: Avatar;
-  buddy: Buddy;
   trivia: number;
   total: number;
   index: number;
@@ -482,20 +511,19 @@ function Trivia({
   onTimeUp: () => void;
   onAnswer: (i: number) => void;
 }) {
-  // La opción que estás por elegir: el avatar la mira y duda contigo.
   const [hover, setHover] = useState<number | null>(null);
-  const { tickled, tickleText, tickleKey, onTickle } = useTickle(buddy);
   useEffect(() => setHover(null), [index]);
 
   const ms = useCountdown(deadline, offset, onTimeUp);
   const secs = Math.ceil(ms / 1000);
-  const pct = deadline ? Math.min(100, (ms / (limitSeconds * 1000)) * 100) : 100;
+  const frac = deadline ? Math.min(1, ms / (limitSeconds * 1000)) : 1;
   // La presión sube por etapas: aviso (queda poco) → apuro (10 s) → alarma (5 s).
   const hurry = deadline !== null && secs <= 10;
   const critical = deadline !== null && secs <= 5;
-  const warn = deadline !== null && (hurry || pct <= 40);
+  const warn = deadline !== null && (hurry || frac <= 0.4);
+  const tone = hurry ? '#E5484D' : warn ? '#FF9F1C' : '#FFCC53';
 
-  // Música de fondo (la elegida en /sonidos) mientras dura la trivia; se acelera en los últimos 10 s.
+  // Música de fondo mientras dura el nivel; se acelera en los últimos 10 s.
   useEffect(() => {
     startMusic();
     return () => {
@@ -513,76 +541,31 @@ function Trivia({
     sfx.alarm(secs);
   }, [secs, deadline]);
 
-  const state: Frase = flash
-    ? flash.correct
-      ? streak >= 2
-        ? 'racha'
-        : 'acierto'
-      : flash.points < 0
-        ? 'resta'
-        : 'fallo'
-    : busy
-      ? 'esperando'
-      : hover !== null
-        ? 'mirando'
-        : hurry
-          ? 'apurado'
-          : 'pregunta';
-  const said = useFrase(state, buddy, `${index}-${state}-${hover}-${flash?.correct}`, streak);
-
-  const mood: Mood = tickled
-    ? 'feliz'
-    : flash
-      ? flash.correct
-        ? streak >= 2
-          ? 'orgulloso'
-          : 'sorpresa'
-        : 'triste'
-      : busy || warn
-        ? 'nervioso'
-        : hover !== null
-          ? 'pensar'
-          : 'normal';
-  // Las opciones están arriba del avatar: mira hacia arriba, de izquierda a derecha según cuál.
-  const look: Look | undefined = hover !== null ? { x: -0.6 + (hover / Math.max(1, options.length - 1)) * 1.2, y: -1 } : undefined;
-
   function point(i: number) {
     if (busy || hover === i) return;
     setHover(i);
     sfx.hover();
   }
 
+  // Aro de la cuenta regresiva: se vacía con el tiempo.
+  const R = 54;
+  const C = 2 * Math.PI * R;
+  const aviso = hurry ? '¡Apúrate!' : warn ? '¡Se acaba el tiempo!' : '¡Responde rápido y suma más!';
+
   return (
     <div className="relative m-3 flex min-h-[calc(100dvh-24px)] flex-1 flex-col overflow-hidden rounded-[22px] bg-polar-cam px-[22px] pt-6 text-polar-ink">
-      {/* Reloj de la trivia */}
-      <div className="flex items-center gap-3 pr-12">
-        <span
-          className={`min-w-[64px] rounded-full px-3 py-1 text-center text-lg font-black tabular-nums text-white ${
-            hurry ? 'animate-pulse bg-[#E5484D]' : 'bg-polar-ink'
-          }`}
-          aria-label={`Quedan ${secs} segundos`}
-        >
-          {`${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`}
+      <div className="flex items-center justify-between gap-2 pr-12 text-[13px] text-[#3D3D3D]">
+        <span className="min-w-0 truncate font-extrabold uppercase tracking-wider">
+          Nivel {trivia}/{total} · {estacion(trivia)?.nombre}
         </span>
-        <div className="h-3 flex-1 overflow-hidden rounded-full bg-white">
-          <div
-            className={`h-full rounded-full transition-[width,background-color] duration-200 ease-linear ${
-              hurry ? 'bg-[#E5484D]' : warn ? 'bg-[#FF9F1C]' : 'bg-polar-yellow'
-            } ${critical ? 'animate-pulse' : ''}`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
-      <div className="mt-3 flex items-center justify-between text-[13px] text-[#3D3D3D]">
-        <span className="font-extrabold uppercase tracking-wider">Trivia {trivia} de {total}</span>
-        <span className="font-bold">Pregunta {index + 1} de {count}</span>
+        <span className="shrink-0 font-bold">Pregunta {index + 1} de {count}</span>
       </div>
       {penalty > 0 && (
         <p className="mt-2 self-start rounded-full bg-[#E5484D] px-3 py-1 text-[12px] font-extrabold uppercase tracking-wide text-white">
           ¡Ojo! Cada incorrecta resta {penalty} puntos
         </p>
       )}
-      <h1 key={index} className="mt-2 animate-pop title-display text-[clamp(22px,3.8dvh,30px)] leading-[1.1] text-polar-navy">
+      <h1 key={index} className="mt-3 animate-pop title-display text-[clamp(22px,3.8dvh,30px)] leading-[1.1] text-polar-navy">
         {text}
       </h1>
       <div className="mt-[2dvh] flex flex-col gap-[min(12px,1.5dvh)]" onPointerLeave={() => setHover(null)}>
@@ -595,7 +578,7 @@ function Trivia({
             onPointerDown={() => point(i)}
             onFocus={() => point(i)}
             onClick={() => onAnswer(i)}
-            className={`flex min-h-[clamp(44px,7.5dvh,52px)] items-center rounded-full px-6 py-1.5 text-left text-[17px] font-bold text-polar-navy shadow-game-sm transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-70 ${
+            className={`flex min-h-[clamp(44px,7.5dvh,52px)] items-center rounded-full px-6 py-1.5 text-left text-[17px] font-bold leading-tight text-polar-navy shadow-game-sm transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-70 ${
               hover === i ? 'bg-polar-yellow-dark' : 'bg-polar-yellow'
             }`}
           >
@@ -603,50 +586,49 @@ function Trivia({
           </button>
         ))}
       </div>
-      {/* Escenario: ocupa el espacio libre bajo las opciones. El globo a la izquierda, el avatar a la derecha. */}
-      <div className="relative -mx-[22px] mt-4 min-h-[150px] flex-1 border-t-4 border-white bg-polar-sky">
-        {/*
-          Globo y avatar van juntos, pegados abajo: así el globo queda a la altura de la cabeza.
-          El grupo mide lo que el avatar (máx. 360px) y el avatar no pasa del 55% del ancho:
-          al texto siempre le queda su lado y nunca lo tapa.
-        */}
-        <div className="absolute inset-x-0 bottom-0 flex h-[calc(100%-12px)] max-h-[360px] gap-1 pl-4 pr-2">
-          <div className="mt-[6%] flex min-w-0 flex-1 flex-col gap-2 self-start">
-            {flash && (
-              <div
-                role="status"
-                className={`animate-pop self-start rounded-[16px] border-[3px] border-white px-4 py-1.5 text-white ${
-                  flash.correct ? 'bg-polar-blue shadow-arrow' : 'bg-polar-ink shadow-[0_4px_0_#000]'
-                }`}
-              >
-                <p className="text-lg font-black uppercase leading-tight">
-                  {!flash.correct ? 'Incorrecta' : streak >= 2 ? `¡Racha de ${streak}!` : '¡Correcto!'}
-                </p>
-                <p className="text-sm font-extrabold">
-                  {flash.correct ? `+${flash.points} puntos` : flash.points < 0 ? `${signed(flash.points)} puntos` : '+0 · ¡sigue!'}
-                </p>
-              </div>
-            )}
-            <div className="relative">
-              <Speech text={tickleText ?? said} voice={buddy.voice} className="text-[15px]" />
-              {/* Colita del globo apuntando al avatar. */}
-              <span
-                className="absolute -right-[7px] top-5 h-3.5 w-3.5 rotate-45 border-r-[3px] border-t-[3px] border-polar-ink bg-white"
-                aria-hidden
-              />
-            </div>
-          </div>
-          <TapAvatar
-            avatar={avatar}
-            mood={mood}
-            look={look}
-            tickleKey={tickleKey}
-            onTickle={onTickle}
-            className="aspect-[216/300] h-full max-w-[55%] shrink-0"
-            title="Tu avatar"
-            shake={tickled || flash || busy ? undefined : critical ? 'alarm' : hurry ? 'tremble' : undefined}
-          />
+
+      {/* La cuenta regresiva: grande, cambia de color y te apura. */}
+      <div className="relative -mx-[22px] mt-4 flex min-h-[150px] flex-1 flex-col items-center justify-center gap-2 border-t-4 border-white bg-polar-navy px-4 py-3 text-white">
+        <div className={`relative aspect-square h-[min(200px,24dvh)] ${critical ? 'animate-alarm' : hurry ? 'animate-tremble' : ''}`}>
+          <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden>
+            <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="10" />
+            <circle
+              cx="60"
+              cy="60"
+              r={R}
+              fill="none"
+              stroke={tone}
+              strokeWidth="10"
+              strokeLinecap="round"
+              strokeDasharray={C}
+              strokeDashoffset={C * (1 - frac)}
+              style={{ transition: 'stroke-dashoffset 200ms linear, stroke 300ms' }}
+            />
+          </svg>
+          <span
+            className={`absolute inset-0 flex items-center justify-center font-display text-[clamp(44px,9dvh,80px)] tabular-nums leading-none ${hurry ? 'animate-pulse' : ''}`}
+            style={{ color: tone }}
+            role="timer"
+            aria-label={`Quedan ${secs} segundos`}
+          >
+            {secs}
+          </span>
         </div>
+        {flash ? (
+          <div
+            role="status"
+            className={`animate-pop rounded-[16px] border-[3px] border-white px-4 py-1 text-center ${flash.correct ? 'bg-polar-bright' : 'bg-polar-ink'}`}
+          >
+            <p className="text-lg font-black uppercase leading-tight">
+              {!flash.correct ? 'Incorrecta' : streak >= 2 ? `¡Racha de ${streak}!` : '¡Correcto!'}
+            </p>
+            <p className="text-sm font-extrabold">
+              {flash.correct ? `+${flash.points} puntos` : flash.points < 0 ? `${signed(flash.points)} puntos` : '+0 · ¡sigue!'}
+            </p>
+          </div>
+        ) : (
+          <p className={`title-display text-center text-[clamp(18px,3dvh,24px)] leading-none ${hurry ? 'text-[#FF6B6F]' : 'text-white'}`}>{aviso}</p>
+        )}
       </div>
       {/* Borde rojo que parpadea en los últimos segundos. */}
       {critical && !flash && (
@@ -657,53 +639,38 @@ function Trivia({
 }
 
 function Superada({
-  avatar,
-  buddy,
+  icono,
   trivia,
+  completed,
   points,
   timedOut,
   nextLabel,
   onNext,
 }: {
-  avatar: Avatar;
-  buddy: Buddy;
+  icono: Icono;
   trivia: number;
+  completed: number[];
   points: number;
   timedOut: boolean;
   nextLabel: string;
   onNext: () => void;
 }) {
-  const { tickled, tickleText, tickleKey, onTickle } = useTickle(buddy);
-  const said = useFrase(timedOut ? 'tiempo' : 'superada', buddy, trivia);
   return (
-    <div className="flex flex-1 flex-col px-[18px] pb-4 pt-16">
-      <h1 className="mx-4 flex h-14 items-center justify-center rounded-full bg-polar-yellow title-display text-[26px] text-polar-navy shadow-game">
-        {timedOut ? '¡Se acabó el tiempo!' : `¡Trivia ${trivia} superada!`}
+    <div className="flex flex-1 flex-col px-4 pb-4 pt-14">
+      <h1 className="mx-2 flex min-h-14 items-center justify-center rounded-full bg-polar-yellow px-4 text-center title-display text-[clamp(20px,6.5vw,26px)] leading-none text-polar-navy shadow-game">
+        {timedOut ? '¡Se acabó el tiempo!' : `¡Nivel ${trivia} superado!`}
       </h1>
-      <AvatarCard
-        art={
-          <TapAvatar
-            avatar={avatar}
-            mood={tickled ? 'feliz' : timedOut ? 'animo' : 'orgulloso'}
-            tickleKey={tickleKey}
-            onTickle={onTickle}
-            className="h-full w-full"
-            title="Tu avatar celebrando"
-          />
-        }
-        top={<Speech text={tickleText ?? `${said} ${signed(points)} para tu localidad.`} voice={buddy.voice} className="animate-pop text-lg" />}
-        className="mt-[3dvh] min-h-[180px] flex-1"
-        artClassName="origin-bottom animate-hop"
-      >
-        <Confetti />
-      </AvatarCard>
+      <p className="mt-3 text-center text-lg font-extrabold">
+        <span className="text-polar-yellow">{signed(points)} puntos</span> para tu localidad
+      </p>
+      <WorldMap icono={icono} completed={completed} current={null} to={trivia} justCleared={trivia} className="mt-3 max-w-[min(340px,48dvh)]" />
       <button
         type="button"
         onClick={() => {
           sfx.tap();
           onNext();
         }}
-        className="btn-game mx-4 mt-5"
+        className="btn-game mx-2 mt-auto"
       >
         {nextLabel}
       </button>
@@ -712,24 +679,20 @@ function Superada({
 }
 
 function Espera({
-  avatar,
-  buddy,
+  icono,
   trivia,
   opensAt,
   offset,
   completed,
-  total,
   demoTools,
   onOpen,
   onSkip,
 }: {
-  avatar: Avatar;
-  buddy: Buddy;
+  icono: Icono;
   trivia: number;
   opensAt: string | null;
   offset: number;
   completed: number[];
-  total: number;
   demoTools: boolean;
   onOpen: () => void;
   onSkip: () => void;
@@ -738,7 +701,6 @@ function Espera({
   const [left, setLeft] = useState(() => Math.max(0, target - (Date.now() + offset)));
   const onOpenRef = useRef(onOpen);
   onOpenRef.current = onOpen;
-  const said = useFrase('espera', buddy, trivia);
 
   useEffect(() => {
     sfx.yawn();
@@ -765,92 +727,52 @@ function Espera({
   const clock = `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
 
   return (
-    <div className="relative m-3 flex min-h-[calc(100dvh-24px)] flex-1 flex-col rounded-[22px] bg-polar-cam text-polar-ink">
-      <div className="flex items-start gap-3">
-        <Thumb avatar={avatar} buddy={buddy} mood="dormido" />
-        <Speech text={said} voice={buddy.voice} className="mr-14 mt-7 text-[15px]" />
-      </div>
+    <div className="flex flex-1 flex-col px-4 pb-5 pt-14">
+      <p className="title-display mr-12 text-[clamp(24px,7.5vw,30px)] leading-none">Tu recorrido</p>
+      <WorldMap icono={icono} completed={completed} current={trivia} to={lastStop(completed)} className="mt-3 max-w-[min(340px,44dvh)]" />
 
-      <div className="mx-auto mt-[4dvh] grid w-[320px] max-w-[85%] grid-cols-4 gap-2">
-        {Array.from({ length: total }, (_, i) => i + 1).map((n) => {
-          const done = completed.includes(n);
-          const next = n === trivia;
-          return (
-            <span
-              key={n}
-              className={`flex h-[min(64px,8dvh)] items-center justify-center rounded-2xl text-lg font-black ${
-                done ? 'bg-polar-blue text-white' : next ? 'bg-polar-yellow text-polar-navy' : 'bg-white text-[#3D3D3D]'
-              }`}
-            >
-              {done ? `✓ ${n}` : n}
-            </span>
-          );
-        })}
-      </div>
-
-      <div className="mx-auto mt-[3dvh] flex w-[320px] max-w-[85%] flex-col items-center gap-1.5 rounded-[20px] bg-white px-4 py-[min(20px,2.5dvh)] text-center">
-        <span className="text-[13px] font-extrabold uppercase tracking-wider text-polar-muted">La Trivia {trivia} abre en</span>
-        <span className="text-[clamp(32px,min(13vw,7.5dvh),52px)] font-black leading-tight tabular-nums tracking-wide">{clock}</span>
+      <div className="mx-auto mt-3 flex w-[320px] max-w-full flex-col items-center gap-1 rounded-[20px] bg-white px-4 py-[min(16px,2dvh)] text-center text-polar-ink">
+        <span className="text-[13px] font-extrabold uppercase tracking-wider text-polar-muted">
+          El {nivelLabel(trivia)} abre en
+        </span>
+        <span className="text-[clamp(30px,min(12vw,6.5dvh),48px)] font-black leading-tight tabular-nums tracking-wide">{clock}</span>
         {opensAt && <span className="text-sm text-polar-muted">Abre a las {hora(opensAt)} · Escanea el mismo QR</span>}
       </div>
+      {demoTools && (
+        <button type="button" onClick={onSkip} className="mx-auto h-11 text-sm font-bold underline">
+          Saltar espera (demo)
+        </button>
+      )}
 
-      <div className="mx-auto mt-[3dvh] flex w-[320px] max-w-[85%] flex-col items-center gap-2">
-        {/* En pantallas muy bajas sobra: el reloj ya dice que está bloqueada. */}
-        <div className="flex h-12 w-full [@media(max-height:600px)]:hidden items-center justify-center rounded-full border-2 border-dashed border-[#8A8A8A] text-base font-bold text-[#3D3D3D]">
-          Bloqueada hasta que abra
-        </div>
-        {demoTools && (
-          <button type="button" onClick={onSkip} className="h-11 text-sm font-bold underline">
-            Saltar espera (demo)
-          </button>
-        )}
-      </div>
-
-      <nav className="mx-auto mb-5 mt-auto grid w-[260px] grid-cols-2 gap-[3px] pt-4">
-        <Link href="/reglas" className="flex h-[52px] items-center justify-center rounded-l-[26px] rounded-r-md bg-polar-lav text-[15px] font-bold text-polar-lav-ink">
-          Instrucciones
-        </Link>
-        <Link href="/ranking" className="flex h-[52px] items-center justify-center rounded-l-md rounded-r-[26px] bg-polar-lav-dark text-[15px] font-bold text-white">
-          Ranking
-        </Link>
-      </nav>
+      <Nav className="mx-auto mt-auto w-[260px] pt-3" />
     </div>
   );
 }
 
-function Final({ avatar, buddy, puntos, completed, total }: { avatar: Avatar; buddy: Buddy; puntos: number; completed: number; total: number }) {
+function Final({ icono, puntos, completed, total }: { icono: Icono; puntos: number; completed: number[]; total: number }) {
   const [rank, setRank] = useState<number | null>(null);
-  const { tickled, tickleText, tickleKey, onTickle } = useTickle(buddy);
-  const said = useFrase('final', buddy, 'final');
   useEffect(() => {
     api.leaderboard().then((r) => setRank(r.me?.rank ?? null)).catch(() => {});
-    sfx.graduate();
   }, []);
 
   return (
-    <div className="flex flex-1 flex-col px-[18px] pb-4 pt-16">
+    <div className="flex flex-1 flex-col px-4 pb-4 pt-14">
       <div className="flex flex-col items-center gap-1 text-center">
-        <span className="text-sm font-extrabold uppercase tracking-[0.12em]">{completed} de {total} trivias completadas</span>
-        <h1 className="title-display text-[clamp(36px,13vw,54px)] leading-none text-white [text-shadow:0_4px_0_#004572]">¡Te graduaste!</h1>
+        <span className="text-sm font-extrabold uppercase tracking-[0.12em]">
+          {completed.length} de {total} niveles completados
+        </span>
+        <h1 className="title-display text-[clamp(36px,13vw,54px)] leading-none text-white [text-shadow:0_4px_0_#0E0C4E]">¡Te graduaste!</h1>
       </div>
-      <AvatarCard
-        art={
-          <TapAvatar
-            avatar={avatar}
-            graduado
-            mood={tickled ? 'feliz' : 'orgulloso'}
-            tickleKey={tickleKey}
-            onTickle={onTickle}
-            className="h-full w-full"
-            title="Tu avatar graduado"
-          />
-        }
-        top={<Speech text={tickleText ?? said} voice={buddy.voice} className="text-base" />}
-        className="mt-[2.5dvh] min-h-[180px] flex-1"
-      >
-        <Confetti />
-      </AvatarCard>
-      <div className="mx-4 mt-4 grid grid-cols-2 gap-3 rounded-[20px] bg-white px-5 py-3.5 text-polar-ink">
+      <WorldMap
+        icono={icono}
+        completed={completed}
+        from={lastStop(completed)}
+        to={META}
+        graduado
+        onArrive={() => sfx.graduate()}
+        className="mt-3 max-w-[min(340px,42dvh)]"
+      />
+      <div className="mx-2 mt-3 grid grid-cols-2 gap-3 rounded-[20px] bg-white px-5 py-3 text-polar-ink">
         <div className="flex flex-col">
           <span className="text-[13px] font-semibold text-polar-muted">Tus puntos</span>
           <span className="text-[26px] font-black">{puntos}</span>
@@ -860,7 +782,7 @@ function Final({ avatar, buddy, puntos, completed, total }: { avatar: Avatar; bu
           <span className="text-[26px] font-black text-polar-blue">{rank ? `#${rank}` : '…'}</span>
         </div>
       </div>
-      <Link href="/ranking" className="btn-game mx-4 mt-4">
+      <Link href="/ranking" className="btn-game mx-2 mt-3">
         Ver el ranking
       </Link>
     </div>

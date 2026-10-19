@@ -1,7 +1,8 @@
 'use client';
 
-// "Ya tengo cuenta": entra con la cédula en otro navegador o teléfono y sigue con su avatar y sus puntos.
+// "Ya tengo cuenta": entra con la cédula en otro navegador o teléfono y sigue con su ícono y sus puntos.
 import Link from 'next/link';
+import { Destello } from '@/components/Cargando';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
@@ -76,7 +77,13 @@ export default function Entrar() {
           </p>
         )}
         <button type="submit" disabled={sending} className="btn-game">
-          {sending ? 'Entrando…' : 'Entrar'}
+          {sending ? (
+            <>
+              <Destello size={20} color="#0E0C4E" /> Entrando…
+            </>
+          ) : (
+            'Entrar'
+          )}
         </button>
       </form>
 

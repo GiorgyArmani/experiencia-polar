@@ -7,7 +7,7 @@ type Wave = OscillatorType;
 const MUTE_KEY = 'polar_mute';
 const VOLUME_KEY = 'polar_volume';
 const PACK_KEY = 'polar_sfx_pack';
-const MUSIC_KEY = 'polar_music';
+const MUSIC_KEY = 'polar_music_v2'; // v2: la música por defecto pasó a «Aventura 16 bits»
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let musicBus: GainNode | null = null;
@@ -456,7 +456,7 @@ const CONCURSO: SfxPack = {
 };
 
 export const SFX_PACKS = [
-  { id: 'clasico', label: '16 bits (actual)', desc: 'Sonidos de consola clásica, alegres y "pixelados".', pack: CLASICO },
+  { id: 'clasico', label: '16 bits (elegido por la UEP)', desc: 'Sonidos de consola clásica, alegres y "pixelados".', pack: CLASICO },
   { id: 'marimba', label: 'Marimba', desc: 'Madera y campanitas: suave, cálido y tropical.', pack: MARIMBA },
   { id: 'concurso', label: 'Concurso de TV', desc: 'Campana al acertar, zumbador al fallar y fanfarria de metales.', pack: CONCURSO },
 ] as const;
@@ -683,7 +683,8 @@ export const MUSIC_TRACKS: readonly { id: string; label: string; desc: string }[
   { id: 'ninguna', label: 'Sin música', desc: 'Solo efectos de sonido (como hasta ahora).' },
   ...MUSIC.map(({ id, label, desc }) => ({ id, label, desc })),
 ];
-const DEFAULT_MUSIC = 'ninguna';
+// La UEP eligió «Aventura 16 bits» y los efectos de 16 bits.
+const DEFAULT_MUSIC = 'aventura';
 
 let musicId: string = readChoice(MUSIC_KEY, MUSIC_TRACKS.map((t) => t.id), DEFAULT_MUSIC);
 

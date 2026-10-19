@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import type { ReactNode } from 'react';
+import { Cargando } from './Cargando';
 
 /** Contenedor de pantalla: columna de teléfono centrada, alto completo. */
 export function Screen({ children, className = '' }: { children: ReactNode; className?: string }) {
@@ -22,7 +23,7 @@ export function Logos({ className = '' }: { className?: string }) {
 /** Stepper del registro (2 pasos). */
 export function Stepper({ step }: { step: 1 | 2 }) {
   const items = [
-    { n: 1, label: 'Tu avatar' },
+    { n: 1, label: 'Tu ícono' },
     { n: 2, label: 'Tus datos' },
   ];
   return (
@@ -64,46 +65,16 @@ export function Bubble({ children, className = '' }: { children: ReactNode; clas
   );
 }
 
-/**
- * Tarjeta grande del avatar con borde blanco. `art` es el dibujo (AvatarSvg).
- * Lo que va en `top` (el globo) ocupa su propio espacio arriba: el texto nunca tapa al avatar,
- * que se encoge para caber en lo que queda.
- */
-export function AvatarCard({
-  art,
-  top,
-  className = '',
-  artClassName = '',
-  children,
-}: {
-  art: ReactNode;
-  top?: ReactNode;
-  className?: string;
-  artClassName?: string;
-  /** Adornos de fondo (confeti), detrás del avatar. */
-  children?: ReactNode;
-}) {
-  return (
-    <div className={`relative flex flex-col overflow-hidden rounded-[20px] border-4 border-white bg-polar-sky ${className}`}>
-      {children}
-      {top && <div className="relative z-10 shrink-0 px-3 pt-3">{top}</div>}
-      <div className="relative min-h-0 flex-1">
-        <div className={`absolute inset-0 flex justify-center pt-2 ${artClassName}`}>{art}</div>
-      </div>
-    </div>
-  );
-}
-
 /** Lluvia de confeti para las celebraciones. */
 export function Confetti() {
   const bits = [
-    { l: 8, w: 10, h: 18, c: '#004572', d: 3.2, s: 0 },
+    { l: 8, w: 10, h: 18, c: '#0E0C4E', d: 3.2, s: 0 },
     { l: 22, w: 12, h: 12, c: '#FFFFFF', d: 2.6, s: 0.4, r: true },
-    { l: 35, w: 8, h: 16, c: '#00428D', d: 3.6, s: 1.1 },
+    { l: 35, w: 8, h: 16, c: '#003088', d: 3.6, s: 1.1 },
     { l: 48, w: 10, h: 18, c: '#FFCC53', d: 2.9, s: 0.2 },
-    { l: 61, w: 12, h: 12, c: '#004572', d: 3.3, s: 1.6, r: true },
+    { l: 61, w: 12, h: 12, c: '#0E0C4E', d: 3.3, s: 1.6, r: true },
     { l: 72, w: 8, h: 16, c: '#FFFFFF', d: 2.7, s: 0.9 },
-    { l: 85, w: 10, h: 18, c: '#00428D', d: 3.1, s: 0.6 },
+    { l: 85, w: 10, h: 18, c: '#003088', d: 3.1, s: 0.6 },
     { l: 15, w: 8, h: 14, c: '#FFCC53', d: 3.8, s: 2 },
     { l: 66, w: 10, h: 10, c: '#FFCC53', d: 3.4, s: 2.4, r: true },
   ];
@@ -143,10 +114,7 @@ export function Chevron({ dir, size = 30 }: { dir: 'left' | 'right'; size?: numb
   );
 }
 
-export function Spinner() {
-  return (
-    <div className="flex flex-1 items-center justify-center" role="status" aria-label="Cargando">
-      <span className="h-10 w-10 animate-spin rounded-full border-4 border-white/40 border-t-white" />
-    </div>
-  );
+/** Carga de pantalla completa con los elementos del Juego Aniversario. */
+export function Spinner({ texto }: { texto?: string }) {
+  return <Cargando texto={texto} />;
 }

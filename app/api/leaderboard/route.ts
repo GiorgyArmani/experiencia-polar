@@ -13,7 +13,7 @@ function row(p: Player, rank: number, meId: string | undefined): LeaderRow {
   return {
     rank,
     apodo: p.oso_nombre,
-    avatar: p.avatar,
+    icono: p.avatar,
     puntos: p.puntos,
     graduado: p.completed.length > 0 && computeStatus(p).phase === 'final',
     isMe: p.id === meId,

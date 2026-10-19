@@ -61,7 +61,7 @@ export default function Sonidos() {
     <Screen className="relative">
       <div className="flex flex-col gap-5 px-4 pb-8 pt-6">
         <div className="pr-14">
-          <h1 className="title-display text-[clamp(30px,10vw,40px)] leading-none text-white [text-shadow:0_4px_0_#004572]">Música y sonidos</h1>
+          <h1 className="title-display text-[clamp(30px,10vw,40px)] leading-none text-white [text-shadow:0_4px_0_#0E0C4E]">Música y sonidos</h1>
           <p className="mt-2 text-sm font-semibold text-[#DCEBFF]">
             Escucha las opciones y marca la que prefieras. Queda guardada en este teléfono y es la que suena al jugar.
           </p>
