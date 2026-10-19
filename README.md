@@ -77,7 +77,7 @@ Si cambia el dominio (p. ej. a `experienciapolar.aulaciete.com`), hay que **reim
 | `GAME_MODE` | `demo` (cada trivia abre `DEMO_WAIT_SECONDS` después de la anterior) o `schedule` (horarios reales). |
 | `TRIVIA_WINDOWS` | JSON con `opensAt` / `closesAt` de cada trivia (modo `schedule`), zona `-04:00`. |
 | `POINTS_PER_CORRECT` | Puntos máximos por respuesta correcta (respuesta rápida); el mínimo es la mitad. |
-| `INTRO_SECONDS` | Segundos del mapa tras escanear, antes de que arranque el reloj del nivel (defecto 6). |
+| `INTRO_SECONDS` | Segundos entre el escaneo y el arranque del reloj del nivel: carga animada + mapa (defecto 8). |
 | `TRIVIA_SECONDS` | Segundos para responder toda la trivia (defecto 60). |
 | `WRONG_PENALTY_LAST` | Puntos que resta cada incorrecta en la última estación (defecto 50; 0 = no resta). |
 | `APP_STORE_URL`, `PLAY_STORE_URL` | Botones de la página del QR. |

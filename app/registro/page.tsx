@@ -8,7 +8,7 @@ import { COLORES, DEFAULT_ICONO, SIMBOLOS, simboloLabel, type Icono } from '@/sh
 import type { Sede } from '@/shared/types';
 import { PlayerIcon, SimboloSvg } from '@/components/PlayerIcon';
 import { Logos, Screen, Spinner, Stepper } from '@/components/ui';
-import { Destello } from '@/components/Cargando';
+import { CARGA_MIN_MS, Destello, useTiempoMinimo } from '@/components/Cargando';
 
 export default function Registro() {
   const router = useRouter();
@@ -19,6 +19,7 @@ export default function Registro() {
   const [sedes, setSedes] = useState<Sede[] | null>(null);
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
+  const cargaVista = useTiempoMinimo(CARGA_MIN_MS.pantalla);
 
   useEffect(() => {
     api
@@ -30,7 +31,7 @@ export default function Registro() {
       .catch(() => setSedes([]));
   }, [router]);
 
-  if (!sedes) {
+  if (!sedes || !cargaVista) {
     return (
       <Screen>
         <Spinner />

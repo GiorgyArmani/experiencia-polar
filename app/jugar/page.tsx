@@ -12,7 +12,7 @@ import type { AnswerResponse, MeResponse } from '@/shared/types';
 import { lastStop, META, WorldMap } from '@/components/WorldMap';
 import { SoundToggle } from '@/components/Talk';
 import { Screen, Spinner } from '@/components/ui';
-import { Anillos, Destello, Franjas } from '@/components/Cargando';
+import { Anillos, CARGA_MIN_MS, Destello, Franjas, useTiempoMinimo } from '@/components/Cargando';
 import { setMusicTempo, sfx, startMusic, stopMusic } from '@/lib/sfx';
 
 const QrScanner = dynamic(() => import('@/components/QrScanner'), { ssr: false });
@@ -29,6 +29,7 @@ export default function Jugar() {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState('');
   const [, rerender] = useState(0);
+  const cargaVista = useTiempoMinimo(CARGA_MIN_MS.pantalla);
   const offset = useRef(0); // hora del servidor - hora del teléfono
   const streak = useRef(0); // aciertos seguidos (para celebrar la racha)
   const playing = useRef<number | null>(null); // trivia que estaba jugando (para detectar "se acabó el tiempo")
@@ -70,7 +71,7 @@ export default function Jugar() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  if (!me || !me.player || !me.status) {
+  if (!cargaVista || !me || !me.player || !me.status) {
     return (
       <Screen>
         <Spinner />
@@ -87,8 +88,8 @@ export default function Jugar() {
     const t0 = Date.now();
     try {
       const r = await api.scan(value);
-      // Que la animación de carga alcance a verse (~1 s) antes de pasar al mapa.
-      await new Promise((ok) => setTimeout(ok, Math.max(0, 1000 - (Date.now() - t0))));
+      // Que la animación de carga alcance a verse antes de pasar al mapa.
+      await new Promise((ok) => setTimeout(ok, Math.max(0, CARGA_MIN_MS.escaneo - (Date.now() - t0))));
       apply(r);
     } catch (e) {
       setToast((e as Error).message);

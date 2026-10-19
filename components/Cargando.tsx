@@ -1,6 +1,22 @@
 // Animaciones de carga con los elementos gráficos del Juego Aniversario UEP (Elementos EP):
 // anillos concéntricos punteados que giran, un destello radial y franjas de líneas.
 // Dibujados en SVG (livianos y nítidos en cualquier pantalla).
+'use client';
+
+import { useEffect, useState } from 'react';
+
+/** Duración mínima de cada carga, para que la animación se alcance a ver aunque el servidor responda rápido. */
+export const CARGA_MIN_MS = { pantalla: 1800, escaneo: 2200 };
+
+/** `true` cuando ya pasaron `ms` desde que se montó el componente. */
+export function useTiempoMinimo(ms: number) {
+  const [listo, setListo] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setListo(true), ms);
+    return () => clearTimeout(t);
+  }, [ms]);
+  return listo;
+}
 
 const INDIGO = '#0E0C4E';
 const REY = '#0351A3';
