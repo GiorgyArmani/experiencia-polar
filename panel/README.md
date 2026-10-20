@@ -5,7 +5,8 @@ el ranking para la premiación: puntaje + tiempo, filtro **global / por estado /
 No escribe nada ni comparte código con el juego.
 
 - Orden: más puntos primero; a igual puntaje, menos tiempo (`tiempo_ms`: suma de lo que tardó en cada nivel).
-- Todo el sitio pide clave: usuario `uep` + `PANEL_PASSWORD`. Muestra cédulas y nombres: la clave es solo para UEP.
+- Se entra con **solo una clave** (`PANEL_PASSWORD`) en la pantalla `/entrar`; la sesión dura 30 días o hasta tocar «Salir».
+  Cambiar la clave cierra todas las sesiones. Muestra cédulas y nombres: la clave es solo para UEP.
 - Se actualiza solo cada 30 s.
 
 ## Correr
@@ -16,6 +17,8 @@ npm install
 cp .env.example .env.local   # PANEL_PASSWORD + la base del juego
 npm run dev                  # http://localhost:3001
 ```
+
+Para verlo sin base de datos: `PANEL_DATOS_PRUEBA=true` (participantes inventados). **Nunca en producción.**
 
 ## Desplegar (Vercel, proyecto nuevo)
 

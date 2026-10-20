@@ -1,29 +1,34 @@
 'use client';
 
-// Panel de premiación (panelpolar.aulaciete.net): lee la base del juego y muestra el ranking de participantes
-// por puntaje y tiempo, con filtro global / por estado / por localidad y descarga en CSV. Protegido con clave (middleware.ts).
+// Panel de premiación (panelpolar.aulaciete.net). Lee la base del juego y muestra quién va ganando.
+// Pensado para usarse sin explicación: dos filtros (estado y localidad), el podio arriba y la tabla completa abajo.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Datos, Fila } from '@/lib/tipos';
 
-type Ambito = 'global' | 'estado' | 'localidad';
-
 const SIN_ESTADO = 'Sin estado';
+const PAGINA = 50;
 
-/** 254300 → "4:14.3" (minutos:segundos.décimas) */
+type ConPuesto = Fila & { puesto: number };
+
+/** 254300 → "4 min 14 s" */
 function tiempo(ms: number) {
   if (!ms) return '—';
-  const m = Math.floor(ms / 60000);
-  const s = (ms % 60000) / 1000;
-  return `${m}:${s.toFixed(1).padStart(4, '0')}`;
+  const total = Math.round(ms / 100) / 10;
+  const m = Math.floor(total / 60);
+  const s = total - m * 60;
+  const seg = s % 1 === 0 ? s.toFixed(0) : s.toFixed(1).replace('.', ',');
+  return m ? `${m} min ${seg} s` : `${seg} s`;
 }
 
-function fecha(iso: string | null) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString('es-VE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+function haceCuanto(iso: string, ahora: number) {
+  const s = Math.max(0, Math.round((ahora - new Date(iso).getTime()) / 1000));
+  if (s < 10) return 'justo ahora';
+  if (s < 60) return `hace ${s} s`;
+  return `hace ${Math.round(s / 60)} min`;
 }
 
 /** Puesto con empates: mismo puntaje y mismo tiempo comparten puesto. */
-function conPuesto(rows: Fila[]) {
+function conPuesto(rows: Fila[]): ConPuesto[] {
   let puesto = 0;
   return rows.map((r, i) => {
     const prev = rows[i - 1];
@@ -32,8 +37,8 @@ function conPuesto(rows: Fila[]) {
   });
 }
 
-function descargarCsv(rows: (Fila & { puesto: number })[], nombre: string) {
-  const head = ['Puesto', 'Cédula', 'Nombre', 'Localidad', 'Estado', 'Puntos', 'Tiempo (s)', 'Niveles', 'Terminó', 'Último nivel', 'Registro'];
+function descargar(rows: ConPuesto[], nombre: string, totalNiveles: number) {
+  const head = ['Puesto', 'Cédula', 'Nombre', 'Localidad', 'Estado', 'Puntos', 'Tiempo (segundos)', 'Niveles completados', 'Terminó todo', 'Último nivel', 'Registro'];
   const esc = (v: string | number) => {
     const t = String(v);
     return /[";\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
@@ -47,7 +52,7 @@ function descargarCsv(rows: (Fila & { puesto: number })[], nombre: string) {
       r.estado ?? '',
       r.puntos,
       (r.tiempoMs / 1000).toFixed(1).replace('.', ','),
-      r.niveles,
+      `${r.niveles} de ${totalNiveles}`,
       r.terminado ? 'Sí' : 'No',
       r.ultimoNivelAt ? new Date(r.ultimoNivelAt).toLocaleString('es-VE') : '',
       new Date(r.registradoAt).toLocaleString('es-VE'),
@@ -55,7 +60,7 @@ function descargarCsv(rows: (Fila & { puesto: number })[], nombre: string) {
       .map(esc)
       .join(';'),
   );
-  // BOM + punto y coma: Excel en español lo abre con acentos y columnas bien.
+  // BOM + punto y coma: Excel en español lo abre directo, con acentos y columnas separadas.
   const blob = new Blob(['﻿' + [head.join(';'), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -64,18 +69,31 @@ function descargarCsv(rows: (Fila & { puesto: number })[], nombre: string) {
   URL.revokeObjectURL(a.href);
 }
 
+const slug = (v: string) =>
+  v
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
 export default function Panel() {
   const [data, setData] = useState<Datos | null>(null);
   const [error, setError] = useState('');
-  const [ambito, setAmbito] = useState<Ambito>('global');
   const [estado, setEstado] = useState('');
   const [localidad, setLocalidad] = useState('');
   const [buscar, setBuscar] = useState('');
   const [soloTerminados, setSoloTerminados] = useState(false);
+  const [mostrar, setMostrar] = useState(PAGINA);
+  const [ahora, setAhora] = useState(() => Date.now());
 
   const load = useCallback(() => {
     fetch('/api/datos', { cache: 'no-store' })
       .then(async (r) => {
+        if (r.status === 401) {
+          window.location.replace('/entrar');
+          return;
+        }
         const body = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(body.error ?? 'No pudimos cargar los datos');
         setData(body as Datos);
@@ -86,197 +104,295 @@ export default function Panel() {
 
   useEffect(() => {
     load();
-    const id = setInterval(load, 30000); // se actualiza solo
-    return () => clearInterval(id);
+    const a = setInterval(load, 30000); // se actualiza solo
+    const b = setInterval(() => setAhora(Date.now()), 5000);
+    return () => {
+      clearInterval(a);
+      clearInterval(b);
+    };
   }, [load]);
 
+  // Al cambiar un filtro vuelve a mostrar desde el primero.
+  useEffect(() => setMostrar(PAGINA), [estado, localidad, buscar, soloTerminados]);
+
   const rows = useMemo(() => data?.rows ?? [], [data]);
-  const estados = useMemo(() => [...new Set(rows.map((r) => r.estado ?? SIN_ESTADO))].sort((a, b) => a.localeCompare(b, 'es')), [rows]);
-  const localidades = useMemo(
-    () =>
-      [...new Set(rows.filter((r) => ambito !== 'localidad' || !estado || (r.estado ?? SIN_ESTADO) === estado).map((r) => r.localidad))].sort((a, b) =>
-        a.localeCompare(b, 'es'),
-      ),
-    [rows, ambito, estado],
-  );
-
-  const vista = useMemo(() => {
-    const q = buscar.trim().toLowerCase();
-    // El puesto se calcula dentro del ámbito (estado o localidad); la búsqueda y "solo terminados" solo filtran la lista.
-    let base = rows;
-    if (ambito !== 'global' && estado) base = base.filter((r) => (r.estado ?? SIN_ESTADO) === estado);
-    if (ambito === 'localidad' && localidad) base = base.filter((r) => r.localidad === localidad);
-    return conPuesto(base).filter((r) => (!soloTerminados || r.terminado) && (!q || r.nombre.toLowerCase().includes(q) || r.cedula.includes(q)));
-  }, [rows, ambito, estado, localidad, buscar, soloTerminados]);
-
-  const titulo =
-    ambito === 'estado'
-      ? estado
-        ? `Estado: ${estado}`
-        : 'Elige un estado'
-      : ambito === 'localidad'
-        ? localidad
-          ? `Localidad: ${localidad}`
-          : 'Elige una localidad'
-        : 'Ranking global';
-  const terminados = rows.filter((r) => r.terminado).length;
-  const pendienteFiltro = (ambito === 'estado' && !estado) || (ambito === 'localidad' && !localidad);
   const totalNiveles = data?.totalNiveles ?? 4;
 
+  const estados = useMemo(() => [...new Set(rows.map((r) => r.estado ?? SIN_ESTADO))].sort((a, b) => a.localeCompare(b, 'es')), [rows]);
+  // Las localidades se acotan al estado elegido.
+  const localidades = useMemo(
+    () => [...new Set(rows.filter((r) => !estado || (r.estado ?? SIN_ESTADO) === estado).map((r) => r.localidad))].sort((a, b) => a.localeCompare(b, 'es')),
+    [rows, estado],
+  );
+
+  // El puesto se calcula dentro del estado / localidad elegidos (es el ranking de ese grupo).
+  const ranking = useMemo(() => {
+    let base = rows;
+    if (estado) base = base.filter((r) => (r.estado ?? SIN_ESTADO) === estado);
+    if (localidad) base = base.filter((r) => r.localidad === localidad);
+    return conPuesto(base);
+  }, [rows, estado, localidad]);
+
+  // La búsqueda y "solo quienes terminaron" filtran la lista sin cambiar los puestos.
+  const lista = useMemo(() => {
+    const q = slug(buscar);
+    return ranking.filter((r) => (!soloTerminados || r.terminado) && (!q || slug(r.nombre).includes(q) || r.cedula.includes(buscar.replace(/\D/g, '') || '§')));
+  }, [ranking, buscar, soloTerminados]);
+
+  const grupo = localidad ? localidad : estado ? `Estado ${estado}` : 'Todo el país';
+  const hayFiltros = Boolean(estado || localidad || buscar || soloTerminados);
+  const terminaron = ranking.filter((r) => r.terminado).length;
+  const podio = ranking.slice(0, 3).filter((r) => r.puntos > 0);
+
+  function limpiar() {
+    setEstado('');
+    setLocalidad('');
+    setBuscar('');
+    setSoloTerminados(false);
+  }
+
+  async function salir() {
+    await fetch('/api/salir', { method: 'POST' }).catch(() => {});
+    window.location.replace('/entrar');
+  }
+
   return (
-    <main className="min-h-[100dvh]">
-      <header className="bg-polar-navy px-4 py-5 text-white sm:px-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-3">
+    <main className="min-h-[100dvh] pb-10">
+      <header className="bg-polar-navy text-white">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-8">
           <div>
             <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-polar-yellow">Experiencia UEP</p>
-            <h1 className="title-display text-[clamp(28px,5vw,40px)] leading-none">Panel de premiación</h1>
+            <h1 className="title-display text-[clamp(26px,4.5vw,36px)] leading-none">Panel de premiación</h1>
           </div>
-          <p className="text-sm text-[#CFE3F7]">{data ? `Actualizado ${fecha(data.generadoAt)} · se actualiza cada 30 s` : 'Cargando…'}</p>
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-2 text-sm text-[#CFE3F7]">
+              <span className="h-2 w-2 rounded-full bg-[#3DDC84]" aria-hidden />
+              {data ? `Actualizado ${haceCuanto(data.generadoAt, ahora)}` : 'Cargando…'}
+            </span>
+            <button type="button" onClick={salir} className="h-9 rounded-lg border border-white/30 px-3 text-sm font-semibold hover:bg-white/10">
+              Salir
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-4 py-5 sm:px-8">
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Resumen">
-          <Stat label="Participantes" value={rows.length} />
-          <Stat label={`Completaron los ${totalNiveles} niveles`} value={terminados} />
-          <Stat label="Localidades con jugadores" value={new Set(rows.map((r) => r.localidad)).size} />
-          <Stat label="Mejor puntaje" value={rows[0]?.puntos ?? 0} />
-        </section>
-
-        <section className="mt-5 flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm" aria-label="Filtros">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex rounded-xl bg-polar-ice p-1" role="tablist" aria-label="Ámbito">
-              {(['global', 'estado', 'localidad'] as const).map((a) => (
-                <button
-                  key={a}
-                  role="tab"
-                  aria-selected={ambito === a}
-                  onClick={() => setAmbito(a)}
-                  className={`h-10 rounded-lg px-4 text-sm font-bold ${ambito === a ? 'bg-polar-navy text-white' : 'text-polar-navy'}`}
-                >
-                  {a === 'global' ? 'Global' : a === 'estado' ? 'Por estado' : 'Por localidad'}
-                </button>
+      {/* Filtros: siempre a la vista */}
+      <div className="z-20 border-b lg:sticky lg:top-0 border-[#E2E8F0] bg-white/95 backdrop-blur">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-3 px-4 py-3 sm:grid-cols-2 sm:px-8 lg:grid-cols-[1fr_1fr_1.3fr_auto]">
+          <Campo label="Estado">
+            <select
+              value={estado}
+              onChange={(e) => {
+                setEstado(e.target.value);
+                setLocalidad('');
+              }}
+              className="input"
+            >
+              <option value="">Todos los estados</option>
+              {estados.map((e) => (
+                <option key={e}>{e}</option>
               ))}
-            </div>
-            {ambito !== 'global' && (
-              <select
-                aria-label="Estado"
-                value={estado}
-                onChange={(e) => {
-                  setEstado(e.target.value);
-                  setLocalidad('');
-                }}
-                className="h-11 rounded-xl border border-[#CBD5E1] bg-white px-3 text-sm font-semibold"
-              >
-                <option value="">{ambito === 'estado' ? 'Elige un estado' : 'Todos los estados'}</option>
-                {estados.map((e) => (
-                  <option key={e}>{e}</option>
-                ))}
-              </select>
-            )}
-            {ambito === 'localidad' && (
-              <select
-                aria-label="Localidad"
-                value={localidad}
-                onChange={(e) => setLocalidad(e.target.value)}
-                className="h-11 rounded-xl border border-[#CBD5E1] bg-white px-3 text-sm font-semibold"
-              >
-                <option value="">Elige una localidad</option>
-                {localidades.map((l) => (
-                  <option key={l}>{l}</option>
-                ))}
-              </select>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <input
-              type="search"
-              value={buscar}
-              onChange={(e) => setBuscar(e.target.value)}
-              placeholder="Buscar por nombre o cédula"
-              aria-label="Buscar por nombre o cédula"
-              className="h-11 min-w-[220px] flex-1 rounded-xl border border-[#CBD5E1] px-3 text-sm"
-            />
-            <label className="flex items-center gap-2 text-sm font-semibold">
-              <input type="checkbox" checked={soloTerminados} onChange={(e) => setSoloTerminados(e.target.checked)} className="h-4 w-4" />
-              Solo quienes completaron todo
-            </label>
+            </select>
+          </Campo>
+          <Campo label="Localidad">
+            <select value={localidad} onChange={(e) => setLocalidad(e.target.value)} className="input">
+              <option value="">{estado ? `Todas las de ${estado}` : 'Todas las localidades'}</option>
+              {localidades.map((l) => (
+                <option key={l}>{l}</option>
+              ))}
+            </select>
+          </Campo>
+          <Campo label="Buscar participante">
+            <input type="search" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Nombre o cédula" className="input" />
+          </Campo>
+          <div className="flex items-end gap-2">
             <button
               type="button"
-              disabled={!vista.length || pendienteFiltro}
-              onClick={() =>
-                descargarCsv(vista, `experiencia-uep-${(ambito === 'global' ? 'global' : localidad || estado || ambito).toLowerCase().replace(/[^a-z0-9]+/gi, '-')}.csv`)
-              }
-              className="h-11 rounded-xl bg-polar-yellow px-4 text-sm font-extrabold text-polar-navy disabled:opacity-50"
+              disabled={!lista.length}
+              onClick={() => descargar(lista, `ranking-${slug(grupo)}.csv`, totalNiveles)}
+              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-polar-yellow px-4 text-sm font-extrabold text-polar-navy hover:brightness-95 disabled:opacity-50 lg:flex-none"
+              title="Descarga la lista que estás viendo, para abrirla en Excel"
             >
-              Descargar CSV
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+              </svg>
+              Descargar Excel
             </button>
           </div>
-        </section>
+        </div>
+      </div>
 
+      <div className="mx-auto max-w-6xl px-4 sm:px-8">
         {error && <p className="mt-4 rounded-xl bg-[#FDE8E8] p-3 text-sm font-semibold text-[#9B1C1C]">{error}</p>}
 
-        <section className="mt-5" aria-label={titulo}>
-          <div className="mb-2 flex items-baseline justify-between gap-2">
-            <h2 className="text-lg font-extrabold text-polar-navy">{titulo}</h2>
-            {!pendienteFiltro && <span className="text-sm text-polar-slate">{vista.length} participantes</span>}
+        {/* Qué se está viendo */}
+        <div className="mt-6 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="text-sm font-semibold text-polar-slate">Ranking de</p>
+            <h2 className="text-2xl font-black text-polar-navy">{grupo}</h2>
           </div>
-          <div className="overflow-x-auto rounded-2xl bg-white shadow-sm">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="bg-[#EEF3FA] text-xs uppercase tracking-wide text-polar-slate">
+          {hayFiltros && (
+            <button type="button" onClick={limpiar} className="text-sm font-bold text-polar-blue underline underline-offset-2">
+              Quitar filtros
+            </button>
+          )}
+        </div>
+
+        <section className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Resumen">
+          <Stat label="Participantes" value={ranking.length.toLocaleString('es-VE')} />
+          <Stat label={`Terminaron los ${totalNiveles} niveles`} value={terminaron.toLocaleString('es-VE')} />
+          <Stat label="Puntaje más alto" value={(ranking[0]?.puntos ?? 0).toLocaleString('es-VE')} />
+          <Stat label="Localidades" value={new Set(ranking.map((r) => r.localidad)).size.toLocaleString('es-VE')} />
+        </section>
+
+        {/* Podio */}
+        {podio.length > 0 && (
+          <section className="mt-6" aria-label="Primeros lugares">
+            <h3 className="text-sm font-extrabold uppercase tracking-wider text-polar-slate">Primeros lugares</h3>
+            <ol className="mt-2 grid gap-3 md:grid-cols-3">
+              {podio.map((r) => (
+                <li
+                  key={r.cedula || r.registradoAt}
+                  className={`flex items-center gap-4 rounded-2xl p-4 shadow-sm ${r.puesto === 1 ? 'bg-polar-navy text-white' : 'bg-white'}`}
+                >
+                  <Medalla puesto={r.puesto} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base font-extrabold">{r.nombre}</p>
+                    <p className={`truncate text-sm ${r.puesto === 1 ? 'text-[#CFE3F7]' : 'text-polar-slate'}`}>
+                      {r.localidad}
+                      {r.estado ? ` · ${r.estado}` : ''}
+                    </p>
+                    <p className={`mt-1 text-sm ${r.puesto === 1 ? 'text-white' : 'text-polar-ink'}`}>
+                      <b className="text-lg">{r.puntos}</b> pts · {tiempo(r.tiempoMs)}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+
+        {/* Tabla completa */}
+        <section className="mt-6" aria-label="Todos los participantes">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-extrabold uppercase tracking-wider text-polar-slate">
+              Todos los participantes {lista.length !== ranking.length && `(${lista.length} de ${ranking.length})`}
+            </h3>
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-polar-navy">
+              <input type="checkbox" checked={soloTerminados} onChange={(e) => setSoloTerminados(e.target.checked)} className="h-4 w-4 accent-polar-blue" />
+              Solo quienes terminaron los {totalNiveles} niveles
+            </label>
+          </div>
+
+          <div className="mt-2 overflow-x-auto rounded-2xl bg-white shadow-sm">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="bg-[#EEF3FA] text-xs font-bold uppercase tracking-wide text-polar-slate">
                 <tr>
-                  <th className="px-3 py-3 text-right">#</th>
-                  <th className="px-3 py-3">Nombre</th>
-                  <th className="px-3 py-3">Cédula</th>
-                  <th className="px-3 py-3">Localidad</th>
-                  <th className="px-3 py-3">Estado</th>
-                  <th className="px-3 py-3 text-right">Puntos</th>
-                  <th className="px-3 py-3 text-right">Tiempo</th>
-                  <th className="px-3 py-3 text-right">Niveles</th>
-                  <th className="px-3 py-3">Último nivel</th>
+                  <th className="w-16 px-4 py-3 text-center">Puesto</th>
+                  <th className="px-4 py-3">Participante</th>
+                  <th className="px-4 py-3">Localidad</th>
+                  <th className="px-4 py-3 text-right">Puntos</th>
+                  <th className="px-4 py-3 text-right">Tiempo</th>
+                  <th className="px-4 py-3">Niveles</th>
                 </tr>
               </thead>
               <tbody>
-                {!pendienteFiltro &&
-                  vista.map((r) => (
-                    <tr key={r.cedula || r.registradoAt} className="border-t border-[#EEF1F5]">
-                      <td className="px-3 py-2.5 text-right font-extrabold text-polar-navy">{r.puesto}</td>
-                      <td className="px-3 py-2.5 font-semibold">{r.nombre}</td>
-                      <td className="px-3 py-2.5 tabular-nums">{r.cedula}</td>
-                      <td className="px-3 py-2.5">{r.localidad}</td>
-                      <td className="px-3 py-2.5">{r.estado ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-right font-extrabold tabular-nums">{r.puntos}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{tiempo(r.tiempoMs)}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">
-                        {r.niveles}/{totalNiveles}
-                      </td>
-                      <td className="px-3 py-2.5 text-polar-slate">{fecha(r.ultimoNivelAt)}</td>
-                    </tr>
-                  ))}
-                {(pendienteFiltro || (data && !vista.length)) && (
+                {lista.slice(0, mostrar).map((r) => (
+                  <tr key={r.cedula || r.registradoAt} className="border-t border-[#EEF1F5] hover:bg-[#F8FAFD]">
+                    <td className="px-4 py-3 text-center text-base font-black text-polar-navy">{r.puesto}</td>
+                    <td className="px-4 py-3">
+                      <p className="font-bold text-polar-ink">{r.nombre}</p>
+                      <p className="text-xs tabular-nums text-polar-slate">C.I. {r.cedula}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-semibold">{r.localidad}</p>
+                      <p className="text-xs text-polar-slate">{r.estado ?? SIN_ESTADO}</p>
+                    </td>
+                    <td className="px-4 py-3 text-right text-base font-black tabular-nums text-polar-navy">{r.puntos}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{tiempo(r.tiempoMs)}</td>
+                    <td className="px-4 py-3">
+                      <Niveles hechos={r.niveles} total={totalNiveles} />
+                    </td>
+                  </tr>
+                ))}
+                {data && !lista.length && (
                   <tr>
-                    <td colSpan={9} className="px-3 py-8 text-center font-semibold text-polar-slate">
-                      {pendienteFiltro ? 'Elige un filtro arriba para ver el ranking.' : 'No hay participantes con ese filtro.'}
+                    <td colSpan={6} className="px-4 py-10 text-center font-semibold text-polar-slate">
+                      {rows.length ? 'Nadie coincide con estos filtros.' : 'Todavía no hay participantes registrados.'}
+                    </td>
+                  </tr>
+                )}
+                {!data && !error && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-10 text-center font-semibold text-polar-slate">
+                      Cargando participantes…
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs text-polar-slate">
-            Orden: más puntos primero; a igual puntaje, gana quien tardó menos. El tiempo suma lo que tardó en responder cada nivel (desde que arranca el reloj).
-          </p>
+          {lista.length > mostrar && (
+            <button
+              type="button"
+              onClick={() => setMostrar((n) => n + PAGINA * 2)}
+              className="mx-auto mt-4 block h-11 rounded-xl border-2 border-polar-navy px-5 text-sm font-bold text-polar-navy hover:bg-white"
+            >
+              Ver más ({lista.length - mostrar} restantes)
+            </button>
+          )}
+
+          <div className="mt-5 rounded-2xl border border-[#E2E8F0] bg-white p-4 text-sm text-polar-slate">
+            <p className="font-bold text-polar-navy">¿Cómo se ordena?</p>
+            <p className="mt-1">
+              Gana quien tiene <b>más puntos</b>. Si dos personas empatan en puntos, va primero quien <b>tardó menos</b> en responder sus niveles
+              (se suma el tiempo de cada nivel desde que arranca el reloj). El puesto es dentro del estado o la localidad que elijas arriba.
+            </p>
+          </div>
         </section>
       </div>
     </main>
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Campo({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs font-bold uppercase tracking-wide text-polar-slate">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-white p-4 shadow-sm">
       <p className="text-xs font-semibold text-polar-slate">{label}</p>
-      <p className="mt-1 text-[28px] font-black leading-none tabular-nums text-polar-navy">{value.toLocaleString('es-VE')}</p>
+      <p className="mt-1 text-[28px] font-black leading-none tabular-nums text-polar-navy">{value}</p>
     </div>
+  );
+}
+
+function Medalla({ puesto }: { puesto: number }) {
+  const color = puesto === 1 ? 'bg-polar-yellow text-polar-navy' : puesto === 2 ? 'bg-[#D9DEE7] text-polar-navy' : 'bg-[#E8B98A] text-polar-navy';
+  return (
+    <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl font-black ${color}`} aria-label={`Puesto ${puesto}`}>
+      {puesto}º
+    </span>
+  );
+}
+
+function Niveles({ hechos, total }: { hechos: number; total: number }) {
+  return (
+    <span className="flex items-center gap-2" aria-label={`${hechos} de ${total} niveles`}>
+      <span className="flex gap-1" aria-hidden>
+        {Array.from({ length: total }, (_, i) => (
+          <span key={i} className={`h-2.5 w-5 rounded-full ${i < hechos ? 'bg-polar-blue' : 'bg-[#E2E8F0]'}`} />
+        ))}
+      </span>
+      <span className="text-xs font-semibold text-polar-slate">
+        {hechos}/{total}
+      </span>
+    </span>
   );
 }

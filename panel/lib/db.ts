@@ -41,7 +41,32 @@ function toFila(r: Row): Fila {
 
 const g = globalThis as unknown as { __panelSql?: postgres.Sql };
 
+/** PANEL_DATOS_PRUEBA=true: participantes inventados para ver el panel sin base de datos (solo pruebas locales). */
+function filasDePrueba(): Row[] {
+  const lugares: [string, string][] = [
+    ['SUC. VALENCIA', 'Carabobo'], ['AG. CATIA', 'Distrito Capital'], ['ADC MARACAIBO', 'Zulia'],
+    ['ADC BARQUISIMET', 'Lara'], ['AG. CUMANA', 'Sucre'], ['ADC LA URBINA', 'Miranda'],
+  ];
+  const nombres = ['María Pérez', 'José Rodríguez', 'Ana González', 'Carlos Hernández', 'Luisa Martínez', 'Pedro Gómez', 'Carmen Díaz', 'Luis Torres'];
+  return Array.from({ length: 140 }, (_, i) => {
+    const [sede, estado] = lugares[i % lugares.length];
+    const niveles = (i * 7) % 5;
+    return {
+      cedula: String(10000000 + i * 7919),
+      nombre: `${nombres[i % nombres.length]} ${i + 1}`,
+      sede,
+      estado,
+      puntos: niveles * ((i * 37) % 300),
+      tiempo_ms: niveles * (20000 + ((i * 1777) % 40000)),
+      completed: Array.from({ length: niveles }, (_, n) => n + 1),
+      last_completed_at: niveles ? new Date(Date.now() - i * 60000).toISOString() : null,
+      created_at: new Date(Date.now() - i * 120000).toISOString(),
+    };
+  });
+}
+
 async function leerFilas(): Promise<Row[]> {
+  if (process.env.PANEL_DATOS_PRUEBA === 'true') return filasDePrueba();
   const url = process.env.DATABASE_URL;
   if (url) {
     const sql = (g.__panelSql ??= postgres(url, { max: 3, prepare: false, idle_timeout: 30 }));

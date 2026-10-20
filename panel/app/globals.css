@@ -16,3 +16,7 @@ body {
 .title-display {
   @apply font-display font-normal uppercase tracking-[0.01em];
 }
+
+.input {
+  @apply h-11 w-full rounded-xl border-2 border-[#CBD5E1] bg-white px-3 text-sm font-semibold text-polar-ink outline-none focus:border-polar-blue;
+}
