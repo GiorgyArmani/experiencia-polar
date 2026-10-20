@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { qrUrlFor } from '@/shared/qr';
-import { estacion, nivelLabel } from '@/shared/estaciones';
 import type { Icono } from '@/shared/icono';
 import type { AnswerResponse, MeResponse } from '@/shared/types';
 import { lastStop, META, WorldMap } from '@/components/WorldMap';
@@ -62,7 +61,7 @@ export default function Jugar() {
   }, [refresh]);
 
   useEffect(() => {
-    if (me && !me.player) router.replace('/registro');
+    if (me && !me.player) router.replace('/');
   }, [me, router]);
 
   useEffect(() => {
@@ -260,16 +259,11 @@ function hora(iso: string | null) {
   return new Date(iso).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
 }
 
-/** Cartel de nivel estilo consola: "NIVEL 2" y el nombre de la estación. */
+/** Cartel de nivel estilo consola: "NIVEL 2" (sin el nombre de la estación, por pedido de la UEP). */
 function NivelBanner({ trivia, className = '' }: { trivia: number; className?: string }) {
   return (
     <div className={`flex flex-col items-center text-center ${className}`}>
-      <span className="rounded-full bg-polar-navy px-4 py-1 font-display text-[15px] uppercase tracking-[0.18em] text-polar-yellow">
-        Nivel {trivia}
-      </span>
-      <span className="title-display mt-1 text-[clamp(28px,9vw,38px)] leading-none text-white [text-shadow:0_4px_0_#0E0C4E]">
-        {estacion(trivia)?.nombre ?? `Estación ${trivia}`}
-      </span>
+      <span className="title-display text-[clamp(36px,12vw,52px)] leading-none text-white [text-shadow:0_4px_0_#0E0C4E]">Nivel {trivia}</span>
     </div>
   );
 }
@@ -336,8 +330,8 @@ function Camara({
       <QrScanner onScan={onScan} paused={busy || map} />
 
       <div className="relative z-10 flex flex-col gap-2 p-4 pr-16">
-        <span className="text-[12px] font-extrabold uppercase tracking-[0.16em] text-polar-yellow">Busca el QR · Nivel {trivia}</span>
-        <span className="title-display text-[clamp(24px,7.5vw,32px)] leading-none text-white">{estacion(trivia)?.nombre}</span>
+        <span className="text-[12px] font-extrabold uppercase tracking-[0.16em] text-polar-yellow">Busca el QR</span>
+        <span className="title-display text-[clamp(24px,7.5vw,32px)] leading-none text-white">Nivel {trivia}</span>
         <div className="flex flex-col gap-2">
           {closesAt && (
             <span className="self-start rounded-full bg-polar-yellow px-3 py-1.5 text-[13px] font-extrabold text-polar-navy">
@@ -557,7 +551,7 @@ function Trivia({
     <div className="relative m-3 flex min-h-[calc(100dvh-24px)] flex-1 flex-col overflow-hidden rounded-[22px] bg-polar-cam px-[22px] pt-6 text-polar-ink">
       <div className="flex items-center justify-between gap-2 pr-12 text-[13px] text-[#3D3D3D]">
         <span className="min-w-0 truncate font-extrabold uppercase tracking-wider">
-          Nivel {trivia}/{total} · {estacion(trivia)?.nombre}
+          Nivel {trivia}/{total}
         </span>
         <span className="shrink-0 font-bold">Pregunta {index + 1} de {count}</span>
       </div>
@@ -566,7 +560,7 @@ function Trivia({
           ¡Ojo! Cada incorrecta resta {penalty} puntos
         </p>
       )}
-      <h1 key={index} className="mt-3 animate-pop title-display text-[clamp(22px,3.8dvh,30px)] leading-[1.1] text-polar-navy">
+      <h1 key={index} className="mt-3 animate-pop-straight text-balance text-center title-display text-[clamp(22px,3.8dvh,30px)] leading-[1.1] text-polar-navy">
         {text}
       </h1>
       <div className="mt-[2dvh] flex flex-col gap-[min(12px,1.5dvh)]" onPointerLeave={() => setHover(null)}>
@@ -579,7 +573,7 @@ function Trivia({
             onPointerDown={() => point(i)}
             onFocus={() => point(i)}
             onClick={() => onAnswer(i)}
-            className={`flex min-h-[clamp(44px,7.5dvh,52px)] items-center rounded-full px-6 py-1.5 text-left text-[17px] font-bold leading-tight text-polar-navy shadow-game-sm transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-70 ${
+            className={`flex min-h-[clamp(44px,7.5dvh,52px)] items-center justify-center rounded-full px-6 py-1.5 text-center text-[17px] font-bold leading-tight text-polar-navy shadow-game-sm transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-70 ${
               hover === i ? 'bg-polar-yellow-dark' : 'bg-polar-yellow'
             }`}
           >
@@ -734,7 +728,7 @@ function Espera({
 
       <div className="mx-auto mt-3 flex w-[320px] max-w-full flex-col items-center gap-1 rounded-[20px] bg-white px-4 py-[min(16px,2dvh)] text-center text-polar-ink">
         <span className="text-[13px] font-extrabold uppercase tracking-wider text-polar-muted">
-          El {nivelLabel(trivia)} abre en
+          El Nivel {trivia} abre en
         </span>
         <span className="text-[clamp(30px,min(12vw,6.5dvh),48px)] font-black leading-tight tabular-nums tracking-wide">{clock}</span>
         {opensAt && <span className="text-sm text-polar-muted">Abre a las {hora(opensAt)} · Escanea el mismo QR</span>}
@@ -762,14 +756,13 @@ function Final({ icono, puntos, completed, total }: { icono: Icono; puntos: numb
         <span className="text-sm font-extrabold uppercase tracking-[0.12em]">
           {completed.length} de {total} niveles completados
         </span>
-        <h1 className="title-display text-[clamp(36px,13vw,54px)] leading-none text-white [text-shadow:0_4px_0_#0E0C4E]">¡Te graduaste!</h1>
+        <h1 className="title-display text-[clamp(36px,13vw,54px)] leading-none text-white [text-shadow:0_4px_0_#0E0C4E]">¡Lo lograste!</h1>
       </div>
       <WorldMap
         icono={icono}
         completed={completed}
         from={lastStop(completed)}
         to={META}
-        graduado
         onArrive={() => sfx.graduate()}
         className="mt-3 max-w-[min(340px,42dvh)]"
       />

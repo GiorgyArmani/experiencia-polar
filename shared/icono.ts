@@ -33,7 +33,7 @@ export interface Icono {
   color: ColorId;
 }
 
-export const DEFAULT_ICONO: Icono = { simbolo: 'birrete', color: 'azul' };
+export const DEFAULT_ICONO: Icono = { simbolo: 'estrella', color: 'azul' };
 
 const isSimbolo = (v: unknown): v is SimboloId => SIMBOLOS.some((s) => s.id === v);
 const isColor = (v: unknown): v is ColorId => COLORES.some((c) => c.id === v);

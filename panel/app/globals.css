@@ -1,0 +1,18 @@
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
+@import '@fontsource/poppins/800.css';
+@import '@fontsource/poppins/900.css';
+@import '@fontsource/anton/400.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-polar-ice font-sans text-polar-ink antialiased;
+}
+
+.title-display {
+  @apply font-display font-normal uppercase tracking-[0.01em];
+}

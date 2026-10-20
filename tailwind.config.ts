@@ -61,6 +61,12 @@ const config: Config = {
           '10%': { opacity: '1' },
           '100%': { transform: 'translateY(640px) rotate(540deg)', opacity: '1' },
         },
+        // Igual que pop pero sin girar: para textos que deben quedar derechos (las preguntas).
+        'pop-straight': {
+          '0%': { transform: 'scale(0.85)', opacity: '0' },
+          '60%': { transform: 'scale(1.04)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
         pop: {
           '0%': { transform: 'scale(0.6) rotate(-4deg)', opacity: '0' },
           '60%': { transform: 'scale(1.08) rotate(2deg)', opacity: '1' },
@@ -85,6 +91,7 @@ const config: Config = {
         walk: 'walk 0.38s ease-in-out infinite',
         hop: 'hop 1.4s ease-in-out infinite',
         pop: 'pop 0.6s ease-out both',
+        'pop-straight': 'pop-straight 0.45s ease-out both',
         shake: 'shake 1.2s ease-in-out 0.2s 2',
         // El ícono tiembla cuando se acaba el tiempo (más rápido en los últimos segundos).
         tremble: 'shake 0.9s ease-in-out infinite',

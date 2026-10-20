@@ -1,7 +1,7 @@
 'use client';
 
 // Mapa del mundo estilo Mario Bros 3: una isla con un camino de casillas que une las 4 estaciones
-// (los niveles) desde el INICIO hasta la META (la graduación). El ícono del jugador camina por el camino.
+// (los niveles) desde el INICIO hasta la META. El ícono del jugador camina por el camino.
 import { useEffect, useId, useRef, useState } from 'react';
 import { ESTACIONES } from '@/shared/estaciones';
 import type { Icono } from '@/shared/icono';
@@ -12,24 +12,37 @@ const W = 320;
 const H = 380;
 type Pt = readonly [number, number];
 
+// El camino dibuja un número 4 (pedido de la UEP): sube por el palo del 4, baja por la diagonal
+// y cruza por la barra horizontal hasta la meta.
+//
+//            ╱│
+//          2  1
+//        ╱    │
+//      3 ── 4 ┼── META
+//             │
+//           INICIO
+//
 /** Paradas del camino: 0 = inicio, 1..4 = estaciones, 5 = meta. */
 const STOPS: Pt[] = [
-  [42, 322],
-  [134, 322],
-  [262, 236],
-  [74, 236],
-  [186, 146],
-  [270, 66],
+  [202, 322],
+  [202, 148],
+  [127, 146],
+  [52, 232],
+  [148, 232],
+  [266, 232],
 ];
 export const META = STOPS.length - 1;
 
-/** Tramos entre una parada y la siguiente (con sus esquinas: el camino solo va en línea recta). */
+/** Punta de arriba del 4 (donde el palo se une con la diagonal). */
+const PUNTA: Pt = [202, 60];
+
+/** Tramos entre una parada y la siguiente (con sus esquinas). */
 const LEGS: Pt[][] = [
   [STOPS[0], STOPS[1]],
-  [STOPS[1], [262, 322], STOPS[2]],
+  [STOPS[1], PUNTA, STOPS[2]],
   [STOPS[2], STOPS[3]],
-  [STOPS[3], [74, 146], STOPS[4]],
-  [STOPS[4], [186, 66], STOPS[5]],
+  [STOPS[3], STOPS[4]],
+  [STOPS[4], STOPS[5]],
 ];
 
 const pathD = LEGS.map((leg, i) => leg.map(([x, y], j) => `${i === 0 && j === 0 ? 'M' : 'L'}${x} ${y}`).join(' ')).join(' ');
@@ -145,16 +158,17 @@ export function WorldMap({
           <path key={i} d={`M${x - 6} ${y} q3 -4 6 0 q3 4 6 0`} fill="none" stroke="#E3F1FF" strokeWidth="2" strokeLinecap="round" />
         ))}
 
-        {/* Colinas y matas, con borde grueso como en los juegos de 16 bits */}
-        <Hill x={200} y={302} w={40} h={28} />
-        <Hill x={232} y={304} w={24} h={18} />
-        <Hill x={130} y={200} w={36} h={26} />
-        <Hill x={250} y={196} w={30} h={22} />
-        <Hill x={60} y={110} w={34} h={28} />
-        <Bush x={50} y={286} />
-        <Bush x={165} y={292} />
-        <Bush x={120} y={110} />
-        <Bush x={240} y={112} />
+        {/* Colinas y matas, con borde grueso como en los juegos de 16 bits (fuera del camino del 4) */}
+        <Hill x={72} y={102} w={36} h={28} />
+        <Hill x={258} y={112} w={36} h={26} />
+        <Hill x={166} y={214} w={30} h={22} />
+        <Hill x={92} y={322} w={40} h={28} />
+        <Hill x={124} y={324} w={24} h={18} />
+        <Hill x={258} y={318} w={34} h={24} />
+        <Bush x={140} y={78} />
+        <Bush x={262} y={176} />
+        <Bush x={160} y={300} />
+        <Bush x={46} y={290} />
 
         {/* Camino: borde, arena y puntitos */}
         <path d={pathD} fill="none" stroke="#0E0C4E" strokeWidth="18" strokeLinejoin="round" strokeLinecap="round" />
@@ -205,12 +219,12 @@ export function WorldMap({
                   {e.id}
                 </text>
               )}
-              <Tag x={x} y={y + 31} text={e.corto} w={e.corto.length * 6 + 16} strong={now} />
+              {/* Sin nombre de estación (pedido de la UEP): el número en la casilla basta. */}
             </g>
           );
         })}
 
-        {/* Meta: la graduación */}
+        {/* Meta */}
         <Castle x={STOPS[META][0]} y={STOPS[META][1]} done={completed.length >= ESTACIONES.length} />
         <Tag x={STOPS[META][0]} y={STOPS[META][1] + 30} text="META" w={40} strong={completed.length >= ESTACIONES.length} />
       </svg>
@@ -230,9 +244,9 @@ export function WorldMap({
 }
 
 function describe(completed: number[], current: number | null) {
-  const hechas = ESTACIONES.filter((e) => completed.includes(e.id)).map((e) => e.nombre);
+  const hechas = ESTACIONES.filter((e) => completed.includes(e.id)).map((e) => `Nivel ${e.id}`);
   const ahora = ESTACIONES.find((e) => e.id === current);
-  return `Mapa del recorrido. Superadas: ${hechas.length ? hechas.join(', ') : 'ninguna'}.${ahora ? ` Siguiente: ${ahora.nombre}.` : ''}`;
+  return `Mapa del recorrido. Superados: ${hechas.length ? hechas.join(', ') : 'ninguno'}.${ahora ? ` Siguiente: Nivel ${ahora.id}.` : ''}`;
 }
 
 function Tag({ x, y, text, w, strong = false }: { x: number; y: number; text: string; w: number; strong?: boolean }) {
@@ -285,7 +299,7 @@ function Bush({ x, y }: { x: number; y: number }) {
   );
 }
 
-/** Castillo de la meta con bandera de birrete. */
+/** Castillo de la meta. */
 function Castle({ x, y, done }: { x: number; y: number; done: boolean }) {
   const wall = done ? '#FFCC53' : '#FFFFFF';
   return (

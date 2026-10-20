@@ -1,5 +1,6 @@
 import type { LeaderboardResponse, LeaderRow, Player } from '@/shared/types';
 import { config, sedeByCode, sedeByName } from '@/lib/config';
+import { codigoDe } from '@/lib/localidades';
 import { computeStatus } from '@/lib/game';
 import { error, json } from '@/lib/http';
 import { currentPlayer } from '@/lib/session';
@@ -25,11 +26,15 @@ export async function GET(req: Request) {
   const me = await currentPlayer();
   // ?sede= acepta el código (CCS) o el nombre ("Sede Caracas"); sin parámetro, la sede del jugador.
   const param = url.searchParams.get('sede');
-  const sede = param ? (sedeByCode(param) ?? sedeByName(param))?.name : me?.sede;
-  if (param && !sede) return error('Localidad desconocida', 404);
-
   const store = getStore();
   try {
+    const totals = await store.sedeTotals();
+    // La localidad puede venir de la nómina de UEP aunque no esté en el listado: se busca también entre las que tienen jugadores.
+    const sede = param
+      ? ((sedeByCode(param) ?? sedeByName(param))?.name ?? totals.find((t) => t.sede === param || codigoDe(t.sede) === codigoDe(param))?.sede)
+      : me?.sede;
+    if (param && !sede) return error('Localidad desconocida', 404);
+
     const topPlayers = sede ? await store.topBySede(sede, TOP) : [];
     // Rango por puntos (empates comparten puesto, igual que rankInSede).
     const top = topPlayers.map((p) => row(p, topPlayers.filter((o) => o.puntos > p.puntos).length + 1, me?.id));
@@ -37,14 +42,14 @@ export async function GET(req: Request) {
     let mine: LeaderRow | null = null;
     if (me && me.sede === sede) mine = row(me, await store.rankInSede(me), me.id);
 
-    const totals = await store.sedeTotals();
-    const sedes = config.sedes
-      .map((s) => {
-        const t = totals.find((x) => x.sede === s.name);
-        return { sede: s.name, code: s.code, puntos: Number(t?.puntos ?? 0), jugadores: Number(t?.jugadores ?? 0) };
+    // Son 130 localidades: solo se listan las que ya tienen jugadores (y la del jugador).
+    const names = new Set([...totals.filter((t) => Number(t.jugadores) > 0).map((t) => t.sede), ...(me ? [me.sede] : [])]);
+    const sedes = [...names]
+      .map((name) => {
+        const t = totals.find((x) => x.sede === name);
+        const code = config.sedes.find((s) => s.name === name)?.code ?? codigoDe(name);
+        return { sede: name, code, puntos: Number(t?.puntos ?? 0), jugadores: Number(t?.jugadores ?? 0) };
       })
-      // Son 130 localidades: solo se listan las que ya tienen jugadores (y la del jugador).
-      .filter((s) => s.jugadores > 0 || s.sede === me?.sede)
       .sort((a, b) => b.puntos - a.puntos)
       .map((s, i) => ({ ...s, rank: i + 1, isMine: s.sede === me?.sede }));
 

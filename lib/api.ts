@@ -15,15 +15,7 @@ async function call<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   me: () => call<MeResponse>('/api/me'),
-  register: (body: {
-    nombre: string;
-    cedula: string;
-    email: string;
-    sede?: string;
-    sedeCode?: string;
-    apodo: string;
-    icono: Icono;
-  }) => call<RegisterResponse>('/api/register', { method: 'POST', body: JSON.stringify(body) }),
+  icono: (icono: Icono) => call<MeResponse>('/api/icono', { method: 'POST', body: JSON.stringify({ icono }) }),
   login: (cedula: string) => call<RegisterResponse>('/api/login', { method: 'POST', body: JSON.stringify({ cedula }) }),
   scan: (value: string) => call<MeResponse>('/api/scan', { method: 'POST', body: JSON.stringify({ value }) }),
   answer: (option: number, index: number) =>

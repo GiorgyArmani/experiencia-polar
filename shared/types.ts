@@ -12,7 +12,8 @@ export interface Player {
   cedula: string; // identifica al jugador (solo dígitos); con ella recupera su partida en otro teléfono
   email: string | null; // opcional: no todos tienen correo corporativo
   telefono: string | null; // ya no se pide (versiones anteriores)
-  sede: string; // nombre de la localidad
+  sede: string; // nombre de la localidad (viene de la nómina de UEP)
+  estado: string | null; // estado de Venezuela (viene de la nómina de UEP)
   oso_nombre: string; // apodo que sale en el ranking (la columna conserva su nombre de cuando había un oso)
   avatar: Icono; // ícono del jugador (la columna conserva el nombre "avatar")
   puntos: number;
@@ -25,6 +26,7 @@ export interface Player {
   trivia_started_at: string | null; // arranca el reloj de la trivia (al escanear)
   question_started_at: string | null; // cuándo vio la pregunta actual (para el puntaje por rapidez)
   last_completed_at: string | null;
+  tiempo_ms: number; // tiempo total jugando los niveles (desempate para la premiación)
   created_at: string;
   updated_at: string;
 }
@@ -76,7 +78,7 @@ export interface MeResponse {
 }
 
 export interface RegisterResponse extends MeResponse {
-  recovered: boolean;
+  recovered: boolean; // false = primera vez (el cliente lo lleva a elegir su ícono)
   /** Para la app nativa: se envía como `Authorization: Bearer <token>`. La web usa cookie. */
   token: string;
 }
@@ -120,3 +122,4 @@ export interface LeaderboardResponse {
   me: LeaderRow | null;
   sedes: SedeRow[];
 }
+

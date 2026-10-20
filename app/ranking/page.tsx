@@ -8,7 +8,7 @@ import { PlayerIcon } from '@/components/PlayerIcon';
 
 function Face({ row, size, className = '' }: { row: LeaderRow; size: number; className?: string }) {
   return (
-    <PlayerIcon icono={row.icono} graduado={row.graduado} size={size} className={className} title={row.apodo} />
+    <PlayerIcon icono={row.icono} size={size} className={className} title={row.apodo} />
   );
 }
 

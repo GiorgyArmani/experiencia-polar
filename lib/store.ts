@@ -15,8 +15,17 @@ export interface NewPlayer {
   email: string | null;
   telefono: string | null;
   sede: string;
+  estado: string | null;
   oso_nombre: string;
   avatar: Icono;
+}
+
+/** Una persona de la nómina que envía UEP: solo quien está aquí puede entrar. */
+export interface Nomina {
+  cedula: string;
+  nombre: string;
+  localidad: string;
+  estado: string | null;
 }
 
 /** Condición para actualizar: si el jugador ya no está en ese estado, no se toca (evita dobles toques). */
@@ -34,6 +43,7 @@ export interface SedeTotal {
 export interface Store {
   getPlayer(id: string): Promise<Player | null>;
   getPlayerByCedula(cedula: string): Promise<Player | null>;
+  getNomina(cedula: string): Promise<Nomina | null>;
   createPlayer(p: NewPlayer): Promise<Player>;
   /** Devuelve null si `expect` no se cumple. */
   updatePlayer(id: string, patch: Partial<Player>, expect?: Expect): Promise<Player | null>;
@@ -44,6 +54,7 @@ export interface Store {
 }
 
 const UPDATABLE = [
+  'avatar',
   'puntos',
   'completed',
   'current_trivia',
@@ -54,6 +65,7 @@ const UPDATABLE = [
   'trivia_started_at',
   'question_started_at',
   'last_completed_at',
+  'tiempo_ms',
 ] as const satisfies readonly (keyof Player)[];
 
 function pickPatch(patch: Partial<Player>) {
@@ -67,6 +79,8 @@ function fromRow(row: Record<string, unknown> | null | undefined): Player | null
   return {
     ...(row as unknown as Player),
     avatar: parseIcono(row.avatar),
+    estado: (row.estado as string | null) ?? null,
+    tiempo_ms: Number(row.tiempo_ms ?? 0),
     completed: (row.completed as number[] | null) ?? [],
     question_ids: (row.question_ids as number[] | null) ?? [],
     last_completed_at: iso(row.last_completed_at),
@@ -95,10 +109,14 @@ class PostgresStore implements Store {
     const [row] = await this.sql`select * from players where cedula = ${cedula}`;
     return fromRow(row);
   }
+  async getNomina(cedula: string) {
+    const [row] = await this.sql`select cedula, nombre, localidad, estado from nomina where cedula = ${cedula}`;
+    return (row as unknown as Nomina) ?? null;
+  }
   async createPlayer(p: NewPlayer) {
     const [row] = await this.sql`
-      insert into players (nombre, cedula, email, telefono, sede, oso_nombre, avatar)
-      values (${p.nombre}, ${p.cedula}, ${p.email}, ${p.telefono}, ${p.sede}, ${p.oso_nombre}, ${this.sql.json(p.avatar as never)})
+      insert into players (nombre, cedula, email, telefono, sede, estado, oso_nombre, avatar)
+      values (${p.nombre}, ${p.cedula}, ${p.email}, ${p.telefono}, ${p.sede}, ${p.estado}, ${p.oso_nombre}, ${this.sql.json(p.avatar as never)})
       returning *`;
     return fromRow(row)!;
   }
@@ -122,7 +140,7 @@ class PostgresStore implements Store {
   async topBySede(sede: string, limit: number) {
     const rows = await this.sql`
       select * from players where sede = ${sede}
-      order by puntos desc, last_completed_at asc nulls last
+      order by puntos desc, tiempo_ms asc, last_completed_at asc nulls last
       limit ${limit}`;
     return rows.map((r) => fromRow(r)!);
   }
@@ -153,6 +171,11 @@ class SupabaseStore implements Store {
     if (error) throw error;
     return fromRow(data);
   }
+  async getNomina(cedula: string) {
+    const { data, error } = await this.db.from('nomina').select('cedula, nombre, localidad, estado').eq('cedula', cedula).maybeSingle();
+    if (error) throw error;
+    return (data as Nomina | null) ?? null;
+  }
   async createPlayer(p: NewPlayer) {
     const { data, error } = await this.db.from('players').insert(p).select('*').single();
     if (error) throw error;
@@ -181,6 +204,7 @@ class SupabaseStore implements Store {
       .select('*')
       .eq('sede', sede)
       .order('puntos', { ascending: false })
+      .order('tiempo_ms', { ascending: true })
       .order('last_completed_at', { ascending: true, nullsFirst: false })
       .limit(limit);
     if (error) throw error;
@@ -207,6 +231,13 @@ class SupabaseStore implements Store {
 const g = globalThis as unknown as { __polarMem?: { players: Map<string, Player> } };
 const mem = (g.__polarMem ??= { players: new Map<string, Player>() });
 
+// Sin base de datos (pruebas locales): una nómina de ejemplo para poder entrar.
+const NOMINA_PRUEBA: Nomina[] = [
+  { cedula: '11111111', nombre: 'María Pérez', localidad: 'SUC. VALENCIA', estado: 'Carabobo' },
+  { cedula: '22222222', nombre: 'José Rodríguez', localidad: 'AG. CATIA', estado: 'Distrito Capital' },
+  { cedula: '33333333', nombre: 'Ana González', localidad: 'ADC MARACAIBO', estado: 'Zulia' },
+];
+
 class MemoryStore implements Store {
   async getPlayer(id: string) {
     return mem.players.get(id) ?? null;
@@ -214,6 +245,9 @@ class MemoryStore implements Store {
   async getPlayerByCedula(cedula: string) {
     for (const p of mem.players.values()) if (p.cedula === cedula) return p;
     return null;
+  }
+  async getNomina(cedula: string) {
+    return NOMINA_PRUEBA.find((n) => n.cedula === cedula) ?? null;
   }
   async createPlayer(p: NewPlayer) {
     const now = new Date().toISOString();
@@ -230,6 +264,7 @@ class MemoryStore implements Store {
       trivia_started_at: null,
       question_started_at: null,
       last_completed_at: null,
+      tiempo_ms: 0,
       created_at: now,
       updated_at: now,
     };
@@ -252,6 +287,7 @@ class MemoryStore implements Store {
     return list.sort(
       (a, b) =>
         b.puntos - a.puntos ||
+        a.tiempo_ms - b.tiempo_ms ||
         (a.last_completed_at ?? '9999').localeCompare(b.last_completed_at ?? '9999'),
     );
   }

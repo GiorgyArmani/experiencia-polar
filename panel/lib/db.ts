@@ -1,0 +1,70 @@
+// Lectura de la base del juego (SOLO lectura: el panel nunca escribe).
+// Usa DATABASE_URL (Postgres directo) o, si no hay, SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY.
+// Recomendado: DATABASE_URL con un usuario de Postgres de solo lectura (ver README del panel).
+import 'server-only';
+import { createClient } from '@supabase/supabase-js';
+import postgres from 'postgres';
+import type { Datos, Fila } from './tipos';
+
+const COLS = 'cedula, nombre, sede, estado, puntos, tiempo_ms, completed, last_completed_at, created_at';
+export const TOTAL_NIVELES = Number(process.env.TOTAL_NIVELES ?? 4);
+
+type Row = {
+  cedula: string | null;
+  nombre: string;
+  sede: string;
+  estado: string | null;
+  puntos: number;
+  tiempo_ms: number | null;
+  completed: number[] | null;
+  last_completed_at: string | Date | null;
+  created_at: string | Date;
+};
+
+const iso = (v: string | Date | null) => (v ? new Date(v).toISOString() : null);
+
+function toFila(r: Row): Fila {
+  const niveles = (r.completed ?? []).length;
+  return {
+    cedula: r.cedula ?? '',
+    nombre: r.nombre,
+    localidad: r.sede,
+    estado: r.estado ?? null,
+    puntos: Number(r.puntos ?? 0),
+    tiempoMs: Number(r.tiempo_ms ?? 0),
+    niveles,
+    terminado: niveles >= TOTAL_NIVELES,
+    ultimoNivelAt: iso(r.last_completed_at),
+    registradoAt: iso(r.created_at)!,
+  };
+}
+
+const g = globalThis as unknown as { __panelSql?: postgres.Sql };
+
+async function leerFilas(): Promise<Row[]> {
+  const url = process.env.DATABASE_URL;
+  if (url) {
+    const sql = (g.__panelSql ??= postgres(url, { max: 3, prepare: false, idle_timeout: 30 }));
+    return (await sql.unsafe(`select ${COLS} from players`)) as unknown as Row[];
+  }
+  const sbUrl = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!sbUrl || !key) throw new Error('Falta DATABASE_URL o SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY');
+  const db = createClient(sbUrl, key, { auth: { persistSession: false } });
+  // La API de Supabase devuelve máximo 1.000 filas por consulta: se pide por páginas.
+  const out: Row[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await db.from('players').select(COLS).order('created_at').range(from, from + 999);
+    if (error) throw error;
+    out.push(...((data ?? []) as Row[]));
+    if (!data || data.length < 1000) return out;
+  }
+}
+
+export async function leerDatos(): Promise<Datos> {
+  const rows = (await leerFilas())
+    .map(toFila)
+    // Orden de premiación: más puntos; a igual puntaje, menos tiempo.
+    .sort((a, b) => b.puntos - a.puntos || a.tiempoMs - b.tiempoMs);
+  return { rows, totalNiveles: TOTAL_NIVELES, generadoAt: new Date().toISOString() };
+}

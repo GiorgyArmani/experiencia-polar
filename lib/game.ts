@@ -60,8 +60,12 @@ export function playerQuestions(p: Player) {
 
 /** Cambios para cerrar la trivia en curso (terminó las preguntas o se le acabó el tiempo). */
 export function finishPatch(p: Player, extra: Partial<Player> = {}): Partial<Player> {
+  // Tiempo que tardó en el nivel (desde que arrancó el reloj; tope = el límite si se le acabó el tiempo).
+  const start = p.trivia_started_at ? new Date(p.trivia_started_at).getTime() : Date.now();
+  const elapsed = Math.min(config.triviaSeconds * 1000, Math.max(0, Date.now() - start));
   return {
     ...extra,
+    tiempo_ms: (p.tiempo_ms ?? 0) + Math.round(elapsed),
     completed: [...new Set([...(p.completed ?? []), p.current_trivia!])].sort((a, b) => a - b),
     current_trivia: null,
     current_question: 0,

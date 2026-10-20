@@ -13,7 +13,7 @@ create table if not exists public.players (
   telefono          text,                         -- ya no se pide
   sede              text not null,
   oso_nombre        text not null,                -- apodo en el ranking
-  avatar            jsonb not null default '{}'::jsonb, -- { piel, peinado, pelo, ropa, accesorio }
+  avatar            jsonb not null default '{}'::jsonb, -- ícono: { simbolo, color }
   puntos            integer not null default 0,
   completed         integer[] not null default '{}',
   current_trivia    integer,
@@ -41,6 +41,20 @@ alter table public.players add column if not exists question_ids integer[] not n
 -- Migración desde la versión PWA (look → avatar). No hace nada en una base nueva.
 alter table public.players add column if not exists avatar jsonb not null default '{}'::jsonb;
 alter table public.players drop column if exists look;
+
+-- Nómina de UEP (cédula, nombre, localidad, estado): solo quien está aquí puede entrar, y solo con su cédula.
+-- Se carga con scripts/importar-nomina.mjs a partir del archivo que envía UEP.
+create table if not exists public.nomina (
+  cedula     text primary key,                    -- solo dígitos
+  nombre     text not null,
+  localidad  text not null,
+  estado     text
+);
+alter table public.nomina enable row level security;
+
+-- Estado (para filtrar en el panel) y tiempo total jugando (desempate para la premiación).
+alter table public.players add column if not exists estado text;
+alter table public.players add column if not exists tiempo_ms integer not null default 0;
 
 -- Claves de consulta: localidad + puntos (leaderboard) y cédula (registro).
 create index if not exists players_sede_puntos_idx on public.players (sede, puntos desc);

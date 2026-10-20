@@ -3,9 +3,10 @@
 Trivia con QR y realidad aumentada ligera para el aniversario de la Universidad Empresas Polar.
 
 ```
+panel/       Panel de premiación (app Next.js aparte, solo lee la base): panelpolar.aulaciete.net
 mobile/      App nativa iOS + Android (Expo SDK 57, React Native, Three.js)  ← lo que usa el jugador
 app/, lib/   Servidor Next.js 14: API del juego, leaderboard web, página del QR y versión web de respaldo
-shared/      Contrato común (tipos de la API, avatar, formato del QR) — lo importan servidor y app
+shared/      Contrato común (tipos de la API, ícono del jugador, formato del QR) — lo importan servidor y app
 supabase/    schema.sql (sirve para Supabase y para Postgres en Dokploy)
 ```
 
@@ -16,12 +17,16 @@ supabase/    schema.sql (sirve para Supabase y para Postgres en Dokploy)
 
 Los dos dominios apuntan al **mismo** despliegue del servidor (`middleware.ts` envía `/` del leaderboard a `/ranking`).
 
+**Panel de premiación** (`panelpolar.aulaciete.net`): es una app **aparte** en `panel/` (su propio `package.json`, su propio
+despliegue). Solo **lee** la base del juego; no comparte código ni rutas con el juego. Ver `panel/README.md`.
+
 ## Gameloop
 
 Hay **un solo QR** (el mismo en todas las sedes). Lo que dispara cada escaneo depende del progreso del jugador:
 
-1. **1.er escaneo → onboarding**: crea su avatar, una persona estilo cabezón (piel, peinado, color de pelo, ropa, accesorio) + apodo para el ranking,
-   y llena sus datos: **cédula**, nombre completo, correo (opcional) y **localidad** (130, en `lib/localidades.ts`). Se guarda en `players`.
+1. **1.er escaneo → acceso solo con la cédula** (portada `/`). Debe estar en la **nómina de UEP** (tabla `nomina`: cédula, nombre,
+   localidad, estado); de ahí salen su nombre, localidad y estado, sin pedirle nada más. La primera vez elige su ícono
+   (`/registro`, un símbolo + un color, en `shared/icono.ts`). En el ranking sale como "María P.". Se guarda en `players`.
 2. **2.º escaneo → abre la trivia** disponible, **contrarreloj**: `TRIVIA_SECONDS` (60) para responder sus 3 preguntas,
    sorteadas al azar del banco de 10 de esa estación (40 en total, en `lib/trivias.ts`; 12 por jugador).
    Correcta = de 100 a 50 puntos según la rapidez en esa pregunta (100 si responde en ≤ 3 s, baja en línea recta hasta 50 a los 15 s).
@@ -29,7 +34,10 @@ Hay **un solo QR** (el mismo en todas las sedes). Lo que dispara cada escaneo de
    Si se acaba el tiempo, la trivia se cierra con lo que sumó.
 3. **Espera** con contador hasta que abra la siguiente trivia.
 4. **Siguiente escaneo → siguiente trivia**, y así hasta la última.
-6. Tras la última: **avatar graduado** (birrete y toga) → **leaderboard** de su sede.
+5. Tras la última: pantalla final ("¡Lo lograste!") → **ranking** de su localidad. Sin menciones a graduación (pedido UEP).
+
+El mapa tiene la forma del **número 4** (`components/WorldMap.tsx`). Las estaciones no muestran nombre en ninguna pantalla,
+solo "Nivel 1…4" (pedido UEP); los nombres siguen en `shared/estaciones.ts` para uso interno.
 
 Música y efectos: `/sonidos` muestra las opciones (4 músicas, 3 paquetes de efectos) para escucharlas y elegir; lo elegido
 se guarda en ese navegador. Los valores por defecto están en `DEFAULT_MUSIC` y `DEFAULT_PACK` de `lib/sfx.ts`.
@@ -47,16 +55,17 @@ y globos de diálogo (`Bubble`) en `mobile/src/components/comic.tsx`.
 - Un doble toque no suma dos veces (la actualización es condicional a la pregunta actual).
 - El reloj lo lleva el servidor (`trivia_started_at`, `question_started_at`), con 2 s de margen por la latencia. Si el jugador
   cierra la pestaña, la trivia se cierra sola en su siguiente petición al vencer el tiempo.
-- Sin contraseñas: la sesión vive en una cookie (400 días, se renueva sola). En otro navegador o teléfono, **«Ya tengo cuenta»**
-  (`/entrar`) recupera la partida **solo con la cédula**. Si el QR se abrió sin sesión, la portada ofrece registrarse o entrar,
-  y al entrar se cumple ese escaneo (abre la trivia disponible).
+- Sin contraseñas: la sesión vive en una cookie (400 días, se renueva sola). En otro navegador o teléfono, la misma cédula
+  recupera la partida. Si el QR se abrió sin sesión, al entrar con la cédula se cumple ese escaneo (abre la trivia disponible).
+- **Tiempo** (`tiempo_ms`): suma lo que tardó en cada nivel desde que arranca el reloj (tope 60 s si se le acaba).
+  Desempata el ranking y la premiación: más puntos primero; a igual puntaje, menos tiempo.
 
 ## Códigos QR
 
 Uno solo, el mismo en todas las sedes y para todas las trivias. Contiene `<APP_URL>/q/POLAR`
 (hoy `https://experiencia-polar.vercel.app/q/POLAR`). El servidor lo genera con el dominio de `APP_URL`:
 
-- `<APP_URL>/qr` → **afiche A4** con el estilo Polar (avatar, logos, pasos) y botón "Imprimir afiche"
+- `<APP_URL>/qr` → **afiche A4** con el estilo Polar (íconos, logos, pasos) y botón "Imprimir afiche"
 - `<APP_URL>/qr/imagen` → solo el QR en SVG; `?format=png&size=2048` en PNG (agrega `&download` para descargarlo)
 
 Si cambia el dominio (p. ej. a `experienciapolar.aulaciete.com`), hay que **reimprimir el QR** y compilar la app de nuevo con ese dominio.
@@ -88,13 +97,23 @@ Sin base de datos configurada usa memoria (solo pruebas).
 
 ## Base de datos
 
-Ejecuta `supabase/schema.sql` (es idempotente y migra la columna `look` de la versión anterior a `avatar`):
+Ejecuta `supabase/schema.sql` (es idempotente: crea `nomina` y agrega `estado` y `tiempo_ms` a `players` si faltan):
 
 - **Supabase**: SQL Editor → pegar y ejecutar.
 - **Dokploy**: crea un servicio Postgres, y `psql "$DATABASE_URL" -f supabase/schema.sql`.
 
-Tablas: `players` (jugador, cédula, localidad en la columna `sede`, avatar, puntos, progreso) y `answers` (auditoría). Índice `(sede, puntos desc)` para el ranking.
+Tablas: `nomina` (quién puede entrar), `players` (jugador, estado, tiempo, cédula, localidad en la columna `sede`, ícono en la columna `avatar`, puntos, progreso) y `answers` (auditoría). Índice `(sede, puntos desc)` para el ranking.
 Para ~2.000 jugadores un Postgres pequeño sobra; el pool por instancia es `DATABASE_POOL` (10).
+
+### Cargar la nómina de UEP
+
+```bash
+node --env-file=.env.local scripts/importar-nomina.mjs nomina.csv
+```
+
+CSV con coma o punto y coma (lo que exporta Excel) y títulos `cédula`, `nombre`, `localidad`, `estado` (estado opcional).
+Se puede volver a correr: actualiza las cédulas que ya existan. Para pruebas: `supabase/nomina-prueba.csv`
+(sin base de datos, la memoria ya trae las cédulas 11111111, 22222222 y 33333333).
 
 ## Preguntas
 
@@ -137,6 +156,11 @@ npx eas-cli@latest submit --platform all
 - El oso 3D está hecho con primitivas (`mobile/src/components/Bear3D.tsx`). Si el artista entrega un `.glb`, se reemplaza ese
   componente con la misma interfaz (`avatar`, `reaction`, `graduado`).
 - `npm run typecheck` y `npx expo-doctor` deben pasar antes de cada build.
+
+## Avatares (archivados)
+
+La UEP pidió quitar los avatares y dejar solo íconos. El código del avatar 2D quedó en `_archivo/avatares/`
+(fuera del build) con su propio README para reusarlo en otro proyecto.
 
 ## Web de respaldo
 
