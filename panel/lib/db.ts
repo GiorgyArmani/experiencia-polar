@@ -86,10 +86,13 @@ async function leerFilas(): Promise<Row[]> {
   }
 }
 
+const orden = (f: Fila) => f.tiempoMs || Number.MAX_SAFE_INTEGER;
+
 export async function leerDatos(): Promise<Datos> {
   const rows = (await leerFilas())
     .map(toFila)
     // Orden de premiación: más puntos; a igual puntaje, menos tiempo.
-    .sort((a, b) => b.puntos - a.puntos || a.tiempoMs - b.tiempoMs);
+    // Sin tiempo registrado (jugó antes de que se guardara) va después de quien sí lo tiene.
+    .sort((a, b) => b.puntos - a.puntos || orden(a) - orden(b));
   return { rows, totalNiveles: TOTAL_NIVELES, generadoAt: new Date().toISOString() };
 }

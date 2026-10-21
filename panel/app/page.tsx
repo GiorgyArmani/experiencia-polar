@@ -10,9 +10,9 @@ const PAGINA = 50;
 
 type ConPuesto = Fila & { puesto: number };
 
-/** 254300 → "4 min 14 s" */
-function tiempo(ms: number) {
-  if (!ms) return '—';
+/** 254300 → "4 min 14 s". Sin tiempo pero con niveles jugados = jugó antes de que se guardara el tiempo. */
+function tiempo(ms: number, niveles = 0) {
+  if (!ms) return niveles ? 'Sin registro' : '—';
   const total = Math.round(ms / 100) / 10;
   const m = Math.floor(total / 60);
   const s = total - m * 60;
@@ -51,7 +51,7 @@ function descargar(rows: ConPuesto[], nombre: string, totalNiveles: number) {
       r.localidad,
       r.estado ?? '',
       r.puntos,
-      (r.tiempoMs / 1000).toFixed(1).replace('.', ','),
+      r.tiempoMs ? (r.tiempoMs / 1000).toFixed(1).replace('.', ',') : '',
       `${r.niveles} de ${totalNiveles}`,
       r.terminado ? 'Sí' : 'No',
       r.ultimoNivelAt ? new Date(r.ultimoNivelAt).toLocaleString('es-VE') : '',
@@ -263,7 +263,7 @@ export default function Panel() {
                       {r.estado ? ` · ${r.estado}` : ''}
                     </p>
                     <p className={`mt-1 text-sm ${r.puesto === 1 ? 'text-white' : 'text-polar-ink'}`}>
-                      <b className="text-lg">{r.puntos}</b> pts · {tiempo(r.tiempoMs)}
+                      <b className="text-lg">{r.puntos}</b> pts · {tiempo(r.tiempoMs, r.niveles)}
                     </p>
                   </div>
                 </li>
@@ -309,7 +309,12 @@ export default function Panel() {
                       <p className="text-xs text-polar-slate">{r.estado ?? SIN_ESTADO}</p>
                     </td>
                     <td className="px-4 py-3 text-right text-base font-black tabular-nums text-polar-navy">{r.puntos}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{tiempo(r.tiempoMs)}</td>
+                    <td
+                      className={`px-4 py-3 text-right tabular-nums ${!r.tiempoMs && r.niveles ? 'text-xs text-polar-slate' : ''}`}
+                      title={!r.tiempoMs && r.niveles ? 'Jugó antes de que el juego guardara el tiempo' : undefined}
+                    >
+                      {tiempo(r.tiempoMs, r.niveles)}
+                    </td>
                     <td className="px-4 py-3">
                       <Niveles hechos={r.niveles} total={totalNiveles} />
                     </td>
