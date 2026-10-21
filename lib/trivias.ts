@@ -10,6 +10,8 @@ export interface Question {
   text: string;
   options: string[]; // 2 a 4
   correct: number;
+  /** Respuesta clave que se muestra al responder (la envía la UEP). Si falta, se muestra la opción correcta. */
+  explanation?: string;
 }
 
 export interface Trivia {
@@ -22,7 +24,7 @@ export interface Trivia {
 /** Preguntas que responde cada jugador en cada estación. */
 export const QUESTIONS_PER_TRIVIA = 3;
 
-const q = (text: string, options: string[], correct: number): Question => ({ text, options, correct });
+const q = (text: string, options: string[], correct: number, explanation?: string): Question => ({ text, options, correct, explanation });
 const VF = ['Verdadero', 'Falso'];
 
 const BANKS: Record<number, Question[]> = {
@@ -84,6 +86,7 @@ const BANKS: Record<number, Question[]> = {
         'Exclusivamente los empleados de nuevo ingreso',
       ],
       1,
+      'Todos los trabajadores de Empresas Polar tienen acceso a la UEP',
     ),
     q(
       '¿Qué modalidades de formación te ofrece la UEP?',

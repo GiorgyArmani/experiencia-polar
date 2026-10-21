@@ -7,7 +7,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { qrUrlFor } from '@/shared/qr';
 import type { Icono } from '@/shared/icono';
-import type { AnswerResponse, MeResponse } from '@/shared/types';
+import { estacion } from '@/shared/estaciones';
+import { FEEDBACK_MS, type AnswerResponse, type MeResponse, type QuestionView } from '@/shared/types';
 import { lastStop, META, WorldMap } from '@/components/WorldMap';
 import { SoundToggle } from '@/components/Talk';
 import { Screen, Spinner } from '@/components/ui';
@@ -16,15 +17,27 @@ import { setMusicTempo, sfx, startMusic, stopMusic } from '@/lib/sfx';
 
 const QrScanner = dynamic(() => import('@/components/QrScanner'), { ssr: false });
 
-type Overlay =
-  | { kind: 'flash'; correct: boolean; points: number }
-  | { kind: 'superada'; trivia: number; points: number; timedOut: boolean }
-  | null;
+type Overlay = { kind: 'superada'; trivia: number; points: number; timedOut: boolean } | null;
+
+/** Pregunta recién respondida: se queda en pantalla con el aviso de correcta/incorrecta. */
+type Review = {
+  q: QuestionView;
+  selected: number;
+  correct: boolean;
+  explanation: string;
+  points: number;
+  streak: number;
+  /** Lo que marcaba el reloj al responder (se queda quieto durante el aviso). */
+  msLeft: number;
+};
 
 export default function Jugar() {
   const router = useRouter();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [overlay, setOverlay] = useState<Overlay>(null);
+  const [review, setReview] = useState<Review | null>(null);
+  const reviewTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(reviewTimer.current), []);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState('');
   const [, rerender] = useState(0);
@@ -99,26 +112,38 @@ export default function Jugar() {
   }
 
   async function onAnswer(option: number) {
-    if (busy || !question) return;
+    if (busy || review || !question || !status) return;
     setBusy(true);
     sfx.tap();
+    const q = question;
+    const deadline = status.deadline;
     try {
-      const r: AnswerResponse = await api.answer(option, question.index);
+      const r: AnswerResponse = await api.answer(option, q.index);
+      const msLeft = deadline ? Math.max(0, new Date(deadline).getTime() - (Date.now() + offset.current)) : 0;
       offset.current = new Date(r.status.serverNow).getTime() - Date.now();
       playing.current = r.status.phase === 'playing' ? r.status.trivia : null;
-      setMe((m) => (m ? { ...m, player: r.player, status: r.status, question: r.question } : m));
       streak.current = r.correct ? streak.current + 1 : 0;
-      if (r.triviaDone) {
-        sfx.levelUp();
-        setOverlay({ kind: 'superada', trivia: question.trivia, points: r.triviaPoints, timedOut: false });
-      } else {
-        // Contrarreloj: el aviso es corto y no bloquea; la siguiente pregunta ya está en pantalla.
-        if (!r.correct) sfx.wrong();
-        else if (streak.current >= 2) sfx.streak(streak.current);
-        else sfx.correct();
-        setOverlay({ kind: 'flash', correct: r.correct, points: r.pointsEarned });
-        setTimeout(() => setOverlay((o) => (o?.kind === 'flash' ? null : o)), 1100);
-      }
+      if (!r.correct) sfx.wrong();
+      else if (streak.current >= 2) sfx.streak(streak.current);
+      else sfx.correct();
+      // Primero el aviso de correcta/incorrecta (el servidor pausó el reloj ese rato); luego sigue el juego.
+      setReview({
+        q,
+        selected: option,
+        correct: r.correct,
+        explanation: r.explanation ?? `La respuesta correcta es: ${q.options[r.correctOption] ?? ''}`,
+        points: r.pointsEarned,
+        streak: streak.current,
+        msLeft,
+      });
+      reviewTimer.current = setTimeout(() => {
+        setReview(null);
+        setMe((m) => (m ? { ...m, player: r.player, status: r.status, question: r.question } : m));
+        if (r.triviaDone) {
+          sfx.levelUp();
+          setOverlay({ kind: 'superada', trivia: q.trivia, points: r.triviaPoints, timedOut: false });
+        }
+      }, FEEDBACK_MS);
     } catch (e) {
       // Si fue porque se acabó el tiempo, refresh() lo detecta y muestra el resultado.
       refresh().catch(() => setToast((e as Error).message));
@@ -129,10 +154,23 @@ export default function Jugar() {
 
   // Recién escaneado: el reloj del nivel todavía no arranca y se muestra el mapa.
   const startsAt = status.phase === 'playing' && status.startsAt ? new Date(status.startsAt).getTime() : 0;
-  const inIntro = startsAt > Date.now() + offset.current;
+  const inIntro = question?.index === 0 && startsAt > Date.now() + offset.current;
+  const triviaProps = {
+    busy,
+    deadline: status.deadline,
+    limitSeconds: status.limitSeconds,
+    penalty: status.wrongPenalty,
+    offset: offset.current,
+    onTimeUp: () => refresh().catch(() => {}),
+    onAnswer,
+  };
 
   let content: React.ReactNode;
-  if (overlay?.kind === 'superada') {
+  let enTrivia = false;
+  if (review) {
+    enTrivia = true;
+    content = <Trivia {...triviaProps} q={review.q} review={review} />;
+  } else if (overlay?.kind === 'superada') {
     const next = status.trivia ?? 0;
     content = (
       <Superada
@@ -163,25 +201,8 @@ export default function Jugar() {
       />
     );
   } else if (status.phase === 'playing' && question) {
-    content = (
-      <Trivia
-        trivia={question.trivia}
-        total={status.totalTrivias}
-        index={question.index}
-        count={question.total}
-        text={question.text}
-        options={question.options}
-        busy={busy}
-        flash={overlay?.kind === 'flash' ? overlay : null}
-        streak={streak.current}
-        deadline={status.deadline}
-        limitSeconds={status.limitSeconds}
-        penalty={status.wrongPenalty}
-        offset={offset.current}
-        onTimeUp={() => refresh().catch(() => {})}
-        onAnswer={onAnswer}
-      />
-    );
+    enTrivia = true;
+    content = <Trivia {...triviaProps} q={question} review={null} />;
   } else if (status.phase === 'scan') {
     content = (
       <Camara
@@ -214,11 +235,13 @@ export default function Jugar() {
   }
 
   return (
-    <Screen className="relative overflow-hidden">
+    // Sin overflow-hidden vertical: en teléfonos bajos la pantalla se desplaza en vez de recortar el texto.
+    <Screen light className="overflow-x-hidden">
       <div className="flex flex-1 flex-col">{content}</div>
-      <SoundToggle className="absolute right-5 top-5 z-40" />
+      {/* En las preguntas la esquina derecha es de "Pregunta N": el sonido pasa a la izquierda. */}
+      <SoundToggle className={`absolute z-40 ${enTrivia ? 'left-3 top-3' : 'right-5 top-5'}`} />
       {toast && (
-        <div role="alert" className="fixed inset-x-4 bottom-6 z-50 mx-auto max-w-[400px] rounded-2xl bg-polar-ink px-4 py-3 text-center text-sm font-bold">
+        <div role="alert" className="fixed inset-x-4 bottom-6 z-50 mx-auto max-w-[400px] rounded-2xl bg-polar-ink px-4 py-3 text-center text-sm font-bold text-white">
           {toast}
         </div>
       )}
@@ -263,7 +286,7 @@ function hora(iso: string | null) {
 function NivelBanner({ trivia, className = '' }: { trivia: number; className?: string }) {
   return (
     <div className={`flex flex-col items-center text-center ${className}`}>
-      <span className="title-display text-[clamp(36px,12vw,52px)] leading-none text-white [text-shadow:0_4px_0_#0E0C4E]">Nivel {trivia}</span>
+      <span className="title-display text-[clamp(36px,12vw,52px)] leading-none text-polar-navy">Nivel {trivia}</span>
     </div>
   );
 }
@@ -278,7 +301,7 @@ function Nav({ onMap, className = '' }: { onMap?: () => void; className?: string
           Mapa
         </button>
       )}
-      <Link href="/reglas" className={`${base} ${onMap ? 'rounded-md' : 'rounded-l-[26px] rounded-r-md'} bg-polar-lav text-polar-lav-ink`}>
+      <Link href="/reglas" className={`${base} ${onMap ? 'rounded-md' : 'rounded-l-[26px] rounded-r-md'} bg-polar-lav text-polar-lav-ink ring-1 ring-inset ring-polar-steel/40`}>
         Instrucciones
       </Link>
       <Link href="/ranking" className={`${base} rounded-l-md rounded-r-[26px] bg-polar-lav-dark text-white`}>
@@ -292,10 +315,10 @@ function Nav({ onMap, className = '' }: { onMap?: () => void; className?: string
 function MapSheet({ icono, completed, current, onClose }: { icono: Icono; completed: number[]; current: number; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" role="dialog" aria-modal="true" aria-label="Mapa" onClick={onClose}>
-      <div className="w-full max-w-[440px] rounded-t-[28px] bg-polar-blue px-4 pb-6 pt-4" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-[440px] rounded-t-[28px] bg-white px-4 pb-6 pt-4 text-polar-navy" onClick={(e) => e.stopPropagation()}>
         <p className="title-display text-center text-2xl">Tu recorrido</p>
         <WorldMap icono={icono} completed={completed} current={current} to={lastStop(completed)} className="mt-3 max-w-[min(340px,62dvh)]" />
-        <button type="button" onClick={onClose} className="btn-game mx-auto mt-4 w-full max-w-[300px]">
+        <button type="button" onClick={onClose} className="btn-uep mx-auto mt-4 w-full max-w-[300px]">
           Seguir buscando el QR
         </button>
       </div>
@@ -434,28 +457,29 @@ function Intro({
         className="mt-3 max-w-[min(360px,56dvh)]"
       />
       <div className="mt-auto flex flex-col items-center gap-1 pt-3 text-center" aria-live="polite">
-        <span className="text-sm font-extrabold uppercase tracking-[0.14em] text-[#DCEBFF]">
+        <span className="text-sm font-extrabold uppercase tracking-[0.14em] text-polar-steel">
           {arrived ? '¡Prepárate!' : 'Camino a la estación…'}
         </span>
-        <span key={secs} className="title-display animate-pop text-[clamp(40px,8dvh,64px)] leading-none text-polar-yellow [text-shadow:0_4px_0_#0E0C4E]">
+        <span key={secs} className="title-display animate-pop text-[clamp(40px,8dvh,64px)] leading-none text-polar-steel">
           {secs > 3 ? 'Listo…' : secs > 0 ? secs : '¡YA!'}
         </span>
-        <span className="text-[13px] font-semibold text-white/85">El reloj empieza al entrar al nivel</span>
+        <span className="text-[13px] font-semibold text-polar-muted">El reloj empieza al entrar al nivel</span>
       </div>
     </div>
   );
 }
 
 /** Segundos que quedan hasta `deadline` (con la hora del servidor). Avisa una vez al llegar a cero. */
-function useCountdown(deadline: string | null, offset: number, onZero: () => void) {
+function useCountdown(deadline: string | null, offset: number, onZero: () => void, frozen: number | null = null) {
   const target = deadline ? new Date(deadline).getTime() : 0;
   const calc = () => Math.max(0, target - (Date.now() + offset));
   const [ms, setMs] = useState(calc);
   const onZeroRef = useRef(onZero);
   onZeroRef.current = onZero;
+  const paused = frozen !== null;
 
   useEffect(() => {
-    if (!target) return;
+    if (!target || paused) return;
     let lastAsk = 0;
     const tick = () => {
       const left = calc();
@@ -469,20 +493,20 @@ function useCountdown(deadline: string | null, offset: number, onZero: () => voi
     tick();
     const id = setInterval(tick, 200);
     return () => clearInterval(id);
-  }, [target, offset]);
-  return ms;
+  }, [target, offset, paused]);
+  return paused ? frozen : ms;
 }
 
+/**
+ * Pregunta (mockup de la UEP): pestaña "Pregunta N", número y nombre de la estación, la pregunta y las opciones
+ * en tarjetas blancas, y abajo el reloj. Al responder, la opción elegida se pinta (verde = correcta,
+ * amarilla = incorrecta) y el reloj cede su lugar al aviso con la respuesta clave.
+ * Los tamaños dependen del alto de la pantalla para que todo quepa sin recortarse.
+ */
 function Trivia({
-  trivia,
-  total,
-  index,
-  count,
-  text,
-  options,
+  q,
+  review,
   busy,
-  flash,
-  streak,
   deadline,
   limitSeconds,
   penalty,
@@ -490,15 +514,9 @@ function Trivia({
   onTimeUp,
   onAnswer,
 }: {
-  trivia: number;
-  total: number;
-  index: number;
-  count: number;
-  text: string;
-  options: string[];
+  q: QuestionView;
+  review: Review | null;
   busy: boolean;
-  flash: { correct: boolean; points: number } | null;
-  streak: number;
   deadline: string | null;
   limitSeconds: number;
   penalty: number;
@@ -506,17 +524,19 @@ function Trivia({
   onTimeUp: () => void;
   onAnswer: (i: number) => void;
 }) {
+  const { trivia, index, text, options } = q;
   const [hover, setHover] = useState<number | null>(null);
   useEffect(() => setHover(null), [index]);
 
-  const ms = useCountdown(deadline, offset, onTimeUp);
+  const ms = useCountdown(deadline, offset, onTimeUp, review ? review.msLeft : null);
   const secs = Math.ceil(ms / 1000);
   const frac = deadline ? Math.min(1, ms / (limitSeconds * 1000)) : 1;
   // La presión sube por etapas: aviso (queda poco) → apuro (10 s) → alarma (5 s).
-  const hurry = deadline !== null && secs <= 10;
-  const critical = deadline !== null && secs <= 5;
-  const warn = deadline !== null && (hurry || frac <= 0.4);
-  const tone = hurry ? '#E5484D' : warn ? '#FF9F1C' : '#FFCC53';
+  const live = deadline !== null && !review;
+  const hurry = live && secs <= 10;
+  const critical = live && secs <= 5;
+  const warn = live && (hurry || frac <= 0.4);
+  const tone = hurry ? '#E5484D' : warn ? '#FF9F1C' : '#4587C5';
 
   // Música de fondo mientras dura el nivel; se acelera en los últimos 10 s.
   useEffect(() => {
@@ -531,104 +551,144 @@ function Trivia({
   // Alarma una vez por segundo en los últimos 10.
   const lastTick = useRef<number | null>(null);
   useEffect(() => {
-    if (!deadline || secs > 10 || secs <= 0 || lastTick.current === secs) return;
+    if (!live || secs > 10 || secs <= 0 || lastTick.current === secs) return;
     lastTick.current = secs;
     sfx.alarm(secs);
-  }, [secs, deadline]);
+  }, [secs, live]);
 
+  const locked = busy || review !== null;
+  // En teléfonos bajos el aviso puede quedar bajo el borde: se desplaza hasta él.
+  const avisoRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (review) avisoRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [review]);
+  // Pregunta nueva: vuelve arriba.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [index]);
   function point(i: number) {
-    if (busy || hover === i) return;
+    if (locked || hover === i) return;
     setHover(i);
     sfx.hover();
   }
 
-  // Aro de la cuenta regresiva: se vacía con el tiempo.
-  const R = 54;
-  const C = 2 * Math.PI * R;
+  function fondo(i: number) {
+    if (review) {
+      if (i !== review.selected) return 'bg-white';
+      return review.correct ? 'bg-[#8BDD6D]' : 'bg-polar-yellow';
+    }
+    return hover === i ? 'bg-polar-lav' : 'bg-white';
+  }
+
+  const nombre = estacion(trivia)?.nombre ?? `Nivel ${trivia}`;
   const aviso = hurry ? '¡Apúrate!' : warn ? '¡Se acaba el tiempo!' : '¡Responde rápido y suma más!';
 
+  // Aro del reloj: se vacía con el tiempo.
+  const R = 46;
+  const C = 2 * Math.PI * R;
+
   return (
-    <div className="relative m-3 flex min-h-[calc(100dvh-24px)] flex-1 flex-col overflow-hidden rounded-[22px] bg-polar-cam px-[22px] pt-6 text-polar-ink">
-      <div className="flex items-center justify-between gap-2 pr-12 text-[13px] text-[#3D3D3D]">
-        <span className="min-w-0 truncate font-extrabold uppercase tracking-wider">
-          Nivel {trivia}/{total}
+    <div className="relative flex flex-1 flex-col px-[clamp(16px,5vw,26px)] pb-[max(14px,env(safe-area-inset-bottom))]">
+      {/* Solo "Pregunta 1/2/3", sin importar qué pregunta del banco le tocó. */}
+      <span className="absolute right-0 top-0 rounded-bl-[22px] bg-polar-steel py-[clamp(4px,0.9dvh,8px)] pl-6 pr-5 font-display text-[clamp(20px,3.3dvh,28px)] leading-tight text-white">
+        Pregunta {index + 1}
+      </span>
+
+      <div className="mt-[clamp(54px,8.5dvh,76px)] flex items-center gap-3">
+        <span className="flex aspect-square h-[clamp(34px,5.4dvh,46px)] shrink-0 items-center justify-center rounded-[10px] border-2 border-polar-navy bg-[#9ED8FF] text-[clamp(20px,3.4dvh,28px)] font-bold leading-none text-polar-navy shadow-[0_3px_6px_rgba(14,12,78,0.25)]">
+          {trivia}
         </span>
-        <span className="shrink-0 font-bold">Pregunta {index + 1} de {count}</span>
+        <span className="min-w-0 text-[clamp(22px,min(8vw,4.4dvh),38px)] font-bold leading-[1.05] text-polar-steel">{nombre}</span>
       </div>
       {penalty > 0 && (
         <p className="mt-2 self-start rounded-full bg-[#E5484D] px-3 py-1 text-[12px] font-extrabold uppercase tracking-wide text-white">
           ¡Ojo! Cada incorrecta resta {penalty} puntos
         </p>
       )}
-      <h1 key={index} className="mt-3 animate-pop-straight text-balance text-center title-display text-[clamp(22px,3.8dvh,30px)] leading-[1.1] text-polar-navy">
-        {text}
-      </h1>
-      <div className="mt-[2dvh] flex flex-col gap-[min(12px,1.5dvh)]" onPointerLeave={() => setHover(null)}>
+
+      <div className="card-uep mt-[clamp(10px,2.4dvh,28px)] px-4 py-[clamp(10px,2.2dvh,22px)]">
+        <h1 key={index} className="animate-pop-straight text-balance text-center title-display text-[clamp(19px,3.3dvh,30px)] leading-[1.1] text-polar-navy">
+          {text}
+        </h1>
+      </div>
+
+      <div
+        className="card-uep mt-[clamp(10px,2.4dvh,28px)] flex flex-col gap-[clamp(8px,1.4dvh,14px)] p-[clamp(12px,2dvh,20px)]"
+        onPointerLeave={() => setHover(null)}
+      >
         {options.map((o, i) => (
           <button
             key={`${index}-${i}`}
             type="button"
-            disabled={busy}
+            disabled={locked}
+            aria-pressed={review ? i === review.selected : undefined}
             onPointerEnter={() => point(i)}
             onPointerDown={() => point(i)}
             onFocus={() => point(i)}
             onClick={() => onAnswer(i)}
-            className={`flex min-h-[clamp(44px,7.5dvh,52px)] items-center justify-center rounded-full px-6 py-1.5 text-center text-[17px] font-bold leading-tight text-polar-navy shadow-game-sm transition-transform active:translate-y-[3px] active:shadow-none disabled:opacity-70 ${
-              hover === i ? 'bg-polar-yellow-dark' : 'bg-polar-yellow'
-            }`}
+            className={`flex min-h-[clamp(44px,6.6dvh,60px)] items-center justify-center rounded-[16px] border-2 border-polar-navy px-4 py-1.5 text-center text-[clamp(14px,2.2dvh,18px)] font-bold leading-tight text-polar-navy transition-colors active:translate-y-[2px] ${fondo(i)}`}
           >
             {o}
           </button>
         ))}
       </div>
 
-      {/* La cuenta regresiva: grande, cambia de color y te apura. */}
-      <div className="relative -mx-[22px] mt-4 flex min-h-[150px] flex-1 flex-col items-center justify-center gap-2 border-t-4 border-white bg-polar-navy px-4 py-3 text-white">
-        <div className={`relative aspect-square h-[min(200px,24dvh)] ${critical ? 'animate-alarm' : hurry ? 'animate-tremble' : ''}`}>
-          <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden>
-            <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="10" />
-            <circle
-              cx="60"
-              cy="60"
-              r={R}
-              fill="none"
-              stroke={tone}
-              strokeWidth="10"
-              strokeLinecap="round"
-              strokeDasharray={C}
-              strokeDashoffset={C * (1 - frac)}
-              style={{ transition: 'stroke-dashoffset 200ms linear, stroke 300ms' }}
-            />
-          </svg>
-          <span
-            className={`absolute inset-0 flex items-center justify-center font-display text-[clamp(44px,9dvh,80px)] tabular-nums leading-none ${hurry ? 'animate-pulse' : ''}`}
-            style={{ color: tone }}
-            role="timer"
-            aria-label={`Quedan ${secs} segundos`}
-          >
-            {secs}
-          </span>
-        </div>
-        {flash ? (
+      <div className="mt-auto flex flex-col items-center pt-[clamp(10px,2.2dvh,26px)]">
+        {review ? (
           <div
+            ref={avisoRef}
             role="status"
-            className={`animate-pop rounded-[16px] border-[3px] border-white px-4 py-1 text-center ${flash.correct ? 'bg-polar-bright' : 'bg-polar-ink'}`}
+            className={`w-full animate-pop-straight rounded-[28px] px-5 py-[clamp(10px,2dvh,20px)] text-center text-white shadow-[0_6px_16px_rgba(14,12,78,0.3)] ${
+              review.correct ? 'bg-polar-steel' : 'bg-polar-navy'
+            }`}
           >
-            <p className="text-lg font-black uppercase leading-tight">
-              {!flash.correct ? 'Incorrecta' : streak >= 2 ? `¡Racha de ${streak}!` : '¡Correcto!'}
-            </p>
-            <p className="text-sm font-extrabold">
-              {flash.correct ? `+${flash.points} puntos` : flash.points < 0 ? `${signed(flash.points)} puntos` : '+0 · ¡sigue!'}
+            <p className="title-display text-[clamp(24px,4.2dvh,38px)] leading-none">{review.correct ? '¡Correcto!' : '¡Incorrecto!'}</p>
+            <p className="mt-1 text-balance text-[clamp(15px,2.5dvh,21px)] leading-snug">{review.explanation}</p>
+            <p className="mt-1 text-[clamp(12px,1.8dvh,14px)] font-bold text-white/85">
+              {review.correct
+                ? `${review.streak >= 2 ? `¡Racha de ${review.streak}! · ` : ''}+${review.points} puntos`
+                : review.points < 0
+                  ? `${signed(review.points)} puntos`
+                  : '+0 puntos'}
             </p>
           </div>
         ) : (
-          <p className={`title-display text-center text-[clamp(18px,3dvh,24px)] leading-none ${hurry ? 'text-[#FF6B6F]' : 'text-white'}`}>{aviso}</p>
+          // El reloj: el número y los mensajes que apuran, un poco más chicos.
+          <div className="flex flex-col items-center gap-[clamp(4px,0.8dvh,8px)]">
+            <div className={`relative aspect-square h-[clamp(68px,11dvh,104px)] ${critical ? 'animate-alarm' : hurry ? 'animate-tremble' : ''}`}>
+              <svg viewBox="0 0 120 120" className="h-full w-full" aria-hidden>
+                <rect x="51" y="0" width="18" height="8" rx="3" fill={tone} />
+                <rect x="57" y="6" width="6" height="10" fill={tone} />
+                <circle cx="60" cy="66" r={R} fill="#FFFFFF" stroke="#E3EAF3" strokeWidth="8" />
+                <circle
+                  cx="60"
+                  cy="66"
+                  r={R}
+                  fill="none"
+                  stroke={tone}
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={C}
+                  strokeDashoffset={C * (1 - frac)}
+                  transform="rotate(-90 60 66)"
+                  style={{ transition: 'stroke-dashoffset 200ms linear, stroke 300ms' }}
+                />
+              </svg>
+              <span
+                className={`absolute inset-x-0 bottom-0 top-[10%] flex items-center justify-center font-display text-[clamp(28px,4.8dvh,46px)] tabular-nums leading-none ${hurry ? 'animate-pulse' : ''}`}
+                style={{ color: hurry || warn ? tone : '#0E0C4E' }}
+                role="timer"
+                aria-label={`Quedan ${secs} segundos`}
+              >
+                {secs}
+              </span>
+            </div>
+            <p className={`title-display text-center text-[clamp(15px,2.4dvh,20px)] leading-none ${hurry ? 'text-[#E5484D]' : 'text-polar-navy'}`}>{aviso}</p>
+          </div>
         )}
       </div>
       {/* Borde rojo que parpadea en los últimos segundos. */}
-      {critical && !flash && (
-        <div className="pointer-events-none absolute inset-0 z-10 animate-pulse rounded-[22px] border-[6px] border-[#E5484D]" aria-hidden />
-      )}
+      {critical && <div className="pointer-events-none fixed inset-0 z-10 mx-auto max-w-[440px] animate-pulse border-[6px] border-[#E5484D]" aria-hidden />}
     </div>
   );
 }
@@ -651,21 +711,21 @@ function Superada({
   onNext: () => void;
 }) {
   return (
-    <div className="flex flex-1 flex-col px-4 pb-4 pt-14">
-      <h1 className="mx-2 flex min-h-14 items-center justify-center rounded-full bg-polar-yellow px-4 text-center title-display text-[clamp(20px,6.5vw,26px)] leading-none text-polar-navy shadow-game">
+    <div className="flex flex-1 flex-col px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-14">
+      <h1 className="title-display text-balance text-center text-[clamp(30px,min(10vw,5.5dvh),46px)] leading-none text-polar-navy">
         {timedOut ? '¡Se acabó el tiempo!' : `¡Nivel ${trivia} superado!`}
       </h1>
-      <p className="mt-3 text-center text-lg font-extrabold">
-        <span className="text-polar-yellow">{signed(points)} puntos</span> para tu localidad
+      <p className="mt-2 text-center text-[clamp(15px,2.4dvh,18px)] font-bold">
+        <span className="text-polar-steel">{signed(points)} puntos</span> para tu localidad
       </p>
-      <WorldMap icono={icono} completed={completed} current={null} to={trivia} justCleared={trivia} className="mt-3 max-w-[min(340px,48dvh)]" />
+      <WorldMap icono={icono} completed={completed} current={null} to={trivia} justCleared={trivia} className="mb-4 mt-3 max-w-[min(340px,52dvh)]" />
       <button
         type="button"
         onClick={() => {
           sfx.tap();
           onNext();
         }}
-        className="btn-game mx-2 mt-auto"
+        className="btn-uep mx-2 mt-auto"
       >
         {nextLabel}
       </button>
@@ -722,11 +782,11 @@ function Espera({
   const clock = `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
 
   return (
-    <div className="flex flex-1 flex-col px-4 pb-5 pt-14">
-      <p className="title-display mr-12 text-[clamp(24px,7.5vw,30px)] leading-none">Tu recorrido</p>
+    <div className="flex flex-1 flex-col px-4 pb-[max(20px,env(safe-area-inset-bottom))] pt-14">
+      <p className="title-display mr-12 text-[clamp(24px,7.5vw,30px)] leading-none text-polar-navy">Tu recorrido</p>
       <WorldMap icono={icono} completed={completed} current={trivia} to={lastStop(completed)} className="mt-3 max-w-[min(340px,44dvh)]" />
 
-      <div className="mx-auto mt-3 flex w-[320px] max-w-full flex-col items-center gap-1 rounded-[20px] bg-white px-4 py-[min(16px,2dvh)] text-center text-polar-ink">
+      <div className="card-uep mx-auto mt-3 flex w-[320px] max-w-full flex-col items-center gap-1 px-4 py-[min(16px,2dvh)] text-center text-polar-ink">
         <span className="text-[13px] font-extrabold uppercase tracking-wider text-polar-muted">
           El Nivel {trivia} abre en
         </span>
@@ -734,7 +794,7 @@ function Espera({
         {opensAt && <span className="text-sm text-polar-muted">Abre a las {hora(opensAt)} · Escanea el mismo QR</span>}
       </div>
       {demoTools && (
-        <button type="button" onClick={onSkip} className="mx-auto h-11 text-sm font-bold underline">
+        <button type="button" onClick={onSkip} className="mx-auto h-11 text-sm font-bold text-polar-navy underline">
           Saltar espera (demo)
         </button>
       )}
@@ -744,6 +804,13 @@ function Espera({
   );
 }
 
+/** 1ro, 2do, 3ro, 4to… 7mo, 8vo, 9no, 10mo, 11vo, 12vo. */
+function ordinal(n: number) {
+  const fin = n % 100 === 11 || n % 100 === 12 ? 'vo' : ['mo', 'ro', 'do', 'ro', 'to', 'to', 'to', 'mo', 'vo', 'no'][n % 10];
+  return `${n}${fin}`;
+}
+
+/** Resultado final (mockup de la UEP): ¡Lo lograste!, el mapa completo, puesto y puntuación. */
 function Final({ icono, puntos, completed, total }: { icono: Icono; puntos: number; completed: number[]; total: number }) {
   const [rank, setRank] = useState<number | null>(null);
   useEffect(() => {
@@ -751,12 +818,12 @@ function Final({ icono, puntos, completed, total }: { icono: Icono; puntos: numb
   }, []);
 
   return (
-    <div className="flex flex-1 flex-col px-4 pb-4 pt-14">
-      <div className="flex flex-col items-center gap-1 text-center">
-        <span className="text-sm font-extrabold uppercase tracking-[0.12em]">
-          {completed.length} de {total} niveles completados
-        </span>
-        <h1 className="title-display text-[clamp(36px,13vw,54px)] leading-none text-white [text-shadow:0_4px_0_#0E0C4E]">¡Lo lograste!</h1>
+    <div className="flex flex-1 flex-col px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-[clamp(44px,7dvh,64px)]">
+      <div className="flex flex-col items-center gap-1 text-center text-polar-navy">
+        <h1 className="title-display text-[clamp(44px,min(15vw,8dvh),72px)] leading-none">¡Lo lograste!</h1>
+        <p className="text-[clamp(15px,2.4dvh,19px)] font-bold">
+          {completed.length >= total ? 'Completaste todos los niveles' : `Completaste ${completed.length} de ${total} niveles`}
+        </p>
       </div>
       <WorldMap
         icono={icono}
@@ -764,21 +831,23 @@ function Final({ icono, puntos, completed, total }: { icono: Icono; puntos: numb
         from={lastStop(completed)}
         to={META}
         onArrive={() => sfx.graduate()}
-        className="mt-3 max-w-[min(340px,42dvh)]"
+        className="mt-3 max-w-[min(340px,44dvh)]"
       />
-      <div className="mx-2 mt-3 grid grid-cols-2 gap-3 rounded-[20px] bg-white px-5 py-3 text-polar-ink">
-        <div className="flex flex-col">
-          <span className="text-[13px] font-semibold text-polar-muted">Tus puntos</span>
-          <span className="text-[26px] font-black">{puntos}</span>
+      <div className="mx-2 mt-3 flex flex-col gap-1 bg-white px-6 py-[clamp(10px,2dvh,18px)] text-polar-navy shadow-[0_6px_18px_rgba(14,12,78,0.18)]">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[clamp(18px,3dvh,26px)] font-bold leading-tight">Puesto en tu localidad</span>
+          <span className="font-display text-[clamp(40px,7dvh,64px)] uppercase leading-none text-polar-steel">{rank ? ordinal(rank) : '…'}</span>
         </div>
-        <div className="flex flex-col">
-          <span className="text-[13px] font-semibold text-polar-muted">Puesto en tu localidad</span>
-          <span className="text-[26px] font-black text-polar-blue">{rank ? `#${rank}` : '…'}</span>
+        <div className="flex items-center gap-4">
+          <span className="text-[clamp(15px,2.4dvh,20px)] font-bold">Puntuación</span>
+          <span className="font-display text-[clamp(28px,4.6dvh,40px)] leading-none text-polar-steel">{puntos}</span>
         </div>
       </div>
-      <Link href="/ranking" className="btn-game mx-2 mt-3">
-        Ver el ranking
-      </Link>
+      <div className="mt-auto px-2 pt-4">
+        <Link href="/ranking" className="btn-uep">
+          Ver ranking
+        </Link>
+      </div>
     </div>
   );
 }

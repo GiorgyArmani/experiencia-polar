@@ -1,8 +1,8 @@
-import { computeStatus, finishPatch, playerQuestions, questionView, speedPoints, toPublic, wrongPenalty } from '@/lib/game';
+import { computeStatus, deadlineOf, finishPatch, playerQuestions, questionView, speedPoints, toPublic, wrongPenalty } from '@/lib/game';
 import { error, json } from '@/lib/http';
 import { currentPlayer } from '@/lib/session';
 import { getStore } from '@/lib/store';
-import type { AnswerResponse, Player } from '@/shared/types';
+import { FEEDBACK_MS, type AnswerResponse, type Player } from '@/shared/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
 
   const now = new Date();
   // Mientras se muestra el mapa todavía no se puede responder.
-  if (p.trivia_started_at && now.getTime() < new Date(p.trivia_started_at).getTime() - 500) {
+  if (p.current_question === 0 && p.trivia_started_at && now.getTime() < new Date(p.trivia_started_at).getTime() - 500) {
     return error('El nivel aún no empieza', 409);
   }
   const correct = option === q.correct;
@@ -36,9 +36,19 @@ export async function POST(req: Request) {
   const scored = { puntos: p.puntos + pointsEarned, trivia_puntos: (p.trivia_puntos ?? 0) + pointsEarned };
   const nextIndex = p.current_question + 1;
   const triviaDone = nextIndex >= pq.ids.length;
+  // Tras responder se muestra el aviso de correcta/incorrecta (FEEDBACK_MS): el reloj se pausa ese rato,
+  // corriendo el arranque del nivel. Si ya estaba en el margen final, no se le regala tiempo.
+  const deadline = deadlineOf(p);
+  const pause = deadline && now < deadline ? FEEDBACK_MS : 0;
+  const shift = (iso: string | null) => (iso ? new Date(new Date(iso).getTime() + pause).toISOString() : iso);
   const patch: Partial<Player> = triviaDone
     ? finishPatch(p, scored)
-    : { ...scored, current_question: nextIndex, question_started_at: now.toISOString() };
+    : {
+        ...scored,
+        current_question: nextIndex,
+        trivia_started_at: shift(p.trivia_started_at),
+        question_started_at: new Date(now.getTime() + pause).toISOString(),
+      };
 
   // Solo aplica si sigue en esta misma pregunta: un doble toque no suma dos veces.
   const store = getStore();
@@ -57,6 +67,8 @@ export async function POST(req: Request) {
 
   const res: AnswerResponse = {
     correct,
+    correctOption: q.correct,
+    explanation: q.explanation ?? null,
     pointsEarned,
     triviaDone,
     triviaPoints: updated.trivia_puntos ?? 0,

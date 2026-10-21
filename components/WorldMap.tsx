@@ -1,7 +1,8 @@
 'use client';
 
-// Mapa del mundo estilo Mario Bros 3: una isla con un camino de casillas que une las 4 estaciones
-// (los niveles) desde el INICIO hasta la META. El ícono del jugador camina por el camino.
+// Mapa del recorrido (mockup de la UEP): un número 4 grande sobre un plano cuadriculado, con montañas y nubes
+// sobrias. Las 4 estaciones (niveles) son círculos numerados sobre el 4 y la meta es una estrella.
+// El ícono del jugador camina de una estación a otra.
 import { useEffect, useId, useRef, useState } from 'react';
 import { ESTACIONES } from '@/shared/estaciones';
 import type { Icono } from '@/shared/icono';
@@ -12,46 +13,31 @@ const W = 320;
 const H = 380;
 type Pt = readonly [number, number];
 
-// El camino dibuja un número 4 (pedido de la UEP): sube por el palo del 4, baja por la diagonal
-// y cruza por la barra horizontal hasta la meta.
-//
-//            ╱│
-//          2  1
-//        ╱    │
-//      3 ── 4 ┼── META
-//             │
-//           INICIO
+//            2
+//          ╱ │
+//        ╱   │
+//      3 ────┼─ 4 ★
+//            │
+//            1
+//          INICIO
 //
 /** Paradas del camino: 0 = inicio, 1..4 = estaciones, 5 = meta. */
 const STOPS: Pt[] = [
-  [202, 322],
-  [202, 148],
-  [127, 146],
-  [52, 232],
-  [148, 232],
-  [266, 232],
+  [204, 352],
+  [204, 298],
+  [204, 70],
+  [64, 240],
+  [246, 240],
+  [288, 240],
 ];
 export const META = STOPS.length - 1;
 
-/** Punta de arriba del 4 (donde el palo se une con la diagonal). */
-const PUNTA: Pt = [202, 60];
-
-/** Tramos entre una parada y la siguiente (con sus esquinas). */
-const LEGS: Pt[][] = [
-  [STOPS[0], STOPS[1]],
-  [STOPS[1], PUNTA, STOPS[2]],
-  [STOPS[2], STOPS[3]],
-  [STOPS[3], STOPS[4]],
-  [STOPS[4], STOPS[5]],
-];
-
-const pathD = LEGS.map((leg, i) => leg.map(([x, y], j) => `${i === 0 && j === 0 ? 'M' : 'L'}${x} ${y}`).join(' ')).join(' ');
+/** El trazo del 4: palo, diagonal y barra. */
+const CUATRO = `M${STOPS[1][0]} ${STOPS[1][1] + 14} L${STOPS[2][0]} ${STOPS[2][1]} L${STOPS[3][0]} ${STOPS[3][1]} L${STOPS[META][0] - 6} ${STOPS[3][1]}`;
 
 /** Puntos a recorrer para ir de una parada a otra (hacia adelante). */
 function route(from: number, to: number): Pt[] {
-  const pts: Pt[] = [STOPS[from]];
-  for (let i = from; i < to; i++) pts.push(...LEGS[i].slice(1));
-  return pts;
+  return STOPS.slice(from, Math.max(from, to) + 1);
 }
 
 const pct = ([x, y]: Pt) => ({ left: `${(x / W) * 100}%`, top: `${(y / H) * 100}%` });
@@ -80,7 +66,7 @@ export function WorldMap({
   from?: number;
   /** Parada donde termina el ícono. */
   to: number;
-  /** Estación recién superada: su casilla se voltea con la bandera. */
+  /** Estación recién superada: su círculo aparece con un salto. */
   justCleared?: number;
   graduado?: boolean;
   onArrive?: () => void;
@@ -93,6 +79,7 @@ export function WorldMap({
   const [walking, setWalking] = useState(false);
   const arrive = useRef(onArrive);
   arrive.current = onArrive;
+  const allDone = completed.length >= ESTACIONES.length;
 
   useEffect(() => {
     const pts = route(start, to);
@@ -116,7 +103,7 @@ export function WorldMap({
           setPos(pts[i]);
         }, at),
       );
-      // Pasitos 16 bits mientras camina.
+      // Pasitos mientras camina.
       for (let s = 0; s < dur; s += 190) timers.push(setTimeout(() => sfx.hover(), at + s));
       t += dur;
     }
@@ -134,53 +121,39 @@ export function WorldMap({
     <div className={`relative mx-auto aspect-[320/380] w-full ${className}`}>
       <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full" role="img" aria-label={describe(completed, current)}>
         <defs>
-          <pattern id={`tiles-${uid}`} width="16" height="16" patternUnits="userSpaceOnUse">
-            <rect width="16" height="16" fill="#A9D3FF" />
-            <rect width="8" height="8" fill="#C4E2FF" />
-            <rect x="8" y="8" width="8" height="8" fill="#C4E2FF" />
+          <pattern id={`grid-${uid}`} width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M20 0H0V20" fill="none" stroke="#DCE5EF" strokeWidth="1" />
           </pattern>
+          <clipPath id={`plano-${uid}`}>
+            <rect x="16" y="16" width={W - 32} height={H - 32} rx="20" />
+          </clipPath>
         </defs>
 
-        {/* Cielo con estrellas */}
-        <rect width={W} height={H} rx="22" fill="#F4F4F4" />
-        {[
-          [20, 22, 6], [300, 20, 5], [12, 190, 4], [306, 186, 5], [292, 366, 4], [26, 368, 5], [160, 14, 4],
-        ].map(([x, y, r], i) => (
-          <Star key={i} x={x} y={y} r={r} />
-        ))}
+        {/* Marco: tarjeta blanca con doble borde fino */}
+        <rect x="2" y="2" width={W - 4} height={H - 4} rx="26" fill="#FFFFFF" stroke="#0E0C4E" strokeOpacity="0.55" strokeWidth="1.5" />
+        <rect x="16" y="16" width={W - 32} height={H - 32} rx="20" fill={`url(#grid-${uid})`} />
 
-        {/* La isla: agua oscura alrededor, tierra a cuadros */}
-        <rect x="14" y="34" width="292" height="330" rx="34" fill="#0351A3" />
-        <rect x="14" y="28" width="292" height="328" rx="34" fill="#008CFD" stroke="#0E0C4E" strokeWidth="4" />
-        <rect x="26" y="40" width="268" height="304" rx="24" fill={`url(#tiles-${uid})`} stroke="#0E0C4E" strokeWidth="3" />
-        {/* Olitas */}
-        {[[30, 352], [120, 354], [230, 352], [298, 120], [18, 120], [298, 260]].map(([x, y], i) => (
-          <path key={i} d={`M${x - 6} ${y} q3 -4 6 0 q3 4 6 0`} fill="none" stroke="#E3F1FF" strokeWidth="2" strokeLinecap="round" />
-        ))}
-
-        {/* Colinas y matas, con borde grueso como en los juegos de 16 bits (fuera del camino del 4) */}
-        <Hill x={72} y={102} w={36} h={28} />
-        <Hill x={258} y={112} w={36} h={26} />
-        <Hill x={166} y={214} w={30} h={22} />
-        <Hill x={92} y={322} w={40} h={28} />
-        <Hill x={124} y={324} w={24} h={18} />
-        <Hill x={258} y={318} w={34} h={24} />
-        <Bush x={140} y={78} />
-        <Bush x={262} y={176} />
-        <Bush x={160} y={300} />
-        <Bush x={46} y={290} />
-
-        {/* Camino: borde, arena y puntitos */}
-        <path d={pathD} fill="none" stroke="#0E0C4E" strokeWidth="18" strokeLinejoin="round" strokeLinecap="round" />
-        <path d={pathD} fill="none" stroke="#FFF6DD" strokeWidth="12" strokeLinejoin="round" strokeLinecap="round" />
-        <path d={pathD} fill="none" stroke="#E5AC2E" strokeWidth="3.5" strokeLinecap="round" strokeDasharray="0 9" />
-
-        {/* Inicio */}
-        <g>
-          <circle cx={STOPS[0][0]} cy={STOPS[0][1]} r="12" fill="#FFFFFF" stroke="#0E0C4E" strokeWidth="3.5" />
-          <circle cx={STOPS[0][0]} cy={STOPS[0][1]} r="5" fill="#E5484D" />
-          <Tag x={STOPS[0][0]} y={STOPS[0][1] + 24} text="INICIO" w={44} />
+        {/* Montañas y nubes, sobrias y lejos del camino */}
+        <g clipPath={`url(#plano-${uid})`}>
+          <Montana pts="16,150 16,96 52,60 80,90 104,72 128,124 112,150" luz="52,60 80,90 68,150 40,150" />
+          <Montana pts="262,16 304,16 304,140 282,120 252,64" luz="262,16 282,40 270,76 252,64" />
+          <Montana pts="16,364 16,300 58,268 104,306 150,364" luz="58,268 104,306 84,364 40,364" />
+          <Montana pts="236,364 266,316 290,300 304,320 304,364" luz="266,316 290,300 282,364 252,364" />
+          <Nube x={104} y={40} />
+          <Nube x={46} y={196} s={0.8} />
+          <Nube x={270} y={176} s={0.85} />
+          <Nube x={146} y={318} s={0.9} />
         </g>
+        <rect x="16" y="16" width={W - 32} height={H - 32} rx="20" fill="none" stroke="#0E0C4E" strokeOpacity="0.55" strokeWidth="1.5" />
+
+        {/* El 4: borde azul y relleno blanco */}
+        <path d={CUATRO} fill="none" stroke="#0351A3" strokeWidth="28" strokeLinejoin="miter" strokeLinecap="square" />
+        <path d={CUATRO} fill="none" stroke="#FFFFFF" strokeWidth="18" strokeLinejoin="miter" strokeLinecap="square" />
+
+        {/* Inicio: una cápsula bajo el 4 */}
+        <path d={`M${STOPS[0][0]} ${STOPS[1][1] + 28} V${STOPS[0][1] - 10}`} stroke="#4587C5" strokeWidth="2" strokeDasharray="3 4" />
+        <rect x={STOPS[0][0] - 8} y={STOPS[0][1] - 12} width="16" height="26" rx="8" fill="#FFFFFF" stroke="#4587C5" strokeWidth="2.5" />
+        <path d={`M${STOPS[0][0]} ${STOPS[0][1] - 5} v4 M${STOPS[0][0]} ${STOPS[0][1] + 3} v4`} stroke="#4587C5" strokeWidth="2.5" strokeLinecap="round" />
 
         {/* Estaciones (niveles) */}
         {ESTACIONES.map((e) => {
@@ -188,56 +161,32 @@ export function WorldMap({
           const done = completed.includes(e.id);
           const now = !done && e.id === current;
           return (
-            <g key={e.id}>
-              {now && (
-                <rect x={x - 23} y={y - 23} width="46" height="46" rx="12" fill="none" stroke="#FFCC53" strokeWidth="4" className="animate-pulse" />
-              )}
-              <rect x={x - 17} y={y - 13} width="34" height="34" rx="8" fill="#0E0C4E" />
-              <rect
-                x={x - 17}
-                y={y - 17}
-                width="34"
-                height="34"
-                rx="8"
-                fill={done ? '#008CFD' : now ? '#FFCC53' : '#FFFFFF'}
-                stroke="#0E0C4E"
-                strokeWidth="3.5"
-                className={justCleared === e.id ? 'animate-pop' : undefined}
-                style={{ transformOrigin: `${x}px ${y}px`, transformBox: 'view-box' }}
-              />
+            <g key={e.id} className={justCleared === e.id ? 'animate-pop-straight' : undefined} style={{ transformOrigin: `${x}px ${y}px`, transformBox: 'view-box' }}>
+              {now && <circle cx={x} cy={y} r="22" fill="none" stroke="#FFCC53" strokeWidth="4" className="animate-pulse" />}
+              <circle cx={x} cy={y} r="16" fill={done ? '#4587C5' : now ? '#FFCC53' : '#9ED8FF'} stroke="#FFFFFF" strokeWidth="2.5" />
               {done ? (
-                <Flag x={x} y={y} pop={justCleared === e.id} />
+                <path d={`M${x - 6} ${y + 0.5} l4 4 l8 -9`} fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
               ) : (
-                <text
-                  x={x}
-                  y={y + 8}
-                  textAnchor="middle"
-                  className="font-display"
-                  fontSize="22"
-                  fill={now ? '#0E0C4E' : '#7C8FB3'}
-                >
+                <text x={x} y={y + 6.5} textAnchor="middle" fontSize="18" fontWeight="700" fill={now ? '#0E0C4E' : '#FFFFFF'} fontFamily="Poppins, sans-serif">
                   {e.id}
                 </text>
               )}
-              {/* Sin nombre de estación (pedido de la UEP): el número en la casilla basta. */}
             </g>
           );
         })}
 
-        {/* Meta */}
-        <Castle x={STOPS[META][0]} y={STOPS[META][1]} done={completed.length >= ESTACIONES.length} />
-        <Tag x={STOPS[META][0]} y={STOPS[META][1] + 30} text="META" w={40} strong={completed.length >= ESTACIONES.length} />
+        {/* Meta: la estrella */}
+        <Estrella x={STOPS[META][0]} y={STOPS[META][1]} r={allDone ? 20 : 17} on={allDone} />
       </svg>
 
-      {/* El jugador: su ícono, parado sobre la casilla */}
+      {/* El jugador: su ícono, parado sobre la parada */}
       <div
-        className="pointer-events-none absolute z-10 w-[15%] -translate-x-1/2 -translate-y-[88%]"
+        className="pointer-events-none absolute z-10 w-[14%] -translate-x-1/2 -translate-y-[118%]"
         style={{ ...pct(pos), transition: ms ? `left ${ms}ms linear, top ${ms}ms linear` : 'none' }}
       >
         <div className={walking ? 'animate-walk' : 'animate-breathe'}>
-          <PlayerIcon icono={icono} graduado={graduado} className="w-full" title="Tú" />
+          <PlayerIcon icono={icono} graduado={graduado} className="w-full drop-shadow-[0_3px_4px_rgba(14,12,78,0.35)]" title="Tú" />
         </div>
-        <span className="mx-auto mt-0.5 block h-1.5 w-2/3 rounded-full bg-[#0E0C4E]/30" aria-hidden />
       </div>
     </div>
   );
@@ -249,73 +198,31 @@ function describe(completed: number[], current: number | null) {
   return `Mapa del recorrido. Superados: ${hechas.length ? hechas.join(', ') : 'ninguno'}.${ahora ? ` Siguiente: Nivel ${ahora.id}.` : ''}`;
 }
 
-function Tag({ x, y, text, w, strong = false }: { x: number; y: number; text: string; w: number; strong?: boolean }) {
+/** Montaña de pocas caras: el cuerpo y una cara más clara. */
+function Montana({ pts, luz }: { pts: string; luz: string }) {
   return (
     <g>
-      <rect x={x - w / 2} y={y - 8} width={w} height="15" rx="7.5" fill={strong ? '#FFCC53' : '#FFFFFF'} stroke="#0E0C4E" strokeWidth="2" />
-      <text x={x} y={y + 3.2} textAnchor="middle" fontSize="9" fontWeight="800" fill="#0E0C4E" fontFamily="Poppins, sans-serif">
-        {text}
-      </text>
+      <polygon points={pts} fill="#0B4F7C" />
+      <polygon points={luz} fill="#1C6A9E" />
     </g>
   );
 }
 
-function Flag({ x, y, pop }: { x: number; y: number; pop: boolean }) {
-  return (
-    <g className={pop ? 'animate-pop' : undefined} style={{ transformOrigin: `${x}px ${y}px`, transformBox: 'view-box' }}>
-      <path d={`M${x - 6} ${y + 10} V${y - 10}`} stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />
-      <path d={`M${x - 5} ${y - 10} h13 l-4 5 4 5 h-13z`} fill="#FFCC53" stroke="#0E0C4E" strokeWidth="1.5" strokeLinejoin="round" />
-    </g>
-  );
-}
-
-function Star({ x, y, r }: { x: number; y: number; r: number }) {
-  const pts = Array.from({ length: 10 }, (_, i) => {
-    const a = (Math.PI / 5) * i - Math.PI / 2;
-    const rr = i % 2 ? r * 0.45 : r;
-    return `${x + Math.cos(a) * rr},${y + Math.sin(a) * rr}`;
-  }).join(' ');
-  return <polygon points={pts} fill="#FFCC53" stroke="#E5AC2E" strokeWidth="1" />;
-}
-
-function Hill({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
-  return (
-    <g>
-      <path d={`M${x - w / 2} ${y} a${w / 2} ${h} 0 0 1 ${w} 0 z`} fill="#4587C5" stroke="#0E0C4E" strokeWidth="3" strokeLinejoin="round" />
-      <path d={`M${x - w / 4} ${y - h * 0.55} a${w / 6} ${h / 4} 0 0 1 ${w / 6} -${h / 6}`} fill="none" stroke="#C4E2FF" strokeWidth="2.5" strokeLinecap="round" />
-    </g>
-  );
-}
-
-function Bush({ x, y }: { x: number; y: number }) {
+function Nube({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
   return (
     <path
-      d={`M${x - 12} ${y} a5 5 0 0 1 4 -8 a6 6 0 0 1 11 -2 a5 5 0 0 1 9 4 a4 4 0 0 1 0 6 z`}
-      fill="#008CFD"
-      stroke="#0E0C4E"
-      strokeWidth="2.5"
-      strokeLinejoin="round"
+      transform={`translate(${x} ${y}) scale(${s})`}
+      d="M-22 6 a8 8 0 0 1 6 -12 a11 11 0 0 1 20 -4 a9 9 0 0 1 14 8 a6 6 0 0 1 4 8 z"
+      fill="#0E3A66"
     />
   );
 }
 
-/** Castillo de la meta. */
-function Castle({ x, y, done }: { x: number; y: number; done: boolean }) {
-  const wall = done ? '#FFCC53' : '#FFFFFF';
-  return (
-    <g>
-      <path d={`M${x} ${y - 34} V${y - 48}`} stroke="#0E0C4E" strokeWidth="2.5" />
-      <path d={`M${x} ${y - 48} l12 4 -12 4z`} fill="#E5484D" stroke="#0E0C4E" strokeWidth="1.5" strokeLinejoin="round" />
-      <path
-        d={`M${x - 20} ${y + 16} V${y - 14} h6 v-6 h6 v6 h4 v-14 h8 v14 h4 v-6 h6 v6 h6 V${y + 16} z`}
-        fill={wall}
-        stroke="#0E0C4E"
-        strokeWidth="3"
-        strokeLinejoin="round"
-      />
-      <path d={`M${x - 6} ${y + 16} v-10 a6 6 0 0 1 12 0 v10 z`} fill="#0E0C4E" />
-      <rect x={x - 15} y={y - 6} width="5" height="6" rx="1" fill="#0E0C4E" />
-      <rect x={x + 10} y={y - 6} width="5" height="6" rx="1" fill="#0E0C4E" />
-    </g>
-  );
+function Estrella({ x, y, r, on }: { x: number; y: number; r: number; on: boolean }) {
+  const pts = Array.from({ length: 10 }, (_, i) => {
+    const a = (Math.PI / 5) * i - Math.PI / 2;
+    const rr = i % 2 ? r * 0.48 : r;
+    return `${x + Math.cos(a) * rr},${y + Math.sin(a) * rr}`;
+  }).join(' ');
+  return <polygon points={pts} fill="#FFCC53" stroke="#E5AC2E" strokeWidth="1.5" strokeLinejoin="round" className={on ? 'animate-pulse' : undefined} />;
 }

@@ -88,8 +88,13 @@ export interface QrResponse {
   sedes: Sede[];
 }
 
+/** Cuánto se muestra el aviso de correcta/incorrecta tras responder. El reloj del nivel se pausa mientras tanto. */
+export const FEEDBACK_MS = 3500;
+
 export interface AnswerResponse {
   correct: boolean;
+  correctOption: number; // índice de la opción correcta (se revela solo después de responder)
+  explanation: string | null; // respuesta clave que envía la UEP (si la hay)
   pointsEarned: number;
   triviaDone: boolean;
   triviaPoints: number;

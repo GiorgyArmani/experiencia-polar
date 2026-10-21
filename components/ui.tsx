@@ -1,11 +1,20 @@
 import Image from 'next/image';
 import type { ReactNode } from 'react';
+import { Arcos } from './Arcos';
 import { Cargando } from './Cargando';
 
-/** Contenedor de pantalla: columna de teléfono centrada, alto completo. */
-export function Screen({ children, className = '' }: { children: ReactNode; className?: string }) {
+/**
+ * Contenedor de pantalla: columna de teléfono centrada, alto completo.
+ * `light`: estilo claro de los mockups de la UEP (fondo blanco con arcos de colores).
+ */
+export function Screen({ children, className = '', light = false }: { children: ReactNode; className?: string; light?: boolean }) {
   return (
-    <main className={`mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col bg-polar-blue ${className}`}>
+    <main
+      className={`relative isolate mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col ${
+        light ? 'bg-white text-polar-navy' : 'bg-polar-blue'
+      } ${className}`}
+    >
+      {light && <Arcos />}
       {children}
     </main>
   );
