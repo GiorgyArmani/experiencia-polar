@@ -53,8 +53,9 @@ export default function Jugar() {
   const streak = useRef(0); // aciertos seguidos (para celebrar la racha)
   const playing = useRef<number | null>(null); // trivia que estaba jugando (para detectar "se acabó el tiempo")
 
-  const apply = useCallback((r: MeResponse) => {
-    if (r.status) offset.current = new Date(r.status.serverNow).getTime() - Date.now();
+  // `receivedAt`: cuándo llegó la respuesta (si se aplica más tarde, la hora del servidor ya quedó vieja).
+  const apply = useCallback((r: MeResponse, receivedAt = Date.now()) => {
+    if (r.status) offset.current = new Date(r.status.serverNow).getTime() - receivedAt;
     // Estaba jugando y el servidor ya cerró la trivia: se le acabó el tiempo.
     const now = r.status?.phase === 'playing' ? r.status.trivia : null;
     if (playing.current !== null && now === null && r.player) {
@@ -106,13 +107,14 @@ export default function Jugar() {
     sfx.scan();
     try {
       const r = await api.scan(value);
+      const receivedAt = Date.now();
       // QR válido: el modelo 3D de la estación aparece sobre la cámara y luego se pasa al mapa.
       if (r.status?.phase === 'playing') {
         setLogoScan(true);
         await espera(LOGO_MS);
         setLogoScan(false);
       }
-      apply(r);
+      apply(r, receivedAt);
     } catch (e) {
       setToast((e as Error).message);
       sfx.nope();
@@ -487,6 +489,7 @@ function Intro({
   }, [startsAt, offset]);
 
   const secs = Math.ceil(left / 1000);
+  const cuenta = secs > 3 ? 'Listo…' : secs > 0 ? String(secs) : '¡YA!';
   return (
     <div className="flex flex-1 flex-col px-4 pb-5 pt-14">
       <NivelBanner trivia={trivia} className="animate-pop" />
@@ -503,8 +506,8 @@ function Intro({
         <span className="text-sm font-extrabold uppercase tracking-[0.14em] text-polar-steel">
           {arrived ? '¡Prepárate!' : 'Camino a la estación…'}
         </span>
-        <span key={secs} className="title-display animate-pop text-[clamp(40px,8dvh,64px)] leading-none text-polar-steel">
-          {secs > 3 ? 'Listo…' : secs > 0 ? secs : '¡YA!'}
+        <span key={cuenta} className="title-display animate-pop text-[clamp(40px,8dvh,64px)] leading-none text-polar-steel">
+          {cuenta}
         </span>
         <span className="text-[13px] font-semibold text-polar-muted">El reloj empieza al entrar al nivel</span>
       </div>
