@@ -108,7 +108,7 @@ export default function Registro() {
               <Destello size={20} color="#0E0C4E" /> Guardando…
             </>
           ) : (
-            '¡Este soy yo!'
+            'Seleccionar'
           )}
         </button>
       </div>
