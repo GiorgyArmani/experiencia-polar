@@ -1,10 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { api } from '@/lib/api';
-import { primerNombre } from '@/lib/frases';
-import type { PublicPlayer } from '@/shared/types';
 import { Screen } from '@/components/ui';
 
 // Textos cortos: todo debe verse en una pantalla de teléfono sin desplazarse (si no cabe, se desplaza en vez de recortarse).
@@ -18,18 +14,6 @@ const PASOS = [
 ];
 
 export default function Instrucciones() {
-  // undefined = cargando; null = sin registro.
-  const [player, setPlayer] = useState<PublicPlayer | null | undefined>(undefined);
-
-  useEffect(() => {
-    api
-      .me()
-      .then((r) => setPlayer(r.player))
-      .catch(() => setPlayer(null));
-  }, []);
-
-  const saludo = player ? `¡Hola, ${primerNombre(player.nombre)}! Así se juega:` : '¡Hola! Así se juega:';
-
   return (
     <Screen className="overflow-x-hidden">
       <div className="flex flex-1 flex-col justify-center px-[clamp(16px,5vw,24px)] pt-[max(16px,3dvh)]">
@@ -37,9 +21,7 @@ export default function Instrucciones() {
           Instrucciones
         </h1>
 
-        <p className="mt-[1dvh] min-h-[1.4em] text-center text-[clamp(14px,2.2dvh,17px)] font-bold text-polar-steel">{player !== undefined && saludo}</p>
-
-        <ol className="mt-[1.2dvh] flex flex-col gap-[min(8px,1dvh)]">
+        <ol className="mt-[2dvh]flex flex-col gap-[min(8px,1dvh)]">
           {PASOS.map((p, i) => (
             <li key={p.t} className="card-uep flex items-center gap-3 rounded-[18px] px-3.5 py-[min(10px,1.2dvh)] text-polar-ink">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border-2 border-polar-navy bg-[#9ED8FF] text-base font-bold text-polar-navy">
