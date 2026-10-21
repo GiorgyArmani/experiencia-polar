@@ -92,7 +92,7 @@ export default async function QrPoster() {
               </li>
             ))}
           </ol>
-          <p className="mt-[3cqw] text-center text-[3cqw] font-bold">Es el mismo QR en las 4 estaciones.</p>
+         
         </footer>
         </div>
       </article>
