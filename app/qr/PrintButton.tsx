@@ -2,7 +2,7 @@
 
 export function PrintButton() {
   return (
-    <button type="button" onClick={() => window.print()} className="btn-game">
+    <button type="button" onClick={() => window.print()} className="btn-uep">
       Imprimir afiche
     </button>
   );
