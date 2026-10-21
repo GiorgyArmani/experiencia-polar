@@ -17,7 +17,8 @@ export default function Instrucciones() {
   return (
     <Screen className="overflow-x-hidden">
       <div className="flex flex-1 flex-col justify-center px-[clamp(16px,5vw,24px)] pt-[max(16px,3dvh)]">
-        <h1 className="title-display text-center text-[clamp(28px,min(10vw,5dvh),40px)] leading-none text-polar-navy">
+        {/* Fondo blanco para que el título no se pierda sobre los arcos de colores. */}
+        <h1 className="title-display self-center rounded-full bg-white px-6 py-2 text-center text-[clamp(28px,min(10vw,5dvh),40px)] leading-none text-polar-navy shadow-[0_4px_14px_rgba(14,12,78,0.15)]">
           Instrucciones
         </h1>
 

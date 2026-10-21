@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { qrUrlFor } from '@/shared/qr';
 import type { Icono } from '@/shared/icono';
@@ -246,9 +246,10 @@ export default function Jugar() {
   }
 
   return (
-    // Sin overflow-hidden vertical: en teléfonos bajos la pantalla se desplaza en vez de recortar el texto.
-    <Screen className="overflow-x-hidden">
-      <div className="flex flex-1 flex-col">{content}</div>
+    // En las preguntas la pantalla mide justo el alto del teléfono (sin desplazarse): Trivia achica el contenido si no cabe.
+    // En el resto, en teléfonos bajos la pantalla se desplaza en vez de recortar el texto.
+    <Screen className={enTrivia ? 'h-[100dvh] overflow-hidden' : 'overflow-x-hidden'}>
+      <div className="flex min-h-0 flex-1 flex-col">{content}</div>
       {/* En las preguntas la esquina derecha es de "Pregunta N": el sonido pasa a la izquierda. */}
       <SoundToggle className={`absolute z-40 ${enTrivia ? 'left-3 top-3' : 'right-5 top-5'}`} />
       {toast && (
@@ -543,7 +544,7 @@ function useCountdown(deadline: string | null, offset: number, onZero: () => voi
  * Pregunta (mockup de la UEP): pestaña "Pregunta N", número y nombre de la estación, la pregunta y las opciones
  * en tarjetas blancas, y abajo el reloj. Al responder, la opción elegida se pinta (verde = correcta,
  * amarilla = incorrecta) y el reloj cede su lugar al aviso con la respuesta clave.
- * Los tamaños dependen del alto de la pantalla para que todo quepa sin recortarse.
+ * Todo cabe en una pantalla sin desplazarse: los tamaños dependen del alto y, si aún no cabe, se achican con --fit.
  */
 function Trivia({
   q,
@@ -599,15 +600,27 @@ function Trivia({
   }, [secs, live]);
 
   const locked = busy || review !== null;
-  // En teléfonos bajos el aviso puede quedar bajo el borde: se desplaza hasta él.
-  const avisoRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (review) avisoRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, [review]);
-  // Pregunta nueva: vuelve arriba.
-  useEffect(() => {
-    window.scrollTo({ top: 0 });
-  }, [index]);
+  // Todo debe caber en una pantalla sin desplazarse: si la pregunta o las opciones ocupan más líneas,
+  // se baja la escala (--fit) de letras, espacios y reloj hasta que quepa.
+  const fitRef = useRef<HTMLDivElement>(null);
+  const enAviso = review !== null;
+  useLayoutEffect(() => {
+    const el = fitRef.current;
+    if (!el) return;
+    const ajustar = () => {
+      let fit = 1;
+      el.style.setProperty('--fit', '1');
+      while (fit > 0.6 && el.scrollHeight > el.clientHeight + 1) {
+        fit = Math.round((fit - 0.04) * 100) / 100;
+        el.style.setProperty('--fit', String(fit));
+      }
+    };
+    ajustar();
+    document.fonts?.ready.then(ajustar).catch(() => {});
+    const ro = new ResizeObserver(ajustar);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [index, text, enAviso]);
   function point(i: number) {
     if (locked || hover === i) return;
     setHover(i);
@@ -630,17 +643,17 @@ function Trivia({
   const C = 2 * Math.PI * R;
 
   return (
-    <div className="relative flex flex-1 flex-col px-[clamp(16px,5vw,26px)] pb-[max(14px,env(safe-area-inset-bottom))]">
+    <div ref={fitRef} className="relative flex min-h-0 flex-1 flex-col overflow-hidden px-[clamp(16px,5vw,26px)] pb-[max(14px,env(safe-area-inset-bottom))]">
       {/* Solo "Pregunta 1/2/3", sin importar qué pregunta del banco le tocó. */}
       <span className="absolute right-0 top-0 rounded-bl-[22px] bg-polar-steel py-[clamp(4px,0.9dvh,8px)] pl-6 pr-5 font-display text-[clamp(20px,3.3dvh,28px)] leading-tight text-white">
         Pregunta {index + 1}
       </span>
 
-      <div className="mt-[clamp(54px,8.5dvh,76px)] flex items-center gap-3">
+      <div className="mt-[max(48px,calc(clamp(54px,8.5dvh,76px)*var(--fit,1)))] flex items-center gap-3">
         <span className="flex aspect-square h-[clamp(34px,5.4dvh,46px)] shrink-0 items-center justify-center rounded-[10px] border-2 border-polar-navy bg-[#9ED8FF] text-[clamp(20px,3.4dvh,28px)] font-bold leading-none text-polar-navy shadow-[0_3px_6px_rgba(14,12,78,0.25)]">
           {trivia}
         </span>
-        <span className="min-w-0 text-[clamp(22px,min(8vw,4.4dvh),38px)] font-bold leading-[1.05] text-polar-steel">{nombre}</span>
+        <span className="min-w-0 text-[length:calc(clamp(22px,min(8vw,4.4dvh),38px)*var(--fit,1))] font-bold leading-[1.05] text-polar-steel">{nombre}</span>
       </div>
       {penalty > 0 && (
         <p className="mt-2 self-start rounded-full bg-[#E5484D] px-3 py-1 text-[12px] font-extrabold uppercase tracking-wide text-white">
@@ -648,14 +661,14 @@ function Trivia({
         </p>
       )}
 
-      <div className="card-uep mt-[clamp(10px,2.4dvh,28px)] px-4 py-[clamp(10px,2.2dvh,22px)]">
-        <h1 key={index} className="animate-pop-straight text-balance text-center title-display text-[clamp(19px,3.3dvh,30px)] leading-[1.1] text-polar-navy">
+      <div className="card-uep mt-[calc(clamp(10px,2.4dvh,28px)*var(--fit,1))] px-4 py-[calc(clamp(10px,2.2dvh,22px)*var(--fit,1))]">
+        <h1 key={index} className="animate-pop-straight text-balance text-center title-display text-[length:calc(clamp(19px,3.3dvh,30px)*var(--fit,1))] leading-[1.1] text-polar-navy">
           {text}
         </h1>
       </div>
 
       <div
-        className="card-uep mt-[clamp(10px,2.4dvh,28px)] flex flex-col gap-[clamp(8px,1.4dvh,14px)] p-[clamp(12px,2dvh,20px)]"
+        className="card-uep mt-[calc(clamp(10px,2.4dvh,28px)*var(--fit,1))] flex flex-col gap-[calc(clamp(8px,1.4dvh,14px)*var(--fit,1))] p-[calc(clamp(12px,2dvh,20px)*var(--fit,1))]"
         onPointerLeave={() => setHover(null)}
       >
         {options.map((o, i) => (
@@ -668,24 +681,23 @@ function Trivia({
             onPointerDown={() => point(i)}
             onFocus={() => point(i)}
             onClick={() => onAnswer(i)}
-            className={`flex min-h-[clamp(44px,6.6dvh,60px)] items-center justify-center rounded-[16px] border-2 border-polar-navy px-4 py-1.5 text-center text-[clamp(14px,2.2dvh,18px)] font-bold leading-tight text-polar-navy transition-colors active:translate-y-[2px] ${fondo(i)}`}
+            className={`flex min-h-[max(40px,calc(clamp(44px,6.6dvh,60px)*var(--fit,1)))] items-center justify-center rounded-[16px] border-2 border-polar-navy px-4 py-1 text-center text-[length:max(12px,calc(clamp(14px,2.2dvh,18px)*var(--fit,1)))] font-bold leading-tight text-polar-navy transition-colors active:translate-y-[2px] ${fondo(i)}`}
           >
             {o}
           </button>
         ))}
       </div>
 
-      <div className="mt-auto flex flex-col items-center pt-[clamp(10px,2.2dvh,26px)]">
+      <div className="mt-auto flex flex-col items-center pt-[calc(clamp(10px,2.2dvh,26px)*var(--fit,1))]">
         {review ? (
           <div
-            ref={avisoRef}
             role="status"
-            className={`w-full animate-pop-straight rounded-[28px] px-5 py-[clamp(10px,2dvh,20px)] text-center text-white shadow-[0_6px_16px_rgba(14,12,78,0.3)] ${
+            className={`w-full animate-pop-straight rounded-[28px] px-5 py-[calc(clamp(10px,2dvh,20px)*var(--fit,1))] text-center text-white shadow-[0_6px_16px_rgba(14,12,78,0.3)] ${
               review.correct ? 'bg-polar-steel' : 'bg-polar-navy'
             }`}
           >
-            <p className="title-display text-[clamp(24px,4.2dvh,38px)] leading-none">{review.correct ? '¡Correcto!' : '¡Incorrecto!'}</p>
-            <p className="mt-1 text-balance text-[clamp(15px,2.5dvh,21px)] leading-snug">{review.explanation}</p>
+            <p className="title-display text-[length:calc(clamp(24px,4.2dvh,38px)*var(--fit,1))] leading-none">{review.correct ? '¡Correcto!' : '¡Incorrecto!'}</p>
+            <p className="mt-1 text-balance text-[length:max(13px,calc(clamp(15px,2.5dvh,21px)*var(--fit,1)))] leading-snug">{review.explanation}</p>
             <p className="mt-1 text-[clamp(12px,1.8dvh,14px)] font-bold text-white/85">
               {review.correct
                 ? `${review.streak >= 2 ? `¡Racha de ${review.streak}! · ` : ''}+${review.points} puntos`
@@ -697,8 +709,8 @@ function Trivia({
         ) : (
           // La cuenta regresiva de siempre (el reloj del mockup era solo referencial), un poco más chica:
           // el aro se vacía, el número cambia de color y los mensajes apuran.
-          <div className="flex w-full flex-col items-center gap-[clamp(4px,1dvh,10px)] rounded-[28px] bg-polar-navy px-4 py-[clamp(8px,1.6dvh,16px)] text-white shadow-[0_6px_16px_rgba(14,12,78,0.3)]">
-            <div className={`relative aspect-square h-[min(150px,17dvh)] ${critical ? 'animate-alarm' : hurry ? 'animate-tremble' : ''}`}>
+          <div className="flex w-full flex-col items-center gap-[calc(clamp(4px,1dvh,10px)*var(--fit,1))] rounded-[28px] bg-polar-navy px-4 py-[calc(clamp(8px,1.6dvh,16px)*var(--fit,1))] text-white shadow-[0_6px_16px_rgba(14,12,78,0.3)]">
+            <div className={`relative aspect-square h-[calc(min(150px,17dvh)*var(--fit,1)*var(--fit,1))] ${critical ? 'animate-alarm' : hurry ? 'animate-tremble' : ''}`}>
               <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden>
                 <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="10" />
                 <circle
@@ -715,7 +727,7 @@ function Trivia({
                 />
               </svg>
               <span
-                className={`absolute inset-0 flex items-center justify-center font-display text-[clamp(34px,6.6dvh,62px)] tabular-nums leading-none ${hurry ? 'animate-pulse' : ''}`}
+                className={`absolute inset-0 flex items-center justify-center font-display text-[length:calc(clamp(34px,6.6dvh,62px)*var(--fit,1)*var(--fit,1))] tabular-nums leading-none ${hurry ? 'animate-pulse' : ''}`}
                 style={{ color: tone }}
                 role="timer"
                 aria-label={`Quedan ${secs} segundos`}
