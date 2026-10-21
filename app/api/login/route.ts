@@ -39,8 +39,13 @@ export async function POST(req: Request) {
       return json(res);
     }
 
-    const persona = await store.getNomina(digits);
-    if (!persona) return error('No encontramos esa cédula. Revisa el número y vuelve a intentarlo.', 404);
+    let persona = await store.getNomina(digits);
+    const enNomina = persona !== null;
+    if (!persona && config.nominaObligatoria) {
+      return error('No encontramos esa cédula. Revisa el número y vuelve a intentarlo.', 404);
+    }
+    // TEMPORAL: sin nómina cargada, entra como jugador de prueba.
+    persona ??= { cedula: digits, nombre: `Jugador ${digits.slice(-4)}`, localidad: 'Pruebas', estado: null };
 
     const nombre = titulo(persona.nombre);
     // Si la localidad de la nómina coincide con una del listado, se usa ese nombre exacto (el del ranking).
@@ -52,7 +57,7 @@ export async function POST(req: Request) {
       telefono: null,
       sede,
       estado: persona.estado?.trim() || null,
-      oso_nombre: apodoDe(nombre),
+      oso_nombre: enNomina ? apodoDe(nombre) : nombre,
       avatar: DEFAULT_ICONO,
     });
     setPlayerCookie(player.id);

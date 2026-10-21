@@ -54,6 +54,9 @@ export const config = {
   // Contrarreloj: segundos para responder TODA la trivia.
   triviaSeconds: Math.max(10, Number(process.env.TRIVIA_SECONDS ?? 60)),
   sedes: parseSedes(process.env.SEDES),
+  // TEMPORAL (pruebas, mientras la UEP envía la nómina): cualquier cédula puede entrar.
+  // Poner NOMINA_OBLIGATORIA=true para exigir que la cédula esté en la tabla `nomina`.
+  nominaObligatoria: process.env.NOMINA_OBLIGATORIA === 'true',
   demoTools: process.env.NEXT_PUBLIC_DEMO === 'true',
   // Base de datos: DATABASE_URL (Postgres en Dokploy, o la cadena de conexión de Supabase)
   // tiene prioridad; si no, SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY; si no, memoria.
