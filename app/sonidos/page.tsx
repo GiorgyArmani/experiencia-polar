@@ -58,7 +58,7 @@ export default function Sonidos() {
   }
 
   return (
-    <Screen className="relative">
+    <Screen dark className="relative">
       <div className="flex flex-col gap-5 px-4 pb-8 pt-6">
         <div className="pr-14">
           <h1 className="title-display text-[clamp(30px,10vw,40px)] leading-none text-white [text-shadow:0_4px_0_#0E0C4E]">Música y sonidos</h1>

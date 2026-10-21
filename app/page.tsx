@@ -2,13 +2,11 @@
 
 // Portada. El acceso es solo con la cédula (la nómina de UEP ya trae nombre, localidad y estado).
 // Primera vez → elige su ícono → instrucciones. Si ya jugó, sigue donde lo dejó.
-// Con ?qr=1 viene de escanear el QR sin sesión: al entrar se cumple ese escaneo.
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { qrUrlFor } from '@/shared/qr';
 import { Destello } from '@/components/Cargando';
 import { Screen } from '@/components/ui';
 
@@ -36,16 +34,6 @@ export default function Inicio() {
         router.replace('/registro');
         return;
       }
-      // Venía de escanear el QR (abierto en otro navegador): se cumple ese escaneo sin volver a buscar el QR.
-      const fromQr = new URLSearchParams(window.location.search).has('qr');
-      if (fromQr && r.status?.phase === 'scan') {
-        const aviso = await api
-          .scan(qrUrlFor(window.location.origin))
-          .then(() => '')
-          .catch((err: Error) => err.message);
-        router.replace(aviso ? `/jugar?aviso=${encodeURIComponent(aviso)}` : '/jugar');
-        return;
-      }
       router.replace('/jugar');
     } catch (err) {
       setError((err as Error).message);
@@ -55,11 +43,11 @@ export default function Inicio() {
 
   const header = (
     <>
-      <Image src="/logos/universidad.png" alt="Universidad Empresas Polar" width={200} height={200} priority className="h-[min(200px,24dvh)] w-auto object-contain" />
-      <h1 className="title-display text-[clamp(44px,16vw,64px)] leading-[1.02] text-white [text-shadow:0_5px_0_#0E0C4E]">
+      <Image src="/logos/uep.svg" alt="Universidad Empresas Polar" width={190} height={184} priority className="h-[min(190px,24dvh)] w-auto object-contain" />
+      <h1 className="title-display text-[clamp(48px,min(17vw,9dvh),72px)] leading-[0.98] text-polar-navy">
         Experiencia
         <br />
-        UEP
+        <span className="text-polar-steel">UEP</span>
       </h1>
     </>
   );
@@ -69,7 +57,7 @@ export default function Inicio() {
       <Screen>
         <Link href="/jugar" className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center" aria-label="Continuar jugando">
           {header}
-          <span className="mt-6 text-base font-semibold">Toca para seguir jugando</span>
+          <span className="btn-uep mt-4 w-full max-w-[320px]">Seguir jugando</span>
         </Link>
       </Screen>
     );
@@ -81,7 +69,7 @@ export default function Inicio() {
         {header}
         {registered === false && (
           <form onSubmit={submit} className="mt-2 flex w-full max-w-[320px] flex-col gap-3">
-            <label htmlFor="cedula" className="text-base font-extrabold">
+            <label htmlFor="cedula" className="text-base font-bold text-polar-navy">
               Escribe tu cédula para entrar
             </label>
             <input
@@ -92,17 +80,17 @@ export default function Inicio() {
               value={cedula}
               onChange={(e) => setCedula(e.target.value)}
               placeholder="12345678"
-              className="h-[56px] rounded-full border-[3px] border-white bg-white px-[22px] text-center text-xl font-bold tracking-wider text-polar-ink shadow-input-blue outline-none placeholder:text-[#8A8A8A]"
+              className="h-[56px] rounded-[16px] border-2 border-polar-navy bg-white px-[22px] text-center text-xl font-bold tracking-wider text-polar-navy shadow-[0_6px_18px_rgba(14,12,78,0.15)] outline-none placeholder:text-[#9AA3B5] focus:border-polar-steel focus:ring-4 focus:ring-polar-steel/25"
             />
             {error && (
-              <p role="alert" className="rounded-xl bg-polar-ink px-4 py-2 text-sm font-bold text-white">
+              <p role="alert" className="rounded-[16px] bg-polar-navy px-4 py-2 text-sm font-bold text-white">
                 {error}
               </p>
             )}
-            <button type="submit" disabled={sending} className="btn-game">
+            <button type="submit" disabled={sending} className="btn-uep">
               {sending ? (
                 <>
-                  <Destello size={20} color="#0E0C4E" /> Entrando…
+                  <Destello size={20} color="#FFFFFF" /> Entrando…
                 </>
               ) : (
                 'Entrar'

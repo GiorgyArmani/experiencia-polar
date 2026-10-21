@@ -50,14 +50,14 @@ export default function Registro() {
 
   return (
     <Screen>
-      <h1 className="title-display mt-8 text-center text-[30px]">Elige tu ícono</h1>
+      <h1 className="title-display mt-8 text-center text-[clamp(30px,10vw,40px)] leading-none text-polar-navy">Elige tu ícono</h1>
 
       <div className="mx-auto mt-3 flex items-center justify-center">
-        <PlayerIcon key={`${icono.simbolo}-${icono.color}`} icono={icono} size={136} className="animate-pop border-[5px]" title={`Tu ícono: ${simboloLabel(icono.simbolo)}`} />
+        <PlayerIcon key={`${icono.simbolo}-${icono.color}`} icono={icono} size={136} className="animate-pop border-[5px] shadow-[0_6px_18px_rgba(14,12,78,0.28)]" title={`Tu ícono: ${simboloLabel(icono.simbolo)}`} />
       </div>
 
       <fieldset className="mx-auto mt-4 w-[min(340px,90vw)]">
-        <legend className="mb-2 text-sm font-extrabold uppercase tracking-wide">Símbolo</legend>
+        <legend className="mb-2 text-sm font-extrabold uppercase tracking-wide text-polar-steel">Símbolo</legend>
         <div className="grid grid-cols-5 gap-2">
           {SIMBOLOS.map((s) => {
             const on = s.id === icono.simbolo;
@@ -68,11 +68,11 @@ export default function Registro() {
                 onClick={() => setIcono({ ...icono, simbolo: s.id })}
                 aria-label={s.label}
                 aria-pressed={on}
-                className={`flex aspect-square items-center justify-center rounded-2xl transition-transform active:translate-y-[2px] ${
-                  on ? 'bg-polar-yellow text-polar-navy shadow-game-sm' : 'bg-polar-card text-white'
+                className={`flex aspect-square items-center justify-center rounded-[14px] border-2 border-polar-navy transition-transform active:translate-y-[2px] ${
+                  on ? 'bg-polar-steel text-white shadow-[0_4px_10px_rgba(14,12,78,0.3)]' : 'bg-white text-polar-navy'
                 }`}
               >
-                <SimboloSvg id={s.id} bg={on ? '#FFCC53' : '#003088'} className="h-[56%] w-[56%]" />
+                <SimboloSvg id={s.id} bg={on ? '#4587C5' : '#FFFFFF'} className="h-[56%] w-[56%]" />
               </button>
             );
           })}
@@ -80,7 +80,7 @@ export default function Registro() {
       </fieldset>
 
       <fieldset className="mx-auto mt-4 w-[min(340px,90vw)]">
-        <legend className="mb-2 text-sm font-extrabold uppercase tracking-wide">Color</legend>
+        <legend className="mb-2 text-sm font-extrabold uppercase tracking-wide text-polar-steel">Color</legend>
         <div className="grid grid-cols-8 gap-1.5">
           {COLORES.map((c) => {
             const on = c.id === icono.color;
@@ -91,7 +91,7 @@ export default function Registro() {
                 onClick={() => setIcono({ ...icono, color: c.id })}
                 aria-label={c.label}
                 aria-pressed={on}
-                className={`aspect-square w-full rounded-full border-[3px] ${on ? 'border-white ring-4 ring-polar-yellow' : 'border-white/70'}`}
+                className={`aspect-square w-full rounded-full border-[3px] border-white ${on ? 'ring-[3px] ring-polar-navy' : 'shadow-[0_2px_6px_rgba(14,12,78,0.3)]'}`}
                 style={{ background: c.bg }}
               />
             );
@@ -99,13 +99,13 @@ export default function Registro() {
         </div>
       </fieldset>
 
-      {error && <p role="alert" className="mx-auto mt-2 w-[min(340px,90vw)] text-sm font-bold text-polar-ink">{error}</p>}
+      {error && <p role="alert" className="mx-auto mt-2 w-[min(340px,90vw)] rounded-[16px] bg-polar-navy px-4 py-2 text-sm font-bold text-white">{error}</p>}
 
       <div className="mx-auto mt-auto w-full max-w-[344px] px-4 pt-5">
-        <button type="button" onClick={guardar} disabled={sending} className="btn-game w-full">
+        <button type="button" onClick={guardar} disabled={sending} className="btn-uep w-full">
           {sending ? (
             <>
-              <Destello size={20} color="#0E0C4E" /> Guardando…
+              <Destello size={20} color="#FFFFFF" /> Guardando…
             </>
           ) : (
             'Seleccionar'

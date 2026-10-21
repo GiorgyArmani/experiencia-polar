@@ -1,58 +1,77 @@
-// Arcos de líneas concéntricas (Elementos EP del Juego Aniversario): el fondo claro de los mockups de la UEP.
-// Van detrás del contenido, en las esquinas, sin tapar textos.
+// Fondo de arcos concéntricos (Elementos EP), recreado de "ELEMENTOS POLAR fondo.svg" (lienzo de 810×1440):
+// 9 semicírculos arriba a la izquierda (magenta → cian) y 9 abajo a la derecha (amarillo → magenta).
+// Dibujado en código para no cargar el SVG original (450 KB) en cada pantalla. Va detrás del contenido.
+// Animado (estilo tecnológico): segmentos de luz que recorren cada arco y un vaivén lento de cada grupo.
 import { useId } from 'react';
 
-type Arco = {
-  /** Clases de posición y tamaño de la caja (absolute). */
-  box: string;
-  /** Centro de los círculos en la caja de 100×100 (puede quedar afuera). */
-  cx: number;
-  cy: number;
-  /** Radio del primer arco y separación entre arcos. */
-  r: number;
-  gap: number;
-  n: number;
-  from: string;
-  to: string;
-};
-
-const ARCOS: Arco[] = [
-  // Arriba a la derecha: azules
-  { box: 'right-0 top-[5%] h-[24%] w-[30%]', cx: 150, cy: 105, r: 62, gap: 5, n: 8, from: '#0351A3', to: '#4587C5' },
-  // Centro a la izquierda: azul acero a oliva
-  { box: 'left-0 top-[46%] h-[22%] w-[13%]', cx: -110, cy: 150, r: 150, gap: 5, n: 8, from: '#4A6F8F', to: '#A39A55' },
-  // Centro a la derecha: azul acero a oliva
-  { box: 'right-0 top-[50%] h-[22%] w-[13%]', cx: 210, cy: 150, r: 150, gap: 5, n: 8, from: '#4A6F8F', to: '#A39A55' },
-  // Abajo a la izquierda: amarillos
-  { box: 'bottom-0 left-0 h-[24%] w-[34%]', cx: 150, cy: 175, r: 120, gap: 5, n: 8, from: '#D2B45A', to: '#FFCC53' },
-];
+/** Radios de los 9 arcos (unidades del lienzo original). */
+const RADIOS = Array.from({ length: 9 }, (_, i) => 330 + i * 14);
+const CAJA_W = 460;
+const CAJA_H = 910;
+const CY = CAJA_H / 2;
 
 export function Arcos({ className = '' }: { className?: string }) {
   const uid = useId().replace(/:/g, '');
+  const izq = `arcos-izq-${uid}`;
+  const der = `arcos-der-${uid}`;
   return (
     <div className={`pointer-events-none absolute inset-0 -z-10 overflow-hidden ${className}`} aria-hidden>
-      {ARCOS.map((a, i) => (
-        <svg key={i} viewBox="0 0 100 100" preserveAspectRatio="none" className={`absolute ${a.box}`}>
-          <defs>
-            <linearGradient id={`arco-${uid}-${i}`} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor={a.from} />
-              <stop offset="1" stopColor={a.to} />
-            </linearGradient>
-          </defs>
-          {Array.from({ length: a.n }, (_, k) => (
-            <circle
-              key={k}
-              cx={a.cx}
-              cy={a.cy}
-              r={a.r + k * a.gap}
-              fill="none"
-              stroke={`url(#arco-${uid}-${i})`}
-              strokeWidth="2.5"
-              vectorEffect="non-scaling-stroke"
-            />
+      {/* Arriba a la izquierda: media luna que sale del borde izquierdo */}
+      <svg viewBox={`0 0 ${CAJA_W} ${CAJA_H}`} className="absolute left-0 top-0 w-[57%]">
+        <defs>
+          <linearGradient id={izq} x1="0" y1="0" x2="0" y2={CAJA_H} gradientUnits="userSpaceOnUse">
+            <stop offset="0.15" stopColor="#DA00FF" />
+            <stop offset="0.5" stopColor="#6E5CE9" />
+            <stop offset="0.85" stopColor="#01B8D4" />
+          </linearGradient>
+        </defs>
+        <g className="arcos-vaiven" style={{ transformOrigin: `0px ${CY}px` }}>
+          {RADIOS.map((r, i) => (
+            <Arco key={r} d={`M0 ${CY - r} A${r} ${r} 0 0 1 0 ${CY + r}`} stroke={`url(#${izq})`} i={i} />
           ))}
-        </svg>
-      ))}
+        </g>
+      </svg>
+      {/* Abajo a la derecha: media luna que sale del borde derecho */}
+      <svg viewBox={`0 0 ${CAJA_W} ${CAJA_H}`} className="absolute bottom-0 right-0 w-[57%]">
+        <defs>
+          <linearGradient id={der} x1="0" y1="0" x2="0" y2={CAJA_H} gradientUnits="userSpaceOnUse">
+            <stop offset="0.15" stopColor="#FFFF84" />
+            <stop offset="0.45" stopColor="#F6BFA3" />
+            <stop offset="0.65" stopColor="#ED80C1" />
+            <stop offset="0.85" stopColor="#DB01FF" />
+          </linearGradient>
+        </defs>
+        <g className="arcos-vaiven arcos-vaiven-inverso" style={{ transformOrigin: `${CAJA_W}px ${CY}px` }}>
+          {RADIOS.map((r, i) => (
+            <Arco key={r} d={`M${CAJA_W} ${CY - r} A${r} ${r} 0 0 0 ${CAJA_W} ${CY + r}`} stroke={`url(#${der})`} i={i} reverso />
+          ))}
+        </g>
+      </svg>
     </div>
+  );
+}
+
+/**
+ * Un arco: la línea tenue de base y encima un segmento de luz que la recorre.
+ * Cada arco tiene su propio ritmo y retraso, alternando el sentido, para que el conjunto se vea vivo.
+ */
+function Arco({ d, stroke, i, reverso = false }: { d: string; stroke: string; i: number; reverso?: boolean }) {
+  const dur = 5 + ((i * 7) % 5) * 0.9; // 5 a 8.6 s
+  const sentido = (i % 2 === 0) !== reverso ? 'normal' : 'reverse';
+  return (
+    <>
+      <path d={d} fill="none" stroke={stroke} strokeWidth="4" opacity="0.45" />
+      <path
+        d={d}
+        pathLength={100}
+        fill="none"
+        stroke={stroke}
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeDasharray="18 82"
+        className="arco-luz"
+        style={{ animationDuration: `${dur}s`, animationDelay: `${-i * 1.3}s`, animationDirection: sentido }}
+      />
+    </>
   );
 }

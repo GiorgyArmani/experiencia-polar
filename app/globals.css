@@ -12,7 +12,7 @@
 
 html,
 body {
-  background: #0351A3;
+  background: #FFFFFF;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -58,6 +58,13 @@ body {
   10% { opacity: 1; }
   100% { transform: translateY(700px) rotate(540deg); opacity: 1; }
 }
+
+/* Fondo de arcos (components/Arcos.tsx): luz que recorre cada arco y vaivén lento del grupo. */
+@keyframes arco-flujo { to { stroke-dashoffset: -100; } }
+@keyframes arcos-vaiven { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+.arco-luz { animation: arco-flujo 6s linear infinite; }
+.arcos-vaiven { transform-box: view-box; animation: arcos-vaiven 14s ease-in-out infinite; }
+.arcos-vaiven-inverso { animation-direction: reverse; animation-duration: 17s; }
 
 /* Animaciones de carga (components/Cargando.tsx). */
 @keyframes spin-ring { to { transform: rotate(360deg); } }

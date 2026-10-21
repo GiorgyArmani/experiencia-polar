@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import type { LeaderboardResponse, LeaderRow } from '@/shared/types';
 import { PlayerIcon } from '@/components/PlayerIcon';
+import { Screen } from '@/components/ui';
 
 function Face({ row, size, className = '' }: { row: LeaderRow; size: number; className?: string }) {
   return (
@@ -50,30 +51,34 @@ export default function Ranking() {
   const rest = top.slice(3, 10);
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col bg-polar-ice text-[#0E1B33]">
-      <div className="flex flex-col gap-4 rounded-b-[32px] bg-polar-navy px-[18px] pb-[22px] pt-5 text-white">
+    <Screen className="overflow-x-hidden text-polar-navy">
+      <div className="flex flex-col gap-4 px-[18px] pb-2 pt-5">
         <div className="flex items-center gap-3">
-          <Link href="/jugar" aria-label="Volver al juego" className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-polar-navy-2">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <Link
+            href="/jugar"
+            aria-label="Volver al juego"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border-2 border-polar-navy bg-white text-polar-navy shadow-[0_3px_8px_rgba(14,12,78,0.2)]"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M15 6l-6 6 6 6" />
             </svg>
           </Link>
-          <div className="flex flex-col">
-            <h1 className="title-display text-[30px] leading-none">Ranking</h1>
-            <span className="text-sm text-[#CFE3F7]">
+          <div className="flex min-w-0 flex-col">
+            <h1 className="title-display text-[clamp(32px,10vw,40px)] leading-none">Ranking</h1>
+            <span className="truncate text-sm font-bold text-polar-steel">
               {tab === 'sede' ? data?.sede ?? 'Tu localidad' : 'Localidades por puntos acumulados'}
             </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-1.5 rounded-[14px] bg-polar-navy-2 p-1" role="tablist">
+        <div className="grid grid-cols-2 gap-1.5 rounded-full border-2 border-polar-navy bg-white p-1" role="tablist">
           {(['sede', 'general'] as const).map((t) => (
             <button
               key={t}
               role="tab"
               aria-selected={tab === t}
               onClick={() => setTab(t)}
-              className={`h-11 rounded-[11px] text-[15px] font-bold ${tab === t ? 'bg-white text-polar-navy' : 'text-white'}`}
+              className={`h-10 rounded-full text-[15px] font-bold transition-colors ${tab === t ? 'bg-polar-steel text-white' : 'text-polar-navy'}`}
             >
               {t === 'sede' ? 'Mi localidad' : 'Todas'}
             </button>
@@ -81,20 +86,21 @@ export default function Ranking() {
         </div>
 
         {tab === 'sede' && (
-          <div className="grid grid-cols-3 items-end gap-2.5 pt-1.5">
+          <div className="card-uep grid grid-cols-3 items-end gap-2.5 px-3 pb-3 pt-4">
             {podium.map((row, i) => {
               const place = i === 1 ? 1 : i === 0 ? 2 : 3;
-              const h = place === 1 ? 'h-[88px] bg-polar-yellow text-polar-navy text-[32px]' : place === 2 ? 'h-[60px] bg-polar-navy-2 text-[26px]' : 'h-[46px] bg-polar-navy-2 text-2xl';
-              const size = place === 1 ? 84 : 70;
+              const h = place === 1 ? 'h-[84px] bg-polar-yellow text-[34px]' : place === 2 ? 'h-[60px] bg-[#9ED8FF] text-[28px]' : 'h-[46px] bg-[#9ED8FF] text-[24px]';
+              const size = place === 1 ? 80 : 64;
               return (
-                <div key={place} className="flex flex-col items-center gap-1.5">
+                <div key={place} className="flex min-w-0 flex-col items-center gap-1.5">
                   {row ? (
-                    <Face row={row} size={size} className={`border-[3px] ${place === 1 ? 'border-polar-yellow' : 'border-[#CFE3F7]'}`} />
+                    <Face row={row} size={size} className={`border-[3px] shadow-[0_4px_10px_rgba(14,12,78,0.25)] ${place === 1 ? 'border-polar-yellow' : 'border-white'}`} />
                   ) : (
-                    <span className="rounded-full border-[3px] border-dashed border-[#CFE3F7]/60" style={{ width: size, height: size }} />
+                    <span className="rounded-full border-[3px] border-dashed border-polar-steel/40" style={{ width: size, height: size }} />
                   )}
-                  <span className="max-w-full truncate text-sm font-extrabold">{row?.apodo ?? '—'}</span>
-                  <div className={`flex w-full items-center justify-center rounded-t-[14px] font-display ${h}`}>{place}</div>
+                  <span className="max-w-full truncate text-sm font-bold">{row?.apodo ?? '—'}</span>
+                  <span className="text-xs font-bold text-polar-steel">{row ? `${row.puntos} pts` : ' '}</span>
+                  <div className={`flex w-full items-center justify-center rounded-[14px] border-2 border-polar-navy font-display text-polar-navy ${h}`}>{place}</div>
                 </div>
               );
             })}
@@ -102,54 +108,60 @@ export default function Ranking() {
         )}
       </div>
 
-      {error && <p className="mx-[18px] mt-4 rounded-xl bg-white p-3 text-sm font-semibold">{error}</p>}
+      {error && <p className="mx-[18px] mt-3 rounded-[16px] bg-polar-navy p-3 text-sm font-bold text-white">{error}</p>}
 
       {tab === 'sede' ? (
-        <ol className="flex flex-col gap-2 px-[18px] pt-4">
+        <ol className="flex flex-col gap-2 px-[18px] pt-3">
           {rest.map((r, i) => (
             <Row key={i} row={r} />
           ))}
-          {data && top.length === 0 && <li className="rounded-2xl bg-white p-4 text-center font-semibold">Aún no hay puntos en esta localidad. ¡Sé el primero!</li>}
+          {data && top.length === 0 && <li className="card-uep p-4 text-center font-bold">Aún no hay puntos en esta localidad. ¡Sé el primero!</li>}
         </ol>
       ) : (
-        <ol className="flex flex-col gap-2 px-[18px] pt-4">
+        <ol className="flex flex-col gap-2 px-[18px] pt-3">
           {(data?.sedes ?? []).map((s) => (
             <li
               key={s.sede}
-              className={`flex min-h-14 items-center gap-3 rounded-2xl px-3.5 py-2 ${s.isMine ? 'border-[2.5px] border-polar-yellow bg-polar-cream' : 'bg-white'}`}
+              className={`flex min-h-14 items-center gap-3 rounded-[18px] px-3.5 py-2 shadow-[0_4px_12px_rgba(14,12,78,0.12)] ${
+                s.isMine ? 'border-2 border-polar-steel bg-polar-lav' : 'bg-white'
+              }`}
             >
-              <span className="w-7 text-center font-extrabold text-polar-slate">{s.rank}</span>
-              <span className="flex-1 text-base font-bold">{s.sede}</span>
-              <span className="text-sm text-polar-slate">{s.jugadores} jug.</span>
-              <span className="font-bold text-polar-navy">{s.puntos} pts</span>
+              <span className="w-7 text-center font-display text-xl text-polar-steel">{s.rank}</span>
+              <span className="min-w-0 flex-1 text-base font-bold">{s.sede}</span>
+              <span className="text-sm text-polar-muted">{s.jugadores} jug.</span>
+              <span className="font-display text-lg text-polar-steel">{s.puntos}</span>
             </li>
           ))}
         </ol>
       )}
 
       {tab === 'sede' && data?.me && (
-        <div className="mt-auto px-[18px] pb-6 pt-3">
-          <div className="flex items-center gap-3 rounded-[18px] border-[2.5px] border-polar-yellow bg-polar-cream py-2.5 pl-2.5 pr-3.5">
-            <span className="w-7 text-center font-extrabold text-polar-navy">#{data.me.rank}</span>
+        <div className="sticky bottom-0 mt-auto px-[18px] pb-[max(16px,env(safe-area-inset-bottom))] pt-3">
+          <div className="flex items-center gap-3 rounded-[18px] border-2 border-polar-steel bg-polar-lav py-2.5 pl-2.5 pr-3.5 shadow-[0_6px_16px_rgba(14,12,78,0.2)]">
+            <span className="w-8 text-center font-display text-xl text-polar-steel">{data.me.rank}</span>
             <Face row={data.me} size={44} />
-            <span className="flex-1 text-[17px] font-extrabold">
-              {data.me.apodo} <span className="text-sm font-semibold text-polar-slate">(tú)</span>
+            <span className="min-w-0 flex-1 truncate text-[17px] font-bold">
+              {data.me.apodo} <span className="text-sm font-semibold text-polar-muted">(tú)</span>
             </span>
-            <span className="font-extrabold text-polar-navy">{data.me.puntos} pts</span>
+            <span className="font-display text-xl text-polar-steel">{data.me.puntos}</span>
           </div>
         </div>
       )}
-    </main>
+    </Screen>
   );
 }
 
 function Row({ row }: { row: LeaderRow }) {
   return (
-    <li className={`flex min-h-14 items-center gap-3 rounded-2xl py-2 pl-2.5 pr-3.5 ${row.isMe ? 'border-[2.5px] border-polar-yellow bg-polar-cream' : 'bg-white'}`}>
-      <span className="w-7 text-center font-extrabold text-polar-slate">{row.rank}</span>
+    <li
+      className={`flex min-h-14 items-center gap-3 rounded-[18px] py-2 pl-2.5 pr-3.5 shadow-[0_4px_12px_rgba(14,12,78,0.12)] ${
+        row.isMe ? 'border-2 border-polar-steel bg-polar-lav' : 'bg-white'
+      }`}
+    >
+      <span className="w-7 text-center font-display text-xl text-polar-steel">{row.rank}</span>
       <Face row={row} size={40} />
-      <span className="flex-1 text-base font-bold">{row.apodo}</span>
-      <span className="font-bold text-polar-navy">{row.puntos} pts</span>
+      <span className="min-w-0 flex-1 truncate text-base font-bold">{row.apodo}</span>
+      <span className="font-display text-lg text-polar-steel">{row.puntos}</span>
     </li>
   );
 }

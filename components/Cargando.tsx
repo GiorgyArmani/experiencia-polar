@@ -18,25 +18,28 @@ export function useTiempoMinimo(ms: number) {
   return listo;
 }
 
-const INDIGO = '#0E0C4E';
-const REY = '#0351A3';
-const BRILLANTE = '#008CFD';
-const CIAN = '#00C3DA';
-const LIMA = '#DEDE00';
-const AMARILLO = '#FFCC53';
-const ROJO = '#E8303A';
+// Colores del loader de la UEP (loader.svg): azules y gris claro.
+const CIAN = '#009FDA';
+const CELESTE = '#49BBED';
+const AZUL = '#00338D';
+const MARINO = '#003F72';
+const GRIS = '#E5E5E5';
 
-/** Anillos: radio, color, grosor, patrón de trazos, segundos por vuelta (negativo = al revés). */
+/** Anillos punteados (recreados de loader.svg): radio, color, grosor, patrón de trazos, segundos por vuelta (negativo = al revés). */
 const ANILLOS: { r: number; c: string; w: number; dash: string; s: number }[] = [
-  { r: 47, c: ROJO, w: 1.6, dash: '70 30 120 40', s: 9 },
-  { r: 43, c: LIMA, w: 1.6, dash: '50 20 30 60 90 25', s: -7 },
-  { r: 38, c: CIAN, w: 2.4, dash: '8 6 22 10 6 14', s: 5 },
-  { r: 33, c: INDIGO, w: 2.2, dash: '60 14 30 20', s: -4 },
-  { r: 28, c: BRILLANTE, w: 2.6, dash: '12 8 28 8', s: 3.2 },
-  { r: 23, c: REY, w: 2.2, dash: '40 10 20 12', s: -2.6 },
-  { r: 18, c: CIAN, w: 1.8, dash: '6 5', s: 2 },
-  { r: 12, c: ROJO, w: 2.2, dash: '50 12', s: -3 },
+  { r: 47, c: GRIS, w: 1.4, dash: '120 20 60 30', s: 12 },
+  { r: 44, c: MARINO, w: 1.6, dash: '46 30 10 40 70 24', s: -8 },
+  { r: 39, c: CIAN, w: 1.8, dash: '14 10 26 16 8 20', s: 6 },
+  { r: 34, c: AZUL, w: 2, dash: '50 12 24 18', s: -4.5 },
+  { r: 29, c: GRIS, w: 1.4, dash: '30 10 60 14', s: 7 },
+  { r: 25, c: MARINO, w: 2, dash: '40 8 16 10', s: 3.4 },
+  { r: 20, c: CIAN, w: 2.2, dash: '34 8 18 6', s: -2.8 },
+  { r: 15, c: CELESTE, w: 1.8, dash: '20 6', s: 2.2 },
+  { r: 10, c: GRIS, w: 1.4, dash: '60 4', s: -5 },
 ];
+
+/** Sobre fondo oscuro, los azules oscuros se pasan a blanco para que se vean. */
+const enOscuro = (c: string) => (c === MARINO || c === AZUL ? '#FFFFFF' : c === GRIS ? 'rgba(255,255,255,0.35)' : c);
 
 /** Anillos que giran: la animación de carga principal. */
 export function Anillos({ size = 140, light = true, className = '' }: { size?: number; light?: boolean; className?: string }) {
@@ -49,7 +52,7 @@ export function Anillos({ size = 140, light = true, className = '' }: { size?: n
           cy="50"
           r={a.r}
           fill="none"
-          stroke={!light && a.c === INDIGO ? '#FFFFFF' : a.c}
+          stroke={light ? a.c : enOscuro(a.c)}
           strokeWidth={a.w}
           strokeDasharray={a.dash}
           strokeLinecap="round"
@@ -59,7 +62,6 @@ export function Anillos({ size = 140, light = true, className = '' }: { size?: n
           }}
         />
       ))}
-      <circle cx="50" cy="50" r="4" fill={AMARILLO} style={{ transformOrigin: '50px 50px', animation: 'pulse-dot 1.2s ease-in-out infinite' }} />
     </svg>
   );
 }
@@ -77,11 +79,11 @@ export function Destello({ size = 22, color = CIAN, className = '' }: { size?: n
 
 /** Franjas de líneas que se "llenan" de izquierda a derecha, como las de la línea gráfica. */
 export function Franjas({ className = '' }: { className?: string }) {
-  const colores = [AMARILLO, BRILLANTE, CIAN, LIMA, AMARILLO];
+  const colores = [MARINO, CIAN, AZUL, CELESTE, CIAN];
   return (
     <div className={`flex w-[160px] flex-col gap-[5px] ${className}`} aria-hidden>
       {colores.map((c, i) => (
-        <span key={i} className="block h-[3px] overflow-hidden rounded-full bg-white/15">
+        <span key={i} className="block h-[3px] overflow-hidden rounded-full bg-polar-navy/10">
           <span
             className="block h-full rounded-full"
             style={{ background: c, animation: `fill-line 1.6s ease-in-out ${i * 0.12}s infinite` }}
@@ -96,9 +98,9 @@ export function Franjas({ className = '' }: { className?: string }) {
 export function Cargando({ texto = 'Cargando…' }: { texto?: string }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-5" role="status" aria-live="polite">
-      <Anillos size={150} light={false} />
+      <Anillos size={150} />
       <Franjas />
-      <span className="text-sm font-extrabold uppercase tracking-[0.18em] text-white">{texto}</span>
+      <span className="text-sm font-extrabold uppercase tracking-[0.18em] text-polar-navy">{texto}</span>
     </div>
   );
 }

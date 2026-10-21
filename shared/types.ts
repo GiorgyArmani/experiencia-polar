@@ -88,6 +88,12 @@ export interface QrResponse {
   sedes: Sede[];
 }
 
+/**
+ * Cuánto se muestra el modelo 3D de la estación al escanear el QR (antes del mapa): alcanza para ver su
+ * animación completa (5 s). El servidor lo suma al arranque del reloj.
+ */
+export const LOGO_MS = 5500;
+
 /** Cuánto se muestra el aviso de correcta/incorrecta tras responder. El reloj del nivel se pausa mientras tanto. */
 export const FEEDBACK_MS = 3500;
 

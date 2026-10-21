@@ -8,7 +8,7 @@ import { api } from '@/lib/api';
 import { qrUrlFor } from '@/shared/qr';
 import type { Icono } from '@/shared/icono';
 import { estacion } from '@/shared/estaciones';
-import { FEEDBACK_MS, type AnswerResponse, type MeResponse, type QuestionView } from '@/shared/types';
+import { FEEDBACK_MS, LOGO_MS, type AnswerResponse, type MeResponse, type QuestionView } from '@/shared/types';
 import { lastStop, META, WorldMap } from '@/components/WorldMap';
 import { SoundToggle } from '@/components/Talk';
 import { Screen, Spinner } from '@/components/ui';
@@ -16,6 +16,12 @@ import { Anillos, CARGA_MIN_MS, Destello, Franjas, useTiempoMinimo } from '@/com
 import { setMusicTempo, sfx, startMusic, stopMusic } from '@/lib/sfx';
 
 const QrScanner = dynamic(() => import('@/components/QrScanner'), { ssr: false });
+const LogoAR = dynamic(() => import('@/components/LogoAR'), { ssr: false });
+/** Baja el modelo 3D de la estación por adelantado para que salga al instante al escanear. */
+const precargarLogo = (url?: string) => {
+  if (url) import('@/components/LogoAR').then((m) => m.precargarLogo(url)).catch(() => {});
+};
+const espera = (ms: number) => new Promise((ok) => setTimeout(ok, ms));
 
 type Overlay = { kind: 'superada'; trivia: number; points: number; timedOut: boolean } | null;
 
@@ -39,6 +45,7 @@ export default function Jugar() {
   const reviewTimer = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => () => clearTimeout(reviewTimer.current), []);
   const [busy, setBusy] = useState(false);
+  const [logoScan, setLogoScan] = useState(false); // logo 3D sobre la cámara tras un escaneo válido
   const [toast, setToast] = useState('');
   const [, rerender] = useState(0);
   const cargaVista = useTiempoMinimo(CARGA_MIN_MS.pantalla);
@@ -97,11 +104,14 @@ export default function Jugar() {
     if (busy) return;
     setBusy(true);
     sfx.scan();
-    const t0 = Date.now();
     try {
       const r = await api.scan(value);
-      // Que la animación de carga alcance a verse antes de pasar al mapa.
-      await new Promise((ok) => setTimeout(ok, Math.max(0, CARGA_MIN_MS.escaneo - (Date.now() - t0))));
+      // QR válido: el modelo 3D de la estación aparece sobre la cámara y luego se pasa al mapa.
+      if (r.status?.phase === 'playing') {
+        setLogoScan(true);
+        await espera(LOGO_MS);
+        setLogoScan(false);
+      }
       apply(r);
     } catch (e) {
       setToast((e as Error).message);
@@ -214,6 +224,7 @@ export default function Jugar() {
         total={status.totalTrivias}
         demoTools={demoTools}
         busy={busy}
+        logo={logoScan}
         onScan={onScan}
       />
     );
@@ -236,7 +247,7 @@ export default function Jugar() {
 
   return (
     // Sin overflow-hidden vertical: en teléfonos bajos la pantalla se desplaza en vez de recortar el texto.
-    <Screen light className="overflow-x-hidden">
+    <Screen className="overflow-x-hidden">
       <div className="flex flex-1 flex-col">{content}</div>
       {/* En las preguntas la esquina derecha es de "Pregunta N": el sonido pasa a la izquierda. */}
       <SoundToggle className={`absolute z-40 ${enTrivia ? 'left-3 top-3' : 'right-5 top-5'}`} />
@@ -251,24 +262,32 @@ export default function Jugar() {
 
 /* ───────────────────────── Piezas ───────────────────────── */
 
+/** Progreso de niveles: círculos como las paradas del mapa (hecho = acero con ✓, actual = amarillo, pendiente = celeste). */
 function Progress({ completed, total, current }: { completed: number[]; total: number; current: number | null }) {
   return (
-    <div className="flex gap-1">
+    <ol className="flex items-center gap-2" aria-label="Niveles">
       {Array.from({ length: total }, (_, i) => i + 1).map((n) => {
         const done = completed.includes(n);
         const now = !done && n === current;
         return (
-          <span
+          <li
             key={n}
-            className={`flex h-7 min-w-[34px] items-center justify-center rounded-full px-2 text-[13px] font-extrabold ${
-              done ? 'bg-polar-blue text-white' : now ? 'bg-polar-yellow text-polar-navy' : 'bg-white text-[#3D3D3D]'
+            aria-label={`Nivel ${n}${done ? ' superado' : now ? ' (ahora)' : ''}`}
+            className={`flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-[14px] font-bold shadow-[0_2px_6px_rgba(14,12,78,0.25)] ${
+              done ? 'bg-polar-steel text-white' : now ? 'bg-polar-yellow text-polar-navy ring-2 ring-polar-yellow/50 ring-offset-1' : 'bg-[#9ED8FF] text-white'
             }`}
           >
-            {done ? `✓ ${n}` : n}
-          </span>
+            {done ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M5 12.5l4.5 4.5L19 7.5" />
+              </svg>
+            ) : (
+              n
+            )}
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }
 
@@ -291,20 +310,20 @@ function NivelBanner({ trivia, className = '' }: { trivia: number; className?: s
   );
 }
 
-/** Botones de abajo: mapa, instrucciones y ranking. */
+/** Botones de abajo: mapa, instrucciones y ranking (píldoras del estilo claro). */
 function Nav({ onMap, className = '' }: { onMap?: () => void; className?: string }) {
-  const base = 'flex h-[52px] items-center justify-center text-[15px] font-bold';
+  const base = 'flex h-[clamp(44px,6.5dvh,50px)] items-center justify-center rounded-full border-2 border-polar-navy px-1.5 text-[clamp(12px,3.7vw,14px)] font-bold transition-transform active:translate-y-[2px]';
   return (
-    <nav className={`grid gap-[3px] ${onMap ? 'grid-cols-3' : 'grid-cols-2'} ${className}`}>
+    <nav className={`grid gap-2 ${onMap ? 'grid-cols-3' : 'grid-cols-2'} ${className}`}>
       {onMap && (
-        <button type="button" onClick={onMap} className={`${base} rounded-l-[26px] rounded-r-md bg-polar-yellow text-polar-navy`}>
+        <button type="button" onClick={onMap} className={`${base} bg-polar-steel text-white`}>
           Mapa
         </button>
       )}
-      <Link href="/reglas" className={`${base} ${onMap ? 'rounded-md' : 'rounded-l-[26px] rounded-r-md'} bg-polar-lav text-polar-lav-ink ring-1 ring-inset ring-polar-steel/40`}>
+      <Link href="/reglas" className={`${base} bg-white text-polar-navy`}>
         Instrucciones
       </Link>
-      <Link href="/ranking" className={`${base} rounded-l-md rounded-r-[26px] bg-polar-lav-dark text-white`}>
+      <Link href="/ranking" className={`${base} bg-white text-polar-navy`}>
         Ranking
       </Link>
     </nav>
@@ -335,6 +354,7 @@ function Camara({
   total,
   demoTools,
   busy,
+  logo,
   onScan,
 }: {
   icono: Icono;
@@ -345,55 +365,76 @@ function Camara({
   total: number;
   demoTools: boolean;
   busy: boolean;
+  logo: boolean;
   onScan: (v: string) => void;
 }) {
   const [map, setMap] = useState(false);
+  const modelo = estacion(trivia)?.modelo;
+  const [logoFallo, setLogoFallo] = useState(false);
+  useEffect(() => precargarLogo(modelo), [modelo]);
   return (
-    <div className="relative m-3 flex min-h-[calc(100dvh-24px)] flex-1 flex-col overflow-hidden rounded-[22px] bg-[#1E1E1E]">
-      <QrScanner onScan={onScan} paused={busy || map} />
-
-      <div className="relative z-10 flex flex-col gap-2 p-4 pr-16">
-        <span className="text-[12px] font-extrabold uppercase tracking-[0.16em] text-polar-yellow">Busca el QR</span>
-        <span className="title-display text-[clamp(24px,7.5vw,32px)] leading-none text-white">Nivel {trivia}</span>
-        <div className="flex flex-col gap-2">
+    <div className="flex flex-1 flex-col px-[clamp(14px,4.5vw,22px)] pb-[max(14px,env(safe-area-inset-bottom))] pt-[clamp(14px,2.5dvh,22px)]">
+      <div className="flex flex-col gap-2 pr-14">
+        <span className="text-[12px] font-extrabold uppercase tracking-[0.16em] text-polar-steel">Busca el QR de la estación</span>
+        <h1 className="title-display text-[clamp(32px,min(10vw,6dvh),44px)] leading-none text-polar-navy">Nivel {trivia}</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <Progress completed={completed} total={total} current={trivia} />
           {closesAt && (
-            <span className="self-start rounded-full bg-polar-yellow px-3 py-1.5 text-[13px] font-extrabold text-polar-navy">
+            <span className="rounded-full border-2 border-polar-steel bg-polar-lav px-3 py-1 text-[12px] font-bold text-polar-navy">
               Abierto hasta las {hora(closesAt)}
             </span>
           )}
-          {penalty > 0 && (
-            <span className="self-start rounded-full bg-[#E5484D] px-3 py-1.5 text-[13px] font-extrabold text-white">
-              ¡Último y más difícil! Cada incorrecta resta {penalty}
-            </span>
-          )}
-          <Progress completed={completed} total={total} current={trivia} />
         </div>
+        {penalty > 0 && (
+          <span className="self-start rounded-full bg-[#E5484D] px-3 py-1 text-[12px] font-extrabold text-white">
+            ¡Último y más difícil! Cada incorrecta resta {penalty}
+          </span>
+        )}
       </div>
 
-      {/* El visor se encoge en pantallas bajas o angostas para que todo quepa sin desplazarse. */}
-      <div className="pointer-events-none relative z-10 mx-auto mt-[4dvh] aspect-square w-[min(240px,28dvh,70vw)]" aria-hidden>
-        <span className="absolute left-0 top-0 h-[50px] w-[50px] rounded-tl-[20px] border-l-[6px] border-t-[6px] border-white" />
-        <span className="absolute right-0 top-0 h-[50px] w-[50px] rounded-tr-[20px] border-r-[6px] border-t-[6px] border-white" />
-        <span className="absolute bottom-0 left-0 h-[50px] w-[50px] rounded-bl-[20px] border-b-[6px] border-l-[6px] border-white" />
-        <span className="absolute bottom-0 right-0 h-[50px] w-[50px] rounded-br-[20px] border-b-[6px] border-r-[6px] border-white" />
-        <span className="absolute inset-x-4 h-1 animate-scan rounded bg-polar-yellow" />
-      </div>
-      <p className="relative z-10 mt-4 flex items-center justify-center gap-2 text-center text-sm font-semibold text-white drop-shadow">
-        {busy && <Destello size={18} />}
-        {busy ? 'Leyendo…' : 'Apunta la cámara al código QR'}
-      </p>
-      {/* QR leído: carga con los anillos mientras se abre el nivel. */}
-      {busy && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-polar-navy/85" role="status" aria-live="polite">
-          <Anillos size={170} light={false} />
-          <Franjas />
-          <span className="text-sm font-extrabold uppercase tracking-[0.18em] text-white">Abriendo el nivel…</span>
-        </div>
-      )}
+      {/* La cámara en una tarjeta redondeada; el visor y los avisos van encima. */}
+      <div className="relative mt-[clamp(10px,2dvh,18px)] min-h-[min(300px,45dvh)] flex-1 overflow-hidden rounded-[28px] border-4 border-white bg-polar-navy shadow-[0_8px_24px_rgba(14,12,78,0.28)]">
+        <QrScanner onScan={onScan} paused={busy || map} />
 
-      <div className="relative z-10 mt-auto flex flex-col gap-3 p-5">
+        <div className={`pointer-events-none absolute inset-0 z-10 flex items-center justify-center ${logo ? 'invisible' : ''}`} aria-hidden>
+          <div className="relative aspect-square w-[min(220px,62%,32dvh)]">
+            <span className="absolute left-0 top-0 h-[44px] w-[44px] rounded-tl-[18px] border-l-[5px] border-t-[5px] border-white" />
+            <span className="absolute right-0 top-0 h-[44px] w-[44px] rounded-tr-[18px] border-r-[5px] border-t-[5px] border-white" />
+            <span className="absolute bottom-0 left-0 h-[44px] w-[44px] rounded-bl-[18px] border-b-[5px] border-l-[5px] border-white" />
+            <span className="absolute bottom-0 right-0 h-[44px] w-[44px] rounded-br-[18px] border-b-[5px] border-r-[5px] border-white" />
+            <span className="absolute inset-x-4 h-1 animate-scan rounded bg-polar-yellow shadow-[0_0_10px_#FFCC53]" />
+          </div>
+        </div>
+        <p
+          className={`absolute inset-x-3 bottom-3 z-10 flex items-center justify-center gap-2 rounded-full bg-polar-navy/70 px-4 py-2 text-center text-sm font-bold text-white backdrop-blur-sm ${logo ? 'invisible' : ''}`}
+        >
+          {busy && <Destello size={18} />}
+          {busy ? 'Leyendo…' : 'Apunta la cámara al código QR'}
+        </p>
+
+        {/* QR válido: el modelo 3D de la estación aparece sobre la cámara en vivo, con su animación. */}
+        {logo && modelo && !logoFallo && (
+          <div className="absolute inset-0 z-30 bg-gradient-to-b from-polar-navy/45 via-transparent to-polar-navy/80" role="status" aria-live="polite">
+            <LogoAR url={modelo} className="absolute inset-x-0 top-[4%] h-[68%]" onError={() => setLogoFallo(true)} />
+            <div className="absolute inset-x-0 bottom-[7%] flex animate-pop-straight flex-col items-center gap-2 px-5 text-center">
+              <span className="title-display text-[clamp(28px,8.5vw,38px)] leading-none text-white [text-shadow:0_3px_12px_rgba(14,12,78,0.8)]">¡Encontraste el QR!</span>
+              <span className="text-sm font-extrabold uppercase tracking-[0.18em] text-polar-yellow">Abriendo el Nivel {trivia}…</span>
+            </div>
+          </div>
+        )}
+        {/* Estación sin modelo todavía, o el teléfono no puede mostrar 3D: la carga con los anillos. */}
+        {logo && (!modelo || logoFallo) && (
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-polar-navy/85" role="status" aria-live="polite">
+            <Anillos size={160} light={false} />
+            <Franjas />
+            <span className="text-sm font-extrabold uppercase tracking-[0.18em] text-white">Abriendo el nivel…</span>
+          </div>
+        )}
+      </div>
+
+      <div className={`mt-[clamp(10px,2dvh,16px)] flex flex-col gap-2.5 ${logo ? 'invisible' : ''}`}>
         {demoTools && (
-          <button type="button" onClick={() => onScan(qrUrlFor(window.location.origin))} className="btn-game">
+          <button type="button" onClick={() => onScan(qrUrlFor(window.location.origin))} className="btn-uep">
             Simular escaneo
           </button>
         )}
@@ -426,6 +467,7 @@ function Intro({
   const calc = () => Math.max(0, startsAt - (Date.now() + offset));
   const [left, setLeft] = useState(calc);
   const [arrived, setArrived] = useState(false);
+
   const started = useRef(false);
   const start = useRef(onStart);
   start.current = onStart;
@@ -536,7 +578,7 @@ function Trivia({
   const hurry = live && secs <= 10;
   const critical = live && secs <= 5;
   const warn = live && (hurry || frac <= 0.4);
-  const tone = hurry ? '#E5484D' : warn ? '#FF9F1C' : '#4587C5';
+  const tone = hurry ? '#E5484D' : warn ? '#FF9F1C' : '#FFCC53';
 
   // Música de fondo mientras dura el nivel; se acelera en los últimos 10 s.
   useEffect(() => {
@@ -584,7 +626,7 @@ function Trivia({
   const aviso = hurry ? '¡Apúrate!' : warn ? '¡Se acaba el tiempo!' : '¡Responde rápido y suma más!';
 
   // Aro del reloj: se vacía con el tiempo.
-  const R = 46;
+  const R = 54;
   const C = 2 * Math.PI * R;
 
   return (
@@ -653,37 +695,35 @@ function Trivia({
             </p>
           </div>
         ) : (
-          // El reloj: el número y los mensajes que apuran, un poco más chicos.
-          <div className="flex flex-col items-center gap-[clamp(4px,0.8dvh,8px)]">
-            <div className={`relative aspect-square h-[clamp(68px,11dvh,104px)] ${critical ? 'animate-alarm' : hurry ? 'animate-tremble' : ''}`}>
-              <svg viewBox="0 0 120 120" className="h-full w-full" aria-hidden>
-                <rect x="51" y="0" width="18" height="8" rx="3" fill={tone} />
-                <rect x="57" y="6" width="6" height="10" fill={tone} />
-                <circle cx="60" cy="66" r={R} fill="#FFFFFF" stroke="#E3EAF3" strokeWidth="8" />
+          // La cuenta regresiva de siempre (el reloj del mockup era solo referencial), un poco más chica:
+          // el aro se vacía, el número cambia de color y los mensajes apuran.
+          <div className="flex w-full flex-col items-center gap-[clamp(4px,1dvh,10px)] rounded-[28px] bg-polar-navy px-4 py-[clamp(8px,1.6dvh,16px)] text-white shadow-[0_6px_16px_rgba(14,12,78,0.3)]">
+            <div className={`relative aspect-square h-[min(150px,17dvh)] ${critical ? 'animate-alarm' : hurry ? 'animate-tremble' : ''}`}>
+              <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden>
+                <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="10" />
                 <circle
                   cx="60"
-                  cy="66"
+                  cy="60"
                   r={R}
                   fill="none"
                   stroke={tone}
-                  strokeWidth="8"
+                  strokeWidth="10"
                   strokeLinecap="round"
                   strokeDasharray={C}
                   strokeDashoffset={C * (1 - frac)}
-                  transform="rotate(-90 60 66)"
                   style={{ transition: 'stroke-dashoffset 200ms linear, stroke 300ms' }}
                 />
               </svg>
               <span
-                className={`absolute inset-x-0 bottom-0 top-[10%] flex items-center justify-center font-display text-[clamp(28px,4.8dvh,46px)] tabular-nums leading-none ${hurry ? 'animate-pulse' : ''}`}
-                style={{ color: hurry || warn ? tone : '#0E0C4E' }}
+                className={`absolute inset-0 flex items-center justify-center font-display text-[clamp(34px,6.6dvh,62px)] tabular-nums leading-none ${hurry ? 'animate-pulse' : ''}`}
+                style={{ color: tone }}
                 role="timer"
                 aria-label={`Quedan ${secs} segundos`}
               >
                 {secs}
               </span>
             </div>
-            <p className={`title-display text-center text-[clamp(15px,2.4dvh,20px)] leading-none ${hurry ? 'text-[#E5484D]' : 'text-polar-navy'}`}>{aviso}</p>
+            <p className={`title-display text-center text-[clamp(16px,2.5dvh,20px)] leading-none ${hurry ? 'text-[#FF6B6F]' : 'text-white'}`}>{aviso}</p>
           </div>
         )}
       </div>

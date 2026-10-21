@@ -3,7 +3,7 @@
 import 'server-only';
 import { drawQuestions, getTrivia, questionIdsFor, TOTAL_TRIVIAS } from './trivias';
 import { isExperienceQr } from '@/shared/qr';
-import type { GameStatus, Player, PublicPlayer, QuestionView } from '@/shared/types';
+import { LOGO_MS, type GameStatus, type Player, type PublicPlayer, type QuestionView } from '@/shared/types';
 import { config } from './config';
 import { getStore } from './store';
 
@@ -170,8 +170,8 @@ export async function scanQr(p: Player): Promise<ScanResult> {
   const trivia = getTrivia(status.trivia);
   if (!trivia) return { ok: false, error: 'Trivia no encontrada', status: 404 };
   const store = getStore();
-  // El reloj arranca después del mapa: primero se ve cómo el ícono camina hasta la estación.
-  const startsAt = new Date(Date.now() + config.introSeconds * 1000).toISOString();
+  // El reloj arranca después del logo 3D y el mapa (el ícono camina hasta la estación).
+  const startsAt = new Date(Date.now() + LOGO_MS + config.introSeconds * 1000).toISOString();
   const updated = await store.updatePlayer(
     p.id,
     {

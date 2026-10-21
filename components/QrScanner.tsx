@@ -53,7 +53,7 @@ export default function QrScanner({ onScan, paused = false }: { onScan: (text: s
     <div className="absolute inset-0">
       <div id="qr-reader" className="h-full w-full [&>div]:!border-0" />
       {problem && (
-        <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 rounded-2xl bg-white p-4 text-center text-sm font-semibold text-polar-ink" role="alert">
+        <div className="absolute inset-x-5 top-1/2 z-20 -translate-y-1/2 rounded-[20px] border-2 border-polar-navy bg-white p-4 text-center text-sm font-semibold text-polar-navy shadow-[0_6px_18px_rgba(14,12,78,0.3)]" role="alert">
           {problem}
         </div>
       )}

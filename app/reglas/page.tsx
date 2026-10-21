@@ -31,7 +31,7 @@ export default function Instrucciones() {
   const saludo = player ? `¡Hola, ${primerNombre(player.nombre)}! Así se juega:` : '¡Hola! Así se juega:';
 
   return (
-    <Screen light className="overflow-x-hidden">
+    <Screen className="overflow-x-hidden">
       <div className="flex flex-1 flex-col justify-center px-[clamp(16px,5vw,24px)] pt-[max(16px,3dvh)]">
         <h1 className="title-display text-center text-[clamp(28px,min(10vw,5dvh),40px)] leading-none text-polar-navy">
           Instrucciones

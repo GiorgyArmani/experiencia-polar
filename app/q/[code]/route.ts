@@ -1,10 +1,10 @@
 // Destino del QR impreso (el mismo en todas las sedes): <APP_URL>/q/POLAR
-// Escanearlo con la cámara del teléfono dispara el siguiente paso del jugador:
-//   · Sin sesión en este navegador → portada (/?qr=1): registrarse o entrar con la cédula
-//   · Registrado  → abre la trivia disponible y entra a /jugar (si no hay, /jugar muestra el aviso)
+// Escanearlo con la cámara del teléfono SOLO sirve para entrar a la app:
+//   · Sin sesión en este navegador → portada: entrar con la cédula
+//   · Registrado → /jugar (la cámara del juego). Los niveles se abren escaneando el QR desde el juego,
+//     así se ve el modelo 3D de la estación.
 import { NextResponse } from 'next/server';
 import { QR_CODE } from '@/shared/qr';
-import { scanQr } from '@/lib/game';
 import { currentPlayer } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
@@ -14,8 +14,5 @@ export async function GET(req: Request, { params }: { params: { code: string } }
   if (params.code.toUpperCase() !== QR_CODE) return to('/');
 
   const p = await currentPlayer();
-  if (!p) return to('/?qr=1');
-
-  const r = await scanQr(p);
-  return to(r.ok ? '/jugar' : `/jugar?aviso=${encodeURIComponent(r.error)}`);
+  return to(p ? '/jugar' : '/');
 }

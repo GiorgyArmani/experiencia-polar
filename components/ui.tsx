@@ -5,9 +5,11 @@ import { Cargando } from './Cargando';
 
 /**
  * Contenedor de pantalla: columna de teléfono centrada, alto completo.
- * `light`: estilo claro de los mockups de la UEP (fondo blanco con arcos de colores).
+ * Por defecto, el estilo claro de los mockups de la UEP (fondo blanco con arcos de colores).
+ * `dark`: el fondo azul anterior (solo páginas internas).
  */
-export function Screen({ children, className = '', light = false }: { children: ReactNode; className?: string; light?: boolean }) {
+export function Screen({ children, className = '', dark = false }: { children: ReactNode; className?: string; dark?: boolean }) {
+  const light = !dark;
   return (
     <main
       className={`relative isolate mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col ${
@@ -20,11 +22,11 @@ export function Screen({ children, className = '', light = false }: { children: 
   );
 }
 
-/** Logo de la Universidad Empresas Polar (solo ese, por pedido de la UEP). */
+/** Logo de la Universidad Empresas Polar (solo ese, por pedido de la UEP). Versión con letras oscuras, para fondo claro. */
 export function Logos({ className = '' }: { className?: string }) {
   return (
     <div className={`flex items-center justify-center py-3 ${className}`}>
-      <Image src="/logos/universidad.png" alt="Universidad Empresas Polar" width={88} height={88} className="h-[min(88px,12dvh)] w-auto object-contain" priority />
+      <Image src="/logos/uep.svg" alt="Universidad Empresas Polar" width={88} height={85} className="h-[min(88px,12dvh)] w-auto object-contain" priority />
     </div>
   );
 }
