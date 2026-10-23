@@ -204,7 +204,7 @@ const BANKS: Record<number, Question[]> = {
       '¡Correcto! Puedes acceder a la Biblioteca UEP desde un máximo de 6 dispositivos.',
       '¡Casi! Puedes acceder a la Biblioteca UEP desde hasta 6 dispositivos.',
     ),
-    // El documento no marca la correcta; por los mensajes de acierto y fallo es la primera (medallas y badges).
+    // El documento no marca la correcta: es la primera (medallas y badges), confirmado por el equipo 2026-10-23.
     q(
       'Además de los puntos y el ranking, ¿de qué otra forma reconoce la plataforma el aprendizaje acumulado de los usuarios?',
       [
@@ -286,7 +286,7 @@ const BANKS: Record<number, Question[]> = {
       '¡Así es! Recorrió un total de 4.337 kilómetros llevando formación a nuestras sedes.',
       '¡Casi! Es Verdadero. La gira cubrió exactamente 4.337 kilómetros a nivel nacional.',
     ),
-    // El documento no marca la correcta; por los mensajes de acierto y fallo es la segunda.
+    // El documento no marca la correcta: es la segunda, confirmado por el equipo 2026-10-23.
     q(
       '¿Cuál es el propósito principal de la Unidad Móvil de la Universidad Empresas Polar?',
       [
