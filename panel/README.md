@@ -28,6 +28,13 @@ Para verlo sin base de datos: `PANEL_DATOS_PRUEBA=true` (participantes inventado
 
 El juego sigue en su propio proyecto (raíz del repositorio); los dos despliegues son independientes.
 
+## Desplegar (Dokploy)
+
+1. **Create Service → Application**, mismo repositorio, rama `master`.
+2. Build type **Dockerfile**, Docker File `Dockerfile`, **Docker Context Path `panel`** (y Build Path `/panel`).
+3. Variables: las mismas de arriba. Dominio `panelpolar.aulaciete.net`, puerto **3000**, HTTPS (Let's Encrypt).
+4. En el DNS de `aulaciete.net`: registro A `panelpolar` → IP del servidor Dokploy.
+
 ## Base de datos de solo lectura (recomendado)
 
 Así el panel no puede modificar nada aunque alguien obtenga su configuración. En el SQL Editor de Supabase:
