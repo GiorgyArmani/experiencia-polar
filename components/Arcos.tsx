@@ -1,5 +1,6 @@
 // Fondo de arcos concéntricos (Elementos EP), recreado de "ELEMENTOS POLAR fondo.svg" (lienzo de 810×1440):
-// 9 semicírculos arriba a la izquierda (magenta → cian) y 9 abajo a la derecha (amarillo → magenta).
+// 9 semicírculos arriba a la izquierda (azul rey → cian) y 9 abajo a la derecha (lima → amarillo → acero),
+// con los colores de la paleta aprobada por la UEP (sin magenta ni rosado).
 // Dibujado en código para no cargar el SVG original (450 KB) en cada pantalla. Va detrás del contenido.
 // Animado (estilo tecnológico): segmentos de luz que recorren cada arco y un vaivén lento de cada grupo.
 import { useId } from 'react';
@@ -21,9 +22,9 @@ export function Arcos({ className = '', portada = false }: { className?: string;
       <svg viewBox={`0 0 ${CAJA_W} ${CAJA_H}`} className={`absolute left-0 top-0 w-[57%] ${portada ? '-translate-x-[30%] -translate-y-[30%]' : ''}`}>
         <defs>
           <linearGradient id={izq} x1="0" y1="0" x2="0" y2={CAJA_H} gradientUnits="userSpaceOnUse">
-            <stop offset="0.15" stopColor="#DA00FF" />
-            <stop offset="0.5" stopColor="#6E5CE9" />
-            <stop offset="0.85" stopColor="#01B8D4" />
+            <stop offset="0.15" stopColor="#0351A3" />
+            <stop offset="0.5" stopColor="#008CFD" />
+            <stop offset="0.85" stopColor="#00C3DA" />
           </linearGradient>
         </defs>
         <g className="arcos-vaiven" style={{ transformOrigin: `0px ${CY}px` }}>
@@ -36,10 +37,9 @@ export function Arcos({ className = '', portada = false }: { className?: string;
       <svg viewBox={`0 0 ${CAJA_W} ${CAJA_H}`} className="absolute bottom-0 right-0 w-[57%]">
         <defs>
           <linearGradient id={der} x1="0" y1="0" x2="0" y2={CAJA_H} gradientUnits="userSpaceOnUse">
-            <stop offset="0.15" stopColor="#FFFF84" />
-            <stop offset="0.45" stopColor="#F6BFA3" />
-            <stop offset="0.65" stopColor="#ED80C1" />
-            <stop offset="0.85" stopColor="#DB01FF" />
+            <stop offset="0.15" stopColor="#DEDE00" />
+            <stop offset="0.5" stopColor="#FFCC53" />
+            <stop offset="0.85" stopColor="#4587C5" />
           </linearGradient>
         </defs>
         <g className="arcos-vaiven arcos-vaiven-inverso" style={{ transformOrigin: `${CAJA_W}px ${CY}px` }}>

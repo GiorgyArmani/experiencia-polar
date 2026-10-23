@@ -1,4 +1,4 @@
-// Sonidos y música generados en el navegador (Web Audio), sin archivos que descargar.
+// Sonidos y música en el navegador (Web Audio): efectos generados en código y la pista de la UEP (public/music/).
 // Hay varios paquetes de efectos y varias pistas de música para elegir (ver /sonidos); la elección,
 // el volumen y el silencio se recuerdan en el navegador.
 
@@ -7,7 +7,7 @@ type Wave = OscillatorType;
 const MUTE_KEY = 'polar_mute';
 const VOLUME_KEY = 'polar_volume';
 const PACK_KEY = 'polar_sfx_pack';
-const MUSIC_KEY = 'polar_music_v2'; // v2: la música por defecto pasó a «Aventura 16 bits»
+const MUSIC_KEY = 'polar_music_v3'; // v3: la música por defecto pasó a la pista oficial de la UEP
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let musicBus: GainNode | null = null;
@@ -679,12 +679,61 @@ const MUSIC: Track[] = [
   },
 ];
 
+// Pistas grabadas (archivos en public/music/): se descargan y decodifican una vez y suenan en bucle
+// por el mismo canal que la música generada, así respetan el volumen y el silencio.
+const FILE_TRACKS: { id: string; label: string; desc: string; url: string; gain: number }[] = [
+  { id: 'uep', label: 'Música UEP', desc: 'La pista oficial que envió la UEP.', url: '/music/musica-uep.mp3', gain: 0.75 },
+];
+
 export const MUSIC_TRACKS: readonly { id: string; label: string; desc: string }[] = [
   { id: 'ninguna', label: 'Sin música', desc: 'Solo efectos de sonido (como hasta ahora).' },
+  ...FILE_TRACKS.map(({ id, label, desc }) => ({ id, label, desc })),
   ...MUSIC.map(({ id, label, desc }) => ({ id, label, desc })),
 ];
-// La UEP eligió «Aventura 16 bits» y los efectos de 16 bits.
-const DEFAULT_MUSIC = 'aventura';
+// La UEP envió su propia pista (2026-10-23); antes sonaba «Aventura 16 bits».
+const DEFAULT_MUSIC = 'uep';
+
+// Una canción grabada también sube de tono al acelerarse: se acelera la mitad que la música generada.
+const fileRate = (t: number) => 1 + (t - 1) / 2;
+
+const decoded = new Map<string, Promise<AudioBuffer | null>>();
+
+/** Descarga y decodifica una pista grabada (una sola vez). Se guarda en mono para gastar la mitad de memoria. */
+function loadFileTrack(id: string): Promise<AudioBuffer | null> {
+  const t = FILE_TRACKS.find((f) => f.id === id);
+  const ac = audio();
+  if (!t || !ac) return Promise.resolve(null);
+  let p = decoded.get(id);
+  if (!p) {
+    p = fetch(t.url)
+      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+      // Forma con callbacks: la de promesa no existe en Safari viejos.
+      .then((data) => new Promise<AudioBuffer>((ok, fail) => ac.decodeAudioData(data, ok, fail)))
+      .then((buf) => {
+        if (buf.numberOfChannels === 1) return buf;
+        const mono = ac.createBuffer(1, buf.length, buf.sampleRate);
+        const out = mono.getChannelData(0);
+        const chans = Array.from({ length: buf.numberOfChannels }, (_, c) => buf.getChannelData(c));
+        for (let i = 0; i < out.length; i++) {
+          let sum = 0;
+          for (const ch of chans) sum += ch[i];
+          out[i] = sum / chans.length;
+        }
+        return mono;
+      })
+      .catch(() => {
+        decoded.delete(id); // que se pueda reintentar
+        return null;
+      });
+    decoded.set(id, p);
+  }
+  return p;
+}
+
+/** Adelanta la descarga de la música elegida (p. ej. mientras se ve el mapa), para que suene sin espera. */
+export function preloadMusic(id: string = musicId) {
+  if (FILE_TRACKS.some((f) => f.id === id)) void loadFileTrack(id);
+}
 
 let musicId: string = readChoice(MUSIC_KEY, MUSIC_TRACKS.map((t) => t.id), DEFAULT_MUSIC);
 
@@ -747,13 +796,45 @@ function compile(t: Track): Compiled {
   return { bpm: t.bpm, steps, parts, drums };
 }
 
-let seq: { id: string; timer: ReturnType<typeof setInterval> } | null = null;
+let seq: { id: string; stop: () => void; source?: AudioBufferSourceNode } | null = null;
 let tempo = 1;
 
 /** Arranca una pista en bucle (si ya suena esa misma, no hace nada). Sin argumento: la elegida. */
 export function startMusic(id: string = musicId) {
   if (seq?.id === id) return;
   stopMusic();
+  const file = FILE_TRACKS.find((f) => f.id === id);
+  if (file) {
+    const ac = audio();
+    if (!ac || !musicBus) return;
+    const bus = musicBus;
+    let stopped = false;
+    const me: NonNullable<typeof seq> = {
+      id,
+      stop: () => {
+        stopped = true;
+        try {
+          me.source?.stop();
+        } catch {}
+        me.source?.disconnect();
+      },
+    };
+    seq = me;
+    loadFileTrack(id).then((buf) => {
+      if (!buf || stopped) return;
+      const src = ac.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      src.playbackRate.value = fileRate(tempo);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0, ac.currentTime);
+      g.gain.linearRampToValueAtTime(file.gain, ac.currentTime + 0.4); // entrada suave
+      src.connect(g).connect(bus);
+      src.start();
+      me.source = src;
+    });
+    return;
+  }
   const t = MUSIC.find((m) => m.id === id);
   const ac = audio();
   if (!t || !ac || !musicBus) return;
@@ -783,12 +864,13 @@ export function startMusic(id: string = musicId) {
     }
   };
   schedule();
-  seq = { id, timer: setInterval(schedule, 25) };
+  const timer = setInterval(schedule, 25);
+  seq = { id, stop: () => clearInterval(timer) };
 }
 
 export function stopMusic() {
   if (!seq) return;
-  clearInterval(seq.timer);
+  seq.stop();
   seq = null;
 }
 
@@ -799,4 +881,5 @@ export function playingMusic() {
 /** Acelera la música (p. ej. 1.15 en los últimos segundos de la trivia). */
 export function setMusicTempo(t: number) {
   tempo = t;
+  if (seq?.source && ctx) seq.source.playbackRate.setValueAtTime(fileRate(t), ctx.currentTime);
 }

@@ -42,6 +42,10 @@ body {
 .title-display {
   @apply font-display font-normal uppercase tracking-[0.01em];
 }
+/* Textos sobre los arcos: halo blanco para que las líneas no los crucen (pedido de Diseño UEP). */
+.sobre-arcos {
+  text-shadow: 0 0 3px #fff, 0 0 6px #fff, 0 0 10px #fff, 0 0 16px #fff, 0 0 22px #fff;
+}
 .field-label {
   @apply pointer-events-none absolute -top-[9px] left-3 bg-white px-1 text-xs font-semibold text-polar-muted;
 }

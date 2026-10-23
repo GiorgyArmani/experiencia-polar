@@ -14,7 +14,7 @@ import { SoundToggle } from '@/components/Talk';
 import { OtraCedula } from '@/components/OtraCedula';
 import { Screen, Spinner } from '@/components/ui';
 import { Anillos, CARGA_MIN_MS, Destello, Franjas, useTiempoMinimo } from '@/components/Cargando';
-import { setMusicTempo, sfx, startMusic, stopMusic } from '@/lib/sfx';
+import { preloadMusic, setMusicTempo, sfx, startMusic, stopMusic } from '@/lib/sfx';
 
 const QrScanner = dynamic(() => import('@/components/QrScanner'), { ssr: false });
 const LogoAR = dynamic(() => import('@/components/LogoAR'), { ssr: false });
@@ -302,6 +302,12 @@ function signed(n: number) {
   return n < 0 ? `−${Math.abs(n)}` : `+${n}`;
 }
 
+function avisoDe(correct: boolean, mensaje: string) {
+  const m = /^(¡[^!]{1,24}!)\s*(.*)$/s.exec(mensaje.trim());
+  if (m && m[2]) return { titulo: m[1], texto: m[2] };
+  return { titulo: correct ? '¡Correcto!' : '¡Incorrecto!', texto: mensaje };
+}
+
 function hora(iso: string | null) {
   if (!iso) return null;
   return new Date(iso).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
@@ -311,7 +317,7 @@ function hora(iso: string | null) {
 function NivelBanner({ trivia, className = '' }: { trivia: number; className?: string }) {
   return (
     <div className={`flex flex-col items-center text-center ${className}`}>
-      <span className="title-display text-[clamp(36px,12vw,52px)] leading-none text-polar-navy">Nivel {trivia}</span>
+      <span className="sobre-arcos title-display text-[clamp(36px,12vw,52px)] leading-none text-polar-navy">Nivel {trivia}</span>
     </div>
   );
 }
@@ -392,8 +398,8 @@ function Camara({
   return (
     <div className="flex flex-1 flex-col px-[clamp(14px,4.5vw,22px)] pb-[max(14px,env(safe-area-inset-bottom))] pt-[clamp(14px,2.5dvh,22px)]">
       <div className="flex flex-col gap-2 pr-14">
-        <span className="text-[12px] font-extrabold uppercase tracking-[0.16em] text-polar-steel">Busca el QR de la estación</span>
-        <h1 className="title-display text-[clamp(32px,min(10vw,6dvh),44px)] leading-none text-polar-navy">Nivel {trivia}</h1>
+        <span className="sobre-arcos text-[12px] font-extrabold uppercase tracking-[0.16em] text-polar-steel">Busca el QR de la estación</span>
+        <h1 className="sobre-arcos title-display text-[clamp(32px,min(10vw,6dvh),44px)] leading-none text-polar-navy">Nivel {trivia}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <Progress completed={completed} total={total} current={trivia} />
           {closesAt && (
@@ -490,6 +496,8 @@ function Intro({
   const started = useRef(false);
   const start = useRef(onStart);
   start.current = onStart;
+  // La música del nivel se descarga mientras se ve el mapa, para que suene apenas empiece el reloj.
+  useEffect(() => preloadMusic(), []);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -508,7 +516,7 @@ function Intro({
   const cuenta = secs > 3 ? 'Listo…' : secs > 0 ? String(secs) : '¡YA!';
   return (
     <div className="flex flex-1 flex-col px-4 pb-5 pt-14">
-      <NivelBanner trivia={trivia} className="animate-pop" />
+      <NivelBanner trivia={trivia} className="animate-pop-straight" />
       <WorldMap
         icono={icono}
         completed={completed}
@@ -519,13 +527,13 @@ function Intro({
         className="mt-3 max-w-[min(360px,56dvh)]"
       />
       <div className="mt-auto flex flex-col items-center gap-1 pt-3 text-center" aria-live="polite">
-        <span className="text-sm font-extrabold uppercase tracking-[0.14em] text-polar-steel">
+        <span className="sobre-arcos text-sm font-extrabold uppercase tracking-[0.14em] text-polar-steel">
           {arrived ? '¡Prepárate!' : 'Camino a la estación…'}
         </span>
-        <span key={cuenta} className="title-display animate-pop text-[clamp(40px,8dvh,64px)] leading-none text-polar-steel">
+        <span key={cuenta} className="sobre-arcos title-display animate-pop-straight text-[clamp(40px,8dvh,64px)] leading-none text-polar-steel">
           {cuenta}
         </span>
-        <span className="text-[13px] font-semibold text-polar-muted">El reloj empieza al entrar al nivel</span>
+        <span className="sobre-arcos text-[13px] font-semibold text-polar-muted">El reloj empieza al entrar al nivel</span>
       </div>
     </div>
   );
@@ -655,6 +663,8 @@ function Trivia({
   }
 
   const nombre = estacion(trivia)?.nombre ?? `Nivel ${trivia}`;
+  // Los mensajes de la UEP empiezan con su propia exclamación ("¡Así es!", "¡Casi!"): esa va de título para no repetir "¡Correcto!".
+  const msg = review ? avisoDe(review.correct, review.explanation) : null;
   const aviso = hurry ? '¡Apúrate!' : warn ? '¡Se acaba el tiempo!' : '¡Responde rápido y suma más!';
 
   // Aro del reloj: se vacía con el tiempo.
@@ -672,7 +682,7 @@ function Trivia({
         <span className="flex aspect-square h-[clamp(34px,5.4dvh,46px)] shrink-0 items-center justify-center rounded-[10px] border-2 border-polar-navy bg-[#9ED8FF] text-[clamp(20px,3.4dvh,28px)] font-bold leading-none text-polar-navy shadow-[0_3px_6px_rgba(14,12,78,0.25)]">
           {trivia}
         </span>
-        <span className="min-w-0 text-[length:calc(clamp(22px,min(8vw,4.4dvh),38px)*var(--fit,1))] font-bold leading-[1.05] text-polar-steel">{nombre}</span>
+        <span className="sobre-arcos min-w-0 text-[length:calc(clamp(22px,min(8vw,4.4dvh),38px)*var(--fit,1))] font-bold leading-[1.05] text-polar-steel">{nombre}</span>
       </div>
       {penalty > 0 && (
         <p className="mt-2 self-start rounded-full bg-[#E5484D] px-3 py-1 text-[12px] font-extrabold uppercase tracking-wide text-white">
@@ -715,8 +725,8 @@ function Trivia({
               review.correct ? 'bg-polar-steel' : 'bg-polar-navy'
             }`}
           >
-            <p className="title-display text-[length:calc(clamp(24px,4.2dvh,38px)*var(--fit,1))] leading-none">{review.correct ? '¡Correcto!' : '¡Incorrecto!'}</p>
-            <p className="mt-1 text-balance text-[length:max(13px,calc(clamp(15px,2.5dvh,21px)*var(--fit,1)))] leading-snug">{review.explanation}</p>
+            <p className="title-display text-[length:calc(clamp(24px,4.2dvh,38px)*var(--fit,1))] leading-none">{msg?.titulo}</p>
+            <p className="mt-1 text-balance text-[length:max(13px,calc(clamp(15px,2.5dvh,21px)*var(--fit,1)))] leading-snug">{msg?.texto}</p>
             <p className="mt-1 text-[clamp(12px,1.8dvh,14px)] font-bold text-white/85">
               {review.correct
                 ? `${review.streak >= 2 ? `¡Racha de ${review.streak}! · ` : ''}+${review.points} puntos`

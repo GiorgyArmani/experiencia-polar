@@ -5,12 +5,10 @@ import { Screen } from '@/components/ui';
 
 // Textos cortos: todo debe verse en una pantalla de teléfono sin desplazarse (si no cabe, se desplaza en vez de recortarse).
 const PASOS = [
-  { t: 'Escanea el QR', d: 'Es el mismo en todas las estaciones y te lleva al siguiente nivel.' },
-  { t: 'Recorre los 4 niveles', d: 'Cada estación es un nivel del mapa.' },
-  { t: 'Responde contra reloj', d: 'Son 3 preguntas por nivel y tienes un minuto para contestarlas. Mientras más rápido aciertes, más puntos sumas.' },
-  { t: '¡Ojo con el último!', d: 'En el Nivel 4, cada respuesta incorrecta resta puntos.' },
-  { t: 'Espera el próximo nivel', d: 'Cada nivel abre en su horario. Vuelve al mismo QR.' },
-  { t: 'Sube en el ranking', d: 'Completa los 4 niveles y mira cómo quedó tu localidad.' },
+  { t: 'Escanea el QR', d: 'Usa el mismo código para acceder a todos los niveles.' },
+  { t: 'Supera los 4 niveles', d: 'Cada estación abre en su horario y tienes un minuto para contestar. ¡Responde rápido para sumar más puntos!' },
+  { t: '¡Cuidado en el Nivel 4!', d: 'Aquí las respuestas incorrectas restan puntos.' },
+  { t: 'Sube en el ranking', d: 'Suma puntos y consulta la posición de tu localidad.' },
 ];
 
 export default function Instrucciones() {
@@ -22,15 +20,19 @@ export default function Instrucciones() {
           Instrucciones
         </h1>
 
-        <ol className="mt-[2dvh]flex flex-col gap-[min(8px,1dvh)]">
+        {/* Mismo estilo que el botón de abajo: fondo azul y letras blancas, con aire entre bloques. */}
+        <ol className="mt-[clamp(14px,2.5dvh,22px)] flex flex-col gap-[clamp(10px,1.8dvh,16px)]">
           {PASOS.map((p, i) => (
-            <li key={p.t} className="card-uep flex items-center gap-3 rounded-[18px] px-3.5 py-[min(10px,1.2dvh)] text-polar-ink">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border-2 border-polar-navy bg-[#9ED8FF] text-base font-bold text-polar-navy">
+            <li
+              key={p.t}
+              className="flex items-center gap-3 rounded-[18px] bg-polar-steel px-4 py-[clamp(9px,1.4dvh,13px)] text-white shadow-[0_4px_10px_rgba(14,12,78,0.28)]"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-base font-bold text-polar-steel">
                 {i + 1}
               </span>
-              <div className="flex min-w-0 flex-col">
-                <span className="text-[clamp(14px,2.1dvh,16px)] font-bold leading-tight text-polar-navy">{p.t}</span>
-                <span className="text-[clamp(12px,1.85dvh,14px)] leading-snug text-polar-muted">{p.d}</span>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-[clamp(14px,2.1dvh,16px)] font-bold leading-tight">{p.t}</span>
+                <span className="text-[clamp(12px,1.85dvh,14px)] leading-snug text-white/90">{p.d}</span>
               </div>
             </li>
           ))}

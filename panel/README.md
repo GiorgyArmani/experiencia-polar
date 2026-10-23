@@ -1,7 +1,7 @@
 # Panel de premiación · Experiencia UEP
 
 App **aparte** del juego (`panelpolar.aulaciete.net`). Solo **lee** la tabla `players` de la base del juego y muestra
-el ranking para la premiación: puntaje + tiempo, filtro **global / por estado / por localidad**, búsqueda y descarga CSV.
+el ranking para la premiación: puntaje + tiempo, filtro **global / por localidad**, búsqueda y descarga CSV.
 No escribe nada ni comparte código con el juego.
 
 - Orden: más puntos primero; a igual puntaje, menos tiempo (`tiempo_ms`: suma de lo que tardó en cada nivel).

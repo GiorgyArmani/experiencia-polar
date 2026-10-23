@@ -2,6 +2,7 @@ import { computeStatus, deadlineOf, finishPatch, playerQuestions, questionView, 
 import { error, json } from '@/lib/http';
 import { currentPlayer } from '@/lib/session';
 import { getStore } from '@/lib/store';
+import { feedbackFor } from '@/lib/trivias';
 import { FEEDBACK_MS, type AnswerResponse, type Player } from '@/shared/types';
 
 export const dynamic = 'force-dynamic';
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
   const res: AnswerResponse = {
     correct,
     correctOption: q.correct,
-    explanation: q.explanation ?? null,
+    explanation: feedbackFor(q, correct),
     pointsEarned,
     triviaDone,
     triviaPoints: updated.trivia_puntos ?? 0,

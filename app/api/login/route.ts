@@ -25,6 +25,21 @@ function apodoDe(nombre: string) {
   return (segundo ? `${primero} ${segundo[0]}.` : primero).slice(0, 24);
 }
 
+/**
+ * La nómina de la UEP viene como "APELLIDOS, NOMBRES" ("MOROS JOVES, OCTAVIO JOSE"):
+ * nombre completo "Octavio Jose Moros Joves" y en el ranking "Octavio M.".
+ */
+function nombreYApodo(raw: string) {
+  const [apellidos, nombres] = raw.split(',').map((x) => titulo(x));
+  if (!nombres) {
+    const nombre = titulo(raw);
+    return { nombre, apodo: apodoDe(nombre) };
+  }
+  const primero = nombres.split(' ')[0];
+  const inicial = apellidos.split(' ')[0]?.[0];
+  return { nombre: `${nombres} ${apellidos}`, apodo: (inicial ? `${primero} ${inicial}.` : primero).slice(0, 24) };
+}
+
 export async function POST(req: Request) {
   const { cedula } = (await req.json().catch(() => ({}))) as { cedula?: unknown };
   const digits = typeof cedula === 'string' ? cedula.replace(/\D/g, '') : '';
@@ -47,7 +62,7 @@ export async function POST(req: Request) {
     // TEMPORAL: sin nómina cargada, entra como jugador de prueba.
     persona ??= { cedula: digits, nombre: `Jugador ${digits.slice(-4)}`, localidad: 'Pruebas', estado: null };
 
-    const nombre = titulo(persona.nombre);
+    const { nombre, apodo } = nombreYApodo(persona.nombre);
     // Si la localidad de la nómina coincide con una del listado, se usa ese nombre exacto (el del ranking).
     const sede = config.sedes.find((s) => norm(s.name) === norm(persona.localidad))?.name ?? persona.localidad.trim();
     const player = await store.createPlayer({
@@ -57,7 +72,7 @@ export async function POST(req: Request) {
       telefono: null,
       sede,
       estado: persona.estado?.trim() || null,
-      oso_nombre: enNomina ? apodoDe(nombre) : nombre,
+      oso_nombre: enNomina ? apodo : nombre,
       avatar: DEFAULT_ICONO,
     });
     setPlayerCookie(player.id);

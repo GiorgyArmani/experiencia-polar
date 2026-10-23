@@ -1,11 +1,10 @@
 'use client';
 
 // Panel de premiación (panelpolar.aulaciete.net). Lee la base del juego y muestra quién va ganando.
-// Pensado para usarse sin explicación: dos filtros (estado y localidad), el podio arriba y la tabla completa abajo.
+// Pensado para usarse sin explicación: filtro por localidad (la nómina de la UEP no trae estado), el podio arriba y la tabla completa abajo.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Datos, Fila } from '@/lib/tipos';
 
-const SIN_ESTADO = 'Sin estado';
 const PAGINA = 50;
 
 type ConPuesto = Fila & { puesto: number };
@@ -38,7 +37,7 @@ function conPuesto(rows: Fila[]): ConPuesto[] {
 }
 
 function descargar(rows: ConPuesto[], nombre: string, totalNiveles: number) {
-  const head = ['Puesto', 'Cédula', 'Nombre', 'Localidad', 'Estado', 'Puntos', 'Tiempo (segundos)', 'Niveles completados', 'Terminó todo', 'Último nivel', 'Registro'];
+  const head = ['Puesto', 'Cédula', 'Nombre', 'Localidad', 'Puntos', 'Tiempo (segundos)', 'Niveles completados', 'Terminó todo', 'Último nivel', 'Registro'];
   const esc = (v: string | number) => {
     const t = String(v);
     return /[";\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
@@ -49,7 +48,6 @@ function descargar(rows: ConPuesto[], nombre: string, totalNiveles: number) {
       r.cedula,
       r.nombre,
       r.localidad,
-      r.estado ?? '',
       r.puntos,
       r.tiempoMs ? (r.tiempoMs / 1000).toFixed(1).replace('.', ',') : '',
       `${r.niveles} de ${totalNiveles}`,
@@ -80,7 +78,6 @@ const slug = (v: string) =>
 export default function Panel() {
   const [data, setData] = useState<Datos | null>(null);
   const [error, setError] = useState('');
-  const [estado, setEstado] = useState('');
   const [localidad, setLocalidad] = useState('');
   const [buscar, setBuscar] = useState('');
   const [soloTerminados, setSoloTerminados] = useState(false);
@@ -113,25 +110,15 @@ export default function Panel() {
   }, [load]);
 
   // Al cambiar un filtro vuelve a mostrar desde el primero.
-  useEffect(() => setMostrar(PAGINA), [estado, localidad, buscar, soloTerminados]);
+  useEffect(() => setMostrar(PAGINA), [localidad, buscar, soloTerminados]);
 
   const rows = useMemo(() => data?.rows ?? [], [data]);
   const totalNiveles = data?.totalNiveles ?? 4;
 
-  const estados = useMemo(() => [...new Set(rows.map((r) => r.estado ?? SIN_ESTADO))].sort((a, b) => a.localeCompare(b, 'es')), [rows]);
-  // Las localidades se acotan al estado elegido.
-  const localidades = useMemo(
-    () => [...new Set(rows.filter((r) => !estado || (r.estado ?? SIN_ESTADO) === estado).map((r) => r.localidad))].sort((a, b) => a.localeCompare(b, 'es')),
-    [rows, estado],
-  );
+  const localidades = useMemo(() => [...new Set(rows.map((r) => r.localidad))].sort((a, b) => a.localeCompare(b, 'es')), [rows]);
 
-  // El puesto se calcula dentro del estado / localidad elegidos (es el ranking de ese grupo).
-  const ranking = useMemo(() => {
-    let base = rows;
-    if (estado) base = base.filter((r) => (r.estado ?? SIN_ESTADO) === estado);
-    if (localidad) base = base.filter((r) => r.localidad === localidad);
-    return conPuesto(base);
-  }, [rows, estado, localidad]);
+  // El puesto se calcula dentro de la localidad elegida (es el ranking de ese grupo).
+  const ranking = useMemo(() => conPuesto(localidad ? rows.filter((r) => r.localidad === localidad) : rows), [rows, localidad]);
 
   // La búsqueda y "solo quienes terminaron" filtran la lista sin cambiar los puestos.
   const lista = useMemo(() => {
@@ -139,13 +126,12 @@ export default function Panel() {
     return ranking.filter((r) => (!soloTerminados || r.terminado) && (!q || slug(r.nombre).includes(q) || r.cedula.includes(buscar.replace(/\D/g, '') || '§')));
   }, [ranking, buscar, soloTerminados]);
 
-  const grupo = localidad ? localidad : estado ? `Estado ${estado}` : 'Todo el país';
-  const hayFiltros = Boolean(estado || localidad || buscar || soloTerminados);
+  const grupo = localidad || 'Todo el país';
+  const hayFiltros = Boolean(localidad || buscar || soloTerminados);
   const terminaron = ranking.filter((r) => r.terminado).length;
   const podio = ranking.slice(0, 3).filter((r) => r.puntos > 0);
 
   function limpiar() {
-    setEstado('');
     setLocalidad('');
     setBuscar('');
     setSoloTerminados(false);
@@ -178,25 +164,10 @@ export default function Panel() {
 
       {/* Filtros: siempre a la vista */}
       <div className="z-20 border-b lg:sticky lg:top-0 border-[#E2E8F0] bg-white/95 backdrop-blur">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-3 px-4 py-3 sm:grid-cols-2 sm:px-8 lg:grid-cols-[1fr_1fr_1.3fr_auto]">
-          <Campo label="Estado">
-            <select
-              value={estado}
-              onChange={(e) => {
-                setEstado(e.target.value);
-                setLocalidad('');
-              }}
-              className="input"
-            >
-              <option value="">Todos los estados</option>
-              {estados.map((e) => (
-                <option key={e}>{e}</option>
-              ))}
-            </select>
-          </Campo>
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-3 px-4 py-3 sm:grid-cols-2 sm:px-8 lg:grid-cols-[1fr_1.3fr_auto]">
           <Campo label="Localidad">
             <select value={localidad} onChange={(e) => setLocalidad(e.target.value)} className="input">
-              <option value="">{estado ? `Todas las de ${estado}` : 'Todas las localidades'}</option>
+              <option value="">Todas las localidades</option>
               {localidades.map((l) => (
                 <option key={l}>{l}</option>
               ))}
@@ -260,7 +231,6 @@ export default function Panel() {
                     <p className="truncate text-base font-extrabold">{r.nombre}</p>
                     <p className={`truncate text-sm ${r.puesto === 1 ? 'text-[#CFE3F7]' : 'text-polar-slate'}`}>
                       {r.localidad}
-                      {r.estado ? ` · ${r.estado}` : ''}
                     </p>
                     <p className={`mt-1 text-sm ${r.puesto === 1 ? 'text-white' : 'text-polar-ink'}`}>
                       <b className="text-lg">{r.puntos}</b> pts · {tiempo(r.tiempoMs, r.niveles)}
@@ -306,7 +276,6 @@ export default function Panel() {
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-semibold">{r.localidad}</p>
-                      <p className="text-xs text-polar-slate">{r.estado ?? SIN_ESTADO}</p>
                     </td>
                     <td className="px-4 py-3 text-right text-base font-black tabular-nums text-polar-navy">{r.puntos}</td>
                     <td
@@ -351,7 +320,7 @@ export default function Panel() {
             <p className="font-bold text-polar-navy">¿Cómo se ordena?</p>
             <p className="mt-1">
               Gana quien tiene <b>más puntos</b>. Si dos personas empatan en puntos, va primero quien <b>tardó menos</b> en responder sus niveles
-              (se suma el tiempo de cada nivel desde que arranca el reloj). El puesto es dentro del estado o la localidad que elijas arriba.
+              (se suma el tiempo de cada nivel desde que arranca el reloj). El puesto es dentro de la localidad que elijas arriba.
             </p>
           </div>
         </section>

@@ -68,9 +68,9 @@ const config: Config = {
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
         pop: {
-          '0%': { transform: 'scale(0.6) rotate(-4deg)', opacity: '0' },
-          '60%': { transform: 'scale(1.08) rotate(2deg)', opacity: '1' },
-          '100%': { transform: 'scale(1) rotate(-2deg)', opacity: '1' },
+          '0%': { transform: 'scale(0.6)', opacity: '0' },
+          '60%': { transform: 'scale(1.08)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
         },
         shake: {
           '0%,100%': { transform: 'rotate(0deg)' },
