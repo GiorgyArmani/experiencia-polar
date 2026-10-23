@@ -10,14 +10,15 @@ const CAJA_W = 460;
 const CAJA_H = 910;
 const CY = CAJA_H / 2;
 
-export function Arcos({ className = '' }: { className?: string }) {
+/** `portada`: los arcos de arriba se corren hacia la esquina para no chocar con el logo (pedido UEP). */
+export function Arcos({ className = '', portada = false }: { className?: string; portada?: boolean }) {
   const uid = useId().replace(/:/g, '');
   const izq = `arcos-izq-${uid}`;
   const der = `arcos-der-${uid}`;
   return (
     <div className={`pointer-events-none absolute inset-0 -z-10 overflow-hidden ${className}`} aria-hidden>
       {/* Arriba a la izquierda: media luna que sale del borde izquierdo */}
-      <svg viewBox={`0 0 ${CAJA_W} ${CAJA_H}`} className="absolute left-0 top-0 w-[57%]">
+      <svg viewBox={`0 0 ${CAJA_W} ${CAJA_H}`} className={`absolute left-0 top-0 w-[57%] ${portada ? '-translate-x-[30%] -translate-y-[30%]' : ''}`}>
         <defs>
           <linearGradient id={izq} x1="0" y1="0" x2="0" y2={CAJA_H} gradientUnits="userSpaceOnUse">
             <stop offset="0.15" stopColor="#DA00FF" />

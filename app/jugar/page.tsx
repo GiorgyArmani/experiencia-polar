@@ -5,12 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
-import { qrUrlFor } from '@/shared/qr';
+import { isExperienceQr, qrUrlFor } from '@/shared/qr';
 import type { Icono } from '@/shared/icono';
 import { estacion } from '@/shared/estaciones';
-import { FEEDBACK_MS, LOGO_MS, type AnswerResponse, type MeResponse, type QuestionView } from '@/shared/types';
+import { FEEDBACK_MS, type AnswerResponse, type MeResponse, type QuestionView } from '@/shared/types';
 import { lastStop, META, WorldMap } from '@/components/WorldMap';
 import { SoundToggle } from '@/components/Talk';
+import { OtraCedula } from '@/components/OtraCedula';
 import { Screen, Spinner } from '@/components/ui';
 import { Anillos, CARGA_MIN_MS, Destello, Franjas, useTiempoMinimo } from '@/components/Cargando';
 import { setMusicTempo, sfx, startMusic, stopMusic } from '@/lib/sfx';
@@ -21,7 +22,6 @@ const LogoAR = dynamic(() => import('@/components/LogoAR'), { ssr: false });
 const precargarLogo = (url?: string) => {
   if (url) import('@/components/LogoAR').then((m) => m.precargarLogo(url)).catch(() => {});
 };
-const espera = (ms: number) => new Promise((ok) => setTimeout(ok, ms));
 
 type Overlay = { kind: 'superada'; trivia: number; points: number; timedOut: boolean } | null;
 
@@ -45,7 +45,8 @@ export default function Jugar() {
   const reviewTimer = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => () => clearTimeout(reviewTimer.current), []);
   const [busy, setBusy] = useState(false);
-  const [logoScan, setLogoScan] = useState(false); // logo 3D sobre la cámara tras un escaneo válido
+  // QR válido recién leído: el logo 3D queda sobre la cámara hasta que el jugador toca "Comenzar".
+  const [qrLeido, setQrLeido] = useState<string | null>(null);
   const [toast, setToast] = useState('');
   const [, rerender] = useState(0);
   const cargaVista = useTiempoMinimo(CARGA_MIN_MS.pantalla);
@@ -101,26 +102,27 @@ export default function Jugar() {
 
   const { status, question, player, demoTools } = me;
 
-  async function onScan(value: string) {
-    if (busy) return;
+  async function abrirNivel(value: string) {
     setBusy(true);
-    sfx.scan();
     try {
       const r = await api.scan(value);
-      const receivedAt = Date.now();
-      // QR válido: el modelo 3D de la estación aparece sobre la cámara y luego se pasa al mapa.
-      if (r.status?.phase === 'playing') {
-        setLogoScan(true);
-        await espera(LOGO_MS);
-        setLogoScan(false);
-      }
-      apply(r, receivedAt);
+      apply(r, Date.now());
     } catch (e) {
       setToast((e as Error).message);
       sfx.nope();
     } finally {
+      setQrLeido(null);
       setBusy(false);
     }
+  }
+
+  function onScan(value: string) {
+    if (busy || qrLeido) return;
+    sfx.scan();
+    // QR de la experiencia: primero el logo 3D (sin reloj); el nivel abre cuando toca "Comenzar".
+    // Cualquier otro QR va directo al servidor, que responde con el aviso de error.
+    if (isExperienceQr(value)) setQrLeido(value);
+    else abrirNivel(value);
   }
 
   async function onAnswer(option: number) {
@@ -226,8 +228,9 @@ export default function Jugar() {
         total={status.totalTrivias}
         demoTools={demoTools}
         busy={busy}
-        logo={logoScan}
+        logo={qrLeido !== null}
         onScan={onScan}
+        onStart={() => qrLeido && abrirNivel(qrLeido)}
       />
     );
   } else if (status.phase === 'locked') {
@@ -333,6 +336,15 @@ function Nav({ onMap, className = '' }: { onMap?: () => void; className?: string
   );
 }
 
+/** Tras el logo 3D: el jugador decide cuándo empieza el nivel (el reloj arranca al tocarlo). */
+function BotonComenzar({ trivia, busy, onStart }: { trivia: number; busy: boolean; onStart: () => void }) {
+  return (
+    <button type="button" onClick={onStart} disabled={busy} className="btn-game mt-1 w-full max-w-[300px]">
+      {busy ? <Destello size={20} /> : `¡Comenzar el Nivel ${trivia}!`}
+    </button>
+  );
+}
+
 /** Mapa en una hoja que sube desde abajo (desde la cámara). */
 function MapSheet({ icono, completed, current, onClose }: { icono: Icono; completed: number[]; current: number; onClose: () => void }) {
   return (
@@ -359,6 +371,7 @@ function Camara({
   busy,
   logo,
   onScan,
+  onStart,
 }: {
   icono: Icono;
   trivia: number;
@@ -370,6 +383,7 @@ function Camara({
   busy: boolean;
   logo: boolean;
   onScan: (v: string) => void;
+  onStart: () => void;
 }) {
   const [map, setMap] = useState(false);
   const modelo = estacion(trivia)?.modelo;
@@ -397,7 +411,7 @@ function Camara({
 
       {/* La cámara en una tarjeta redondeada; el visor y los avisos van encima. */}
       <div className="relative mt-[clamp(10px,2dvh,18px)] min-h-[min(300px,45dvh)] flex-1 overflow-hidden rounded-[28px] border-4 border-white bg-polar-navy shadow-[0_8px_24px_rgba(14,12,78,0.28)]">
-        <QrScanner onScan={onScan} paused={busy || map} />
+        <QrScanner onScan={onScan} paused={busy || map || logo} />
 
         <div className={`pointer-events-none absolute inset-0 z-10 flex items-center justify-center ${logo ? 'invisible' : ''}`} aria-hidden>
           <div className="relative aspect-square w-[min(220px,62%,32dvh)]">
@@ -421,7 +435,7 @@ function Camara({
             <LogoAR url={modelo} className="absolute inset-x-0 top-[4%] h-[68%]" onError={() => setLogoFallo(true)} />
             <div className="absolute inset-x-0 bottom-[7%] flex animate-pop-straight flex-col items-center gap-2 px-5 text-center">
               <span className="title-display text-[clamp(28px,8.5vw,38px)] leading-none text-white [text-shadow:0_3px_12px_rgba(14,12,78,0.8)]">¡Encontraste el QR!</span>
-              <span className="text-sm font-extrabold uppercase tracking-[0.18em] text-polar-yellow">Abriendo el Nivel {trivia}…</span>
+              <BotonComenzar trivia={trivia} busy={busy} onStart={onStart} />
             </div>
           </div>
         )}
@@ -430,7 +444,8 @@ function Camara({
           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-polar-navy/85" role="status" aria-live="polite">
             <Anillos size={160} light={false} />
             <Franjas />
-            <span className="text-sm font-extrabold uppercase tracking-[0.18em] text-white">Abriendo el nivel…</span>
+            <span className="title-display text-[clamp(28px,8.5vw,38px)] leading-none text-white">¡Encontraste el QR!</span>
+            <BotonComenzar trivia={trivia} busy={busy} onStart={onStart} />
           </div>
         )}
       </div>
@@ -442,6 +457,7 @@ function Camara({
           </button>
         )}
         <Nav onMap={() => setMap(true)} />
+        <OtraCedula className="-mt-1" />
       </div>
       {map && <MapSheet icono={icono} completed={completed} current={trivia} onClose={() => setMap(false)} />}
     </div>
@@ -855,6 +871,7 @@ function Espera({
       )}
 
       <Nav className="mx-auto mt-auto w-[260px] pt-3" />
+      <OtraCedula className="mt-1" />
     </div>
   );
 }
@@ -902,6 +919,7 @@ function Final({ icono, puntos, completed, total }: { icono: Icono; puntos: numb
         <Link href="/ranking" className="btn-uep">
           Ver ranking
         </Link>
+        <OtraCedula className="mt-2 flex" />
       </div>
     </div>
   );

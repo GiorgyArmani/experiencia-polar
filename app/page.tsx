@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Destello } from '@/components/Cargando';
 import { Screen } from '@/components/ui';
+import { OtraCedula } from '@/components/OtraCedula';
 
 export default function Inicio() {
   const router = useRouter();
@@ -54,17 +55,18 @@ export default function Inicio() {
 
   if (registered) {
     return (
-      <Screen>
+      <Screen portada>
         <Link href="/jugar" className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center" aria-label="Continuar jugando">
           {header}
           <span className="btn-uep mt-4 w-full max-w-[320px]">Seguir jugando</span>
         </Link>
+        <OtraCedula className="mb-[max(20px,env(safe-area-inset-bottom))]" />
       </Screen>
     );
   }
 
   return (
-    <Screen>
+    <Screen portada>
       <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
         {header}
         {registered === false && (

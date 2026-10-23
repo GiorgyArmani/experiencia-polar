@@ -8,7 +8,18 @@ import { Cargando } from './Cargando';
  * Por defecto, el estilo claro de los mockups de la UEP (fondo blanco con arcos de colores).
  * `dark`: el fondo azul anterior (solo páginas internas).
  */
-export function Screen({ children, className = '', dark = false }: { children: ReactNode; className?: string; dark?: boolean }) {
+export function Screen({
+  children,
+  className = '',
+  dark = false,
+  portada = false,
+}: {
+  children: ReactNode;
+  className?: string;
+  dark?: boolean;
+  /** Portada: arcos corridos para que no choquen con el logo. */
+  portada?: boolean;
+}) {
   const light = !dark;
   return (
     <main
@@ -16,7 +27,7 @@ export function Screen({ children, className = '', dark = false }: { children: R
         light ? 'bg-white text-polar-navy' : 'bg-polar-blue'
       } ${className}`}
     >
-      {light && <Arcos />}
+      {light && <Arcos portada={portada} />}
       {children}
     </main>
   );
