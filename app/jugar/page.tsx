@@ -457,7 +457,7 @@ function Camara({
           </button>
         )}
         <Nav onMap={() => setMap(true)} />
-        <OtraCedula className="-mt-1" />
+        <OtraCedula />
       </div>
       {map && <MapSheet icono={icono} completed={completed} current={trivia} onClose={() => setMap(false)} />}
     </div>
