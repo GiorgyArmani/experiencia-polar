@@ -26,7 +26,7 @@ body {
 }
 /* Botón del estilo claro (mockups UEP): azul acero con Anton blanco. */
 .btn-uep {
-  @apply flex h-[clamp(48px,7dvh,58px)] items-center justify-center gap-2 rounded-full bg-polar-steel px-6 font-display text-[clamp(20px,3dvh,24px)] font-normal text-white shadow-[0_4px_10px_rgba(14,12,78,0.28)] transition-transform active:translate-y-[2px] active:shadow-none disabled:opacity-50;
+  @apply flex h-[clamp(48px,7dvh,58px)] items-center justify-center gap-2 rounded-full bg-polar-blue px-6 font-display text-[clamp(20px,3dvh,24px)] font-normal text-white shadow-[0_4px_10px_rgba(14,12,78,0.28)] transition-transform active:translate-y-[2px] active:shadow-none disabled:opacity-50;
 }
 /* Tarjeta blanca con sombra suave (preguntas, opciones, resultados). */
 .card-uep {

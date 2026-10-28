@@ -56,8 +56,10 @@ export default function Registro() {
         <PlayerIcon key={`${icono.simbolo}-${icono.color}`} icono={icono} size={136} className="animate-pop border-[5px] shadow-[0_6px_18px_rgba(14,12,78,0.28)]" title={`Tu ícono: ${simboloLabel(icono.simbolo)}`} />
       </div>
 
-      <fieldset className="mx-auto mt-4 w-[min(340px,90vw)]">
-        <legend className="mb-2 text-sm font-extrabold uppercase tracking-wide text-polar-steel">Símbolo</legend>
+      {/* Tarjeta blanca para que los arcos del fondo no se crucen con los símbolos y colores. */}
+      <div className="card-uep mx-auto mt-4 flex w-[min(360px,92vw)] flex-col gap-4 p-4">
+      <fieldset>
+        <legend className="mb-2 text-sm font-extrabold uppercase tracking-wide text-polar-blue">Símbolo</legend>
         <div className="grid grid-cols-5 gap-2">
           {SIMBOLOS.map((s) => {
             const on = s.id === icono.simbolo;
@@ -69,18 +71,18 @@ export default function Registro() {
                 aria-label={s.label}
                 aria-pressed={on}
                 className={`flex aspect-square items-center justify-center rounded-[14px] border-2 border-polar-navy transition-transform active:translate-y-[2px] ${
-                  on ? 'bg-polar-steel text-white shadow-[0_4px_10px_rgba(14,12,78,0.3)]' : 'bg-white text-polar-navy'
+                  on ? 'bg-polar-blue text-white shadow-[0_4px_10px_rgba(14,12,78,0.3)]' : 'bg-white text-polar-navy'
                 }`}
               >
-                <SimboloSvg id={s.id} bg={on ? '#4587C5' : '#FFFFFF'} className="h-[56%] w-[56%]" />
+                <SimboloSvg id={s.id} bg={on ? '#0351A3' : '#FFFFFF'} className="h-[56%] w-[56%]" />
               </button>
             );
           })}
         </div>
       </fieldset>
 
-      <fieldset className="mx-auto mt-4 w-[min(340px,90vw)]">
-        <legend className="mb-2 text-sm font-extrabold uppercase tracking-wide text-polar-steel">Color</legend>
+      <fieldset>
+        <legend className="mb-2 text-sm font-extrabold uppercase tracking-wide text-polar-blue">Color</legend>
         <div className="grid grid-cols-8 gap-1.5">
           {COLORES.map((c) => {
             const on = c.id === icono.color;
@@ -98,6 +100,7 @@ export default function Registro() {
           })}
         </div>
       </fieldset>
+      </div>
 
       {error && <p role="alert" className="mx-auto mt-2 w-[min(340px,90vw)] rounded-[16px] bg-polar-navy px-4 py-2 text-sm font-bold text-white">{error}</p>}
 

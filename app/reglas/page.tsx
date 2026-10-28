@@ -5,34 +5,37 @@ import { Screen } from '@/components/ui';
 
 // Textos cortos: todo debe verse en una pantalla de teléfono sin desplazarse (si no cabe, se desplaza en vez de recortarse).
 const PASOS = [
-  { t: 'Escanea el QR', d: 'Usa el mismo código para acceder a todos los niveles.' },
-  { t: 'Supera los 4 niveles', d: 'Cada estación abre en su horario y tienes un minuto para contestar. ¡Responde rápido para sumar más puntos!' },
-  { t: '¡Cuidado en el Nivel 4!', d: 'Aquí las respuestas incorrectas restan puntos.' },
-  { t: 'Sube en el ranking', d: 'Suma puntos y consulta la posición de tu localidad.' },
+  { icono: '/iconos/paso-1.png', t: 'Escanea el QR', d: 'Usa el mismo código para acceder a todos los niveles.' },
+  { icono: '/iconos/paso-2.png', t: 'Supera los 4 niveles', d: 'Cada estación abre en su horario y tienes un minuto para contestar. ¡Responde rápido para sumar más puntos!' },
+  { icono: '/iconos/paso-3.png', t: '¡Cuidado en el Nivel 4!', d: 'Aquí las respuestas incorrectas restan puntos.' },
+  { icono: '/iconos/paso-4.png', t: 'Sube en el ranking', d: 'Suma puntos y consulta la posición de tu localidad.' },
 ];
 
 export default function Instrucciones() {
   return (
     <Screen className="overflow-x-hidden">
       <div className="flex flex-1 flex-col justify-center px-[clamp(16px,5vw,24px)] pt-[max(16px,3dvh)]">
-        {/* Fondo blanco para que el título no se pierda sobre los arcos de colores. */}
-        <h1 className="title-display self-center rounded-full bg-white px-6 py-2 text-center text-[clamp(28px,min(10vw,5dvh),40px)] leading-none text-polar-navy shadow-[0_4px_14px_rgba(14,12,78,0.15)]">
+        {/* Solo el título va resaltado en azul; los pasos van en blanco. */}
+        <h1 className="title-display self-center rounded-full bg-polar-blue px-6 py-2 text-center text-[clamp(28px,min(10vw,5dvh),40px)] leading-none text-white shadow-[0_4px_14px_rgba(14,12,78,0.25)]">
           Instrucciones
         </h1>
 
-        {/* Mismo estilo que el botón de abajo: fondo azul y letras blancas, con aire entre bloques. */}
+        {/* Pasos en tarjetas blancas con letra azul oscuro; cada uno con su ícono de la acción. */}
         <ol className="mt-[clamp(14px,2.5dvh,22px)] flex flex-col gap-[clamp(10px,1.8dvh,16px)]">
-          {PASOS.map((p, i) => (
+          {PASOS.map((p) => (
             <li
               key={p.t}
-              className="flex items-center gap-3 rounded-[18px] bg-polar-steel px-4 py-[clamp(9px,1.4dvh,13px)] text-white shadow-[0_4px_10px_rgba(14,12,78,0.28)]"
+              className="flex items-center gap-3 rounded-[18px] border-2 border-polar-navy/15 bg-white px-4 py-[clamp(9px,1.4dvh,13px)] text-polar-navy shadow-[0_4px_10px_rgba(14,12,78,0.15)]"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-base font-bold text-polar-steel">
-                {i + 1}
-              </span>
+              {/* El PNG es de líneas negras: se usa como máscara para pintarlo del azul de la UEP. */}
+              <span
+                aria-hidden
+                className="h-[clamp(36px,5.5dvh,44px)] w-[clamp(36px,5.5dvh,44px)] shrink-0 bg-polar-blue"
+                style={{ mask: `url('${p.icono}') center / contain no-repeat`, WebkitMask: `url('${p.icono}') center / contain no-repeat` }}
+              />
               <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="text-[clamp(14px,2.1dvh,16px)] font-bold leading-tight">{p.t}</span>
-                <span className="text-[clamp(12px,1.85dvh,14px)] leading-snug text-white/90">{p.d}</span>
+                <span className="text-[clamp(14px,2.1dvh,16px)] font-medium leading-tight">{p.t}</span>
+                <span className="text-[clamp(12px,1.85dvh,14px)] leading-snug">{p.d}</span>
               </div>
             </li>
           ))}

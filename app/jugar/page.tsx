@@ -173,7 +173,6 @@ export default function Jugar() {
     busy,
     deadline: status.deadline,
     limitSeconds: status.limitSeconds,
-    penalty: status.wrongPenalty,
     offset: offset.current,
     onTimeUp: () => refresh().catch(() => {}),
     onAnswer,
@@ -223,7 +222,6 @@ export default function Jugar() {
         icono={player.icono}
         trivia={status.trivia ?? 1}
         closesAt={status.closesAt}
-        penalty={status.wrongPenalty}
         completed={player.completed}
         total={status.totalTrivias}
         demoTools={demoTools}
@@ -370,7 +368,6 @@ function Camara({
   icono,
   trivia,
   closesAt,
-  penalty,
   completed,
   total,
   demoTools,
@@ -382,7 +379,6 @@ function Camara({
   icono: Icono;
   trivia: number;
   closesAt: string | null;
-  penalty: number;
   completed: number[];
   total: number;
   demoTools: boolean;
@@ -408,11 +404,6 @@ function Camara({
             </span>
           )}
         </div>
-        {penalty > 0 && (
-          <span className="self-start rounded-full bg-[#E5484D] px-3 py-1 text-[12px] font-extrabold text-white">
-            ¡Último y más difícil! Cada incorrecta resta {penalty}
-          </span>
-        )}
       </div>
 
       {/* La cámara en una tarjeta redondeada; el visor y los avisos van encima. */}
@@ -579,7 +570,6 @@ function Trivia({
   busy,
   deadline,
   limitSeconds,
-  penalty,
   offset,
   onTimeUp,
   onAnswer,
@@ -589,7 +579,6 @@ function Trivia({
   busy: boolean;
   deadline: string | null;
   limitSeconds: number;
-  penalty: number;
   offset: number;
   onTimeUp: () => void;
   onAnswer: (i: number) => void;
@@ -684,14 +673,9 @@ function Trivia({
         </span>
         <span className="sobre-arcos min-w-0 text-[length:calc(clamp(22px,min(8vw,4.4dvh),38px)*var(--fit,1))] font-bold leading-[1.05] text-polar-steel">{nombre}</span>
       </div>
-      {penalty > 0 && (
-        <p className="mt-2 self-start rounded-full bg-[#E5484D] px-3 py-1 text-[12px] font-extrabold uppercase tracking-wide text-white">
-          ¡Ojo! Cada incorrecta resta {penalty} puntos
-        </p>
-      )}
 
       <div className="card-uep mt-[calc(clamp(10px,2.4dvh,28px)*var(--fit,1))] px-4 py-[calc(clamp(10px,2.2dvh,22px)*var(--fit,1))]">
-        <h1 key={index} className="animate-pop-straight text-balance text-center title-display text-[length:calc(clamp(19px,3.3dvh,30px)*var(--fit,1))] leading-[1.1] text-polar-navy">
+        <h1 key={index} className="animate-pop-straight text-balance text-center text-[length:calc(clamp(17px,2.8dvh,24px)*var(--fit,1))] font-bold leading-[1.2] text-polar-navy">
           {text}
         </h1>
       </div>
@@ -901,8 +885,9 @@ function Final({ icono, puntos, completed, total }: { icono: Icono; puntos: numb
 
   return (
     <div className="flex flex-1 flex-col px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-[clamp(44px,7dvh,64px)]">
-      <div className="flex flex-col items-center gap-1 text-center text-polar-navy">
-        <h1 className="title-display text-[clamp(44px,min(15vw,8dvh),72px)] leading-none">¡Lo lograste!</h1>
+      {/* Fondo blanco para que los arcos no crucen el título ni el texto. */}
+      <div className="flex flex-col items-center gap-1 self-center rounded-[24px] bg-white px-4 py-3 text-center text-polar-navy shadow-[0_6px_18px_rgba(14,12,78,0.18)]">
+        <h1 className="title-display whitespace-nowrap text-[clamp(34px,min(12vw,7dvh),64px)] leading-none">¡Lo lograste!</h1>
         <p className="text-[clamp(15px,2.4dvh,19px)] font-bold">
           {completed.length >= total ? 'Completaste todos los niveles' : `Completaste ${completed.length} de ${total} niveles`}
         </p>

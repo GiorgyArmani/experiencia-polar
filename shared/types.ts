@@ -89,7 +89,7 @@ export interface QrResponse {
 }
 
 /** Cuánto se muestra el aviso de correcta/incorrecta tras responder. El reloj del nivel se pausa mientras tanto. */
-export const FEEDBACK_MS = 3500;
+export const FEEDBACK_MS = 7000;
 
 export interface AnswerResponse {
   correct: boolean;

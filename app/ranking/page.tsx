@@ -50,6 +50,9 @@ export default function Ranking() {
   const podium = [top[1], top[0], top[2]];
   const rest = top.slice(3, 10);
 
+  const sedeReal = data?.sede && data.sede !== 'Pruebas' ? data.sede : null;
+  const subtitulo = tab === 'sede' ? sedeReal : 'Localidades por puntos acumulados';
+
   return (
     <Screen className="overflow-x-hidden text-polar-navy">
       <div className="flex flex-col gap-4 px-[18px] pb-2 pt-5">
@@ -63,11 +66,11 @@ export default function Ranking() {
               <path d="M15 6l-6 6 6 6" />
             </svg>
           </Link>
-          <div className="flex min-w-0 flex-col">
+          {/* Fondo blanco para que los arcos no crucen el título. */}
+          <div className="flex min-w-0 flex-col rounded-[16px] bg-white px-3 py-1.5 shadow-[0_4px_14px_rgba(14,12,78,0.15)]">
             <h1 className="title-display text-[clamp(32px,10vw,40px)] leading-none">Ranking</h1>
-            <span className="truncate text-sm font-bold text-polar-steel">
-              {tab === 'sede' ? data?.sede ?? 'Tu localidad' : 'Localidades por puntos acumulados'}
-            </span>
+            {/* "Pruebas" es la localidad temporal de quien no está en la nómina: no se muestra. */}
+            {subtitulo && <span className="truncate text-sm font-bold text-polar-blue">{subtitulo}</span>}
           </div>
         </div>
 

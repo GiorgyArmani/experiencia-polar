@@ -56,9 +56,11 @@ export default function Inicio() {
   if (registered) {
     return (
       <Screen portada>
-        <Link href="/jugar" className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center" aria-label="Continuar jugando">
-          {header}
-          <span className="btn-uep mt-4 w-full max-w-[320px]">Seguir jugando</span>
+        <Link href="/jugar" className="flex flex-1 flex-col items-center justify-center px-4 text-center" aria-label="Continuar jugando">
+          <div className="flex w-full max-w-[360px] flex-col items-center gap-6 rounded-[28px] bg-white/95 px-5 py-6 shadow-[0_8px_28px_rgba(14,12,78,0.18)]">
+            {header}
+            <span className="btn-uep mt-2 w-full max-w-[320px]">Seguir jugando</span>
+          </div>
         </Link>
         <OtraCedula className="mb-[max(20px,env(safe-area-inset-bottom))]" />
       </Screen>
@@ -67,7 +69,9 @@ export default function Inicio() {
 
   return (
     <Screen portada>
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center px-4 text-center">
+        {/* Recuadro blanco para que los arcos del fondo no choquen con el texto. */}
+        <div className="flex w-full max-w-[360px] flex-col items-center gap-5 rounded-[28px] bg-white/95 px-5 py-6 shadow-[0_8px_28px_rgba(14,12,78,0.18)]">
         {header}
         {registered === false && (
           <form onSubmit={submit} className="mt-2 flex w-full max-w-[320px] flex-col gap-3">
@@ -100,6 +104,7 @@ export default function Inicio() {
             </button>
           </form>
         )}
+        </div>
       </div>
     </Screen>
   );
