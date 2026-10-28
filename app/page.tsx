@@ -62,7 +62,7 @@ export default function Inicio() {
             <span className="btn-uep mt-2 w-full max-w-[320px]">Seguir jugando</span>
           </div>
         </Link>
-        <OtraCedula className="mb-[max(20px,env(safe-area-inset-bottom))]" />
+        <OtraCedula siempre className="mb-[max(20px,env(safe-area-inset-bottom))]" />
       </Screen>
     );
   }
@@ -81,8 +81,8 @@ export default function Inicio() {
         >
         {header}
         <form onSubmit={submit} className="mt-2 flex w-full max-w-[320px] flex-col gap-3">
-            <label htmlFor="cedula" className="text-base font-bold text-polar-navy">
-              Escribe tu cédula para entrar
+            <label htmlFor="cedula" className="text-balance text-base font-bold text-polar-navy">
+              Ingresa tu número de cédula para iniciar
             </label>
             <input
               id="cedula"

@@ -4,13 +4,14 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import { stopMusic } from '@/lib/sfx';
 
-// Solo para pruebas: igual que "Simular escaneo", desaparece con NEXT_PUBLIC_DEMO=false (se fija al compilar).
+// En pruebas (NEXT_PUBLIC_DEMO=true) se ve en todas las pantallas. En el evento solo donde va `siempre`
+// (resultado final y portada): así el mismo teléfono sirve para que juegue otra persona.
 const DEMO = process.env.NEXT_PUBLIC_DEMO === 'true';
 
 /** Reiniciar: cierra la sesión y vuelve a la portada para entrar con otra cédula (pedido UEP: jugar una y otra vez). */
-export function OtraCedula({ className = '' }: { className?: string }) {
+export function OtraCedula({ className = '', siempre = false }: { className?: string; siempre?: boolean }) {
   const [saliendo, setSaliendo] = useState(false);
-  if (!DEMO) return null;
+  if (!DEMO && !siempre) return null;
 
   async function reiniciar() {
     setSaliendo(true);

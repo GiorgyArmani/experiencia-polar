@@ -4,7 +4,7 @@
 // Todo se mide en cqw (ancho del afiche) para que en pantalla y en A4 se vea igual y nada se corte.
 import QRCode from 'qrcode';
 import { QR_INK, qrUrlFor } from '@/shared/qr';
-import { config } from '@/lib/config';
+import { publicAppUrl } from '@/lib/appUrl';
 import { Arcos } from '@/components/Arcos';
 import { PlayerIcon } from '@/components/PlayerIcon';
 import { PrintButton } from './PrintButton';
@@ -19,7 +19,7 @@ const PASOS = [
 ];
 
 export default async function QrPoster() {
-  const url = qrUrlFor(config.appUrl);
+  const url = qrUrlFor(await publicAppUrl());
   const svg = await QRCode.toString(url, {
     type: 'svg',
     errorCorrectionLevel: 'H',

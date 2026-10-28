@@ -63,7 +63,7 @@ y globos de diálogo (`Bubble`) en `mobile/src/components/comic.tsx`.
 ## Códigos QR
 
 Uno solo, el mismo en todas las sedes y para todas las trivias. Contiene `<APP_URL>/q/POLAR`
-(hoy `https://experiencia-polar.vercel.app/q/POLAR`). El servidor lo genera con el dominio de `APP_URL`:
+(hoy `https://experienciauep.aulaciete.com/q/POLAR`). El servidor lo genera con el dominio de `APP_URL`:
 
 - `<APP_URL>/qr` → **afiche A4** con el estilo Polar (íconos, logos, pasos) y botón "Imprimir afiche"
 - `<APP_URL>/qr/imagen` → solo el QR en SVG; `?format=png&size=2048` en PNG (agrega `&download` para descargarlo)
@@ -79,7 +79,7 @@ Si cambia el dominio (p. ej. a `experienciapolar.aulaciete.com`), hay que **reim
 
 | Variable | Qué hace |
 | --- | --- |
-| `APP_URL` | Dominio público del servidor; es el que va dentro del QR. Defecto `https://experiencia-polar.vercel.app`. |
+| `APP_URL` | Dominio público del servidor; es el que va dentro del QR. Si falta o es `localhost`, se usa el dominio por el que entra la petición. |
 | `DATABASE_URL` | Postgres (Dokploy, o cadena de conexión de Supabase). Tiene prioridad. |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Alternativa vía API de Supabase. La service role key va **solo en el servidor**. |
 | `SEDES` | `CODIGO:Nombre` separados por coma. El jugador elige la suya al registrarse; el código se usa en `?sede=` del ranking. |

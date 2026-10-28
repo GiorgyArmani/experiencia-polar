@@ -23,7 +23,28 @@ const precargarLogo = (url?: string) => {
   if (url) import('@/components/LogoAR').then((m) => m.precargarLogo(url)).catch(() => {});
 };
 
-type Overlay = { kind: 'superada'; trivia: number; points: number; timedOut: boolean } | null;
+type Overlay = { kind: 'superada'; trivia: number; points: number; timedOut: boolean; aciertos: Aciertos | null } | null;
+
+/** Aciertos del nivel en curso. En sessionStorage para que no se pierdan si recarga la página a mitad del nivel. */
+type Aciertos = { trivia: number; correct: number; total: number };
+const ACIERTOS_KEY = 'uep:aciertos';
+function leerAciertos(trivia: number): Aciertos | null {
+  try {
+    const a = JSON.parse(sessionStorage.getItem(ACIERTOS_KEY) ?? 'null') as Aciertos | null;
+    return a?.trivia === trivia ? a : null;
+  } catch {
+    return null;
+  }
+}
+function sumarAcierto(q: QuestionView, correct: boolean): Aciertos {
+  // Primera pregunta del nivel: arranca de cero (también si otra cédula jugó antes en este teléfono).
+  const prev = q.index === 0 ? null : leerAciertos(q.trivia);
+  const a = { trivia: q.trivia, correct: (prev?.correct ?? 0) + (correct ? 1 : 0), total: q.total };
+  try {
+    sessionStorage.setItem(ACIERTOS_KEY, JSON.stringify(a));
+  } catch {}
+  return a;
+}
 
 /** Pregunta recién respondida: se queda en pantalla con el aviso de correcta/incorrecta. */
 type Review = {
@@ -53,6 +74,7 @@ export default function Jugar() {
   const offset = useRef(0); // hora del servidor - hora del teléfono
   const streak = useRef(0); // aciertos seguidos (para celebrar la racha)
   const playing = useRef<number | null>(null); // trivia que estaba jugando (para detectar "se acabó el tiempo")
+  const preguntas = useRef<{ trivia: number; total: number } | null>(null); // cuántas preguntas tiene el nivel en curso
 
   // `receivedAt`: cuándo llegó la respuesta (si se aplica más tarde, la hora del servidor ya quedó vieja).
   const apply = useCallback((r: MeResponse, receivedAt = Date.now()) => {
@@ -62,9 +84,21 @@ export default function Jugar() {
     if (playing.current !== null && now === null && r.player) {
       streak.current = 0;
       sfx.timeUp();
-      setOverlay({ kind: 'superada', trivia: playing.current, points: r.player.triviaPuntos, timedOut: true });
+      const t = playing.current;
+      // Si no alcanzó a responder ninguna: 0 de N.
+      const sinResponder = preguntas.current?.trivia === t ? { trivia: t, correct: 0, total: preguntas.current.total } : null;
+      setOverlay({ kind: 'superada', trivia: t, points: r.player.triviaPuntos, timedOut: true, aciertos: leerAciertos(t) ?? sinResponder });
     }
     playing.current = now;
+    if (r.question) {
+      preguntas.current = { trivia: r.question.trivia, total: r.question.total };
+      // Nivel recién empezado: borra el conteo que haya dejado otra persona en este teléfono.
+      if (r.question.index === 0) {
+        try {
+          sessionStorage.removeItem(ACIERTOS_KEY);
+        } catch {}
+      }
+    }
     setMe(r);
   }, []);
 
@@ -137,6 +171,7 @@ export default function Jugar() {
       offset.current = new Date(r.status.serverNow).getTime() - Date.now();
       playing.current = r.status.phase === 'playing' ? r.status.trivia : null;
       streak.current = r.correct ? streak.current + 1 : 0;
+      const aciertos = sumarAcierto(q, r.correct);
       if (!r.correct) sfx.wrong();
       else if (streak.current >= 2) sfx.streak(streak.current);
       else sfx.correct();
@@ -155,7 +190,7 @@ export default function Jugar() {
         setMe((m) => (m ? { ...m, player: r.player, status: r.status, question: r.question } : m));
         if (r.triviaDone) {
           sfx.levelUp();
-          setOverlay({ kind: 'superada', trivia: q.trivia, points: r.triviaPoints, timedOut: false });
+          setOverlay({ kind: 'superada', trivia: q.trivia, points: r.triviaPoints, timedOut: false, aciertos });
         }
       }, FEEDBACK_MS);
     } catch (e) {
@@ -191,6 +226,9 @@ export default function Jugar() {
         trivia={overlay.trivia}
         completed={player.completed}
         points={overlay.points}
+        totalPoints={player.puntos}
+        aciertos={overlay.aciertos}
+        ultimo={status.phase === 'final'}
         timedOut={overlay.timedOut}
         nextLabel={
           status.phase === 'final'
@@ -296,6 +334,14 @@ function Progress({ completed, total, current }: { completed: number[]; total: n
 }
 
 /** +80 / −50 (con signo menos tipográfico). */
+/** Mensaje al terminar un nivel: siempre en positivo, aunque haya fallado (que no se desanime). */
+function animo({ correct, total }: Aciertos, ultimo: boolean) {
+  if (correct === total) return '¡Perfecto! Respondiste todo bien.';
+  if (correct * 2 >= total) return '¡Muy bien! Vas por buen camino.';
+  if (correct > 0) return ultimo ? '¡Buen trabajo! Cada respuesta cuenta.' : '¡Buen intento! En el próximo nivel vas por más.';
+  return ultimo ? '¡Gracias por jugar! Lo importante es lo que aprendiste.' : '¡No te rindas! El próximo nivel es otra oportunidad.';
+}
+
 function signed(n: number) {
   return n < 0 ? `−${Math.abs(n)}` : `+${n}`;
 }
@@ -308,7 +354,7 @@ function avisoDe(correct: boolean, mensaje: string) {
 
 function hora(iso: string | null) {
   if (!iso) return null;
-  return new Date(iso).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas' });
 }
 
 /** Cartel de nivel estilo consola: "NIVEL 2" (sin el nombre de la estación, por pedido de la UEP). */
@@ -763,6 +809,9 @@ function Superada({
   trivia,
   completed,
   points,
+  totalPoints,
+  aciertos,
+  ultimo,
   timedOut,
   nextLabel,
   onNext,
@@ -771,19 +820,31 @@ function Superada({
   trivia: number;
   completed: number[];
   points: number;
+  totalPoints: number;
+  aciertos: Aciertos | null;
+  ultimo: boolean;
   timedOut: boolean;
   nextLabel: string;
   onNext: () => void;
 }) {
+  const perfecto = !!aciertos && aciertos.correct === aciertos.total;
   return (
-    <div className="flex flex-1 flex-col px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-14">
-      <h1 className="title-display text-balance text-center text-[clamp(30px,min(10vw,5.5dvh),46px)] leading-none text-polar-navy">
-        {timedOut ? '¡Se acabó el tiempo!' : `¡Nivel ${trivia} superado!`}
-      </h1>
-      <p className="mt-2 text-center text-[clamp(15px,2.4dvh,18px)] font-bold">
-        <span className="text-polar-steel">{signed(points)} puntos</span> para tu localidad
-      </p>
-      <WorldMap icono={icono} completed={completed} current={null} to={trivia} justCleared={trivia} className="mb-4 mt-3 max-w-[min(340px,52dvh)]" />
+    <div className="flex flex-1 flex-col px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-[clamp(44px,7dvh,64px)]">
+      {/* Fondo blanco (igual que "¡Lo lograste!") para que los arcos no crucen el título ni el resultado. */}
+      <div className="self-center rounded-[24px] bg-white px-4 py-3 shadow-[0_6px_18px_rgba(14,12,78,0.18)]">
+        <h1 className="title-display text-balance text-center text-[clamp(30px,min(10vw,5.5dvh),46px)] leading-none text-polar-navy">
+          {timedOut ? '¡Se acabó el tiempo!' : perfecto ? `¡Nivel ${trivia} superado!` : `¡Nivel ${trivia} completado!`}
+        </h1>
+      </div>
+      <WorldMap icono={icono} completed={completed} current={null} to={trivia} justCleared={trivia} className="mt-3 max-w-[min(340px,44dvh)]" />
+      <div className="mx-2 mb-3 mt-3 flex flex-col items-center gap-1 rounded-[20px] bg-white px-5 py-[clamp(10px,2dvh,16px)] text-center text-polar-navy shadow-[0_6px_18px_rgba(14,12,78,0.18)]">
+        {aciertos && <p className="text-[clamp(20px,3.2dvh,26px)] font-black leading-tight">Acertaste {aciertos.correct} de {aciertos.total}</p>}
+        {aciertos && <p className="text-balance text-sm font-bold text-polar-muted">{animo(aciertos, ultimo)}</p>}
+        <p className="mt-1 text-balance text-[clamp(15px,2.4dvh,18px)] font-bold">
+          <span className="text-polar-steel">{signed(points)}</span> en este nivel · Llevas{' '}
+          <span className="text-polar-steel">{totalPoints.toLocaleString('es-VE')} puntos</span>
+        </p>
+      </div>
       <button
         type="button"
         onClick={() => {
@@ -914,7 +975,7 @@ function Final({ icono, puntos, completed, total }: { icono: Icono; puntos: numb
         <Link href="/ranking" className="btn-uep">
           Ver ranking
         </Link>
-        <OtraCedula className="mt-2 flex" />
+        <OtraCedula siempre className="mt-2 flex" />
       </div>
     </div>
   );

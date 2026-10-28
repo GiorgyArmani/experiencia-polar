@@ -4,13 +4,13 @@
 // El afiche para imprimir está en /qr.
 import QRCode from 'qrcode';
 import { QR_INK, qrUrlFor } from '@/shared/qr';
-import { config } from '@/lib/config';
+import { publicAppUrl } from '@/lib/appUrl';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   const params = new URL(req.url).searchParams;
-  const url = qrUrlFor(config.appUrl);
+  const url = qrUrlFor(await publicAppUrl());
   const opts = { errorCorrectionLevel: 'H' as const, margin: 4, color: { dark: QR_INK, light: '#FFFFFF' } };
   const download = params.has('download') ? 'attachment' : 'inline';
 
