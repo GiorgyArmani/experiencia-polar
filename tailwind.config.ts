@@ -43,6 +43,7 @@ const config: Config = {
         'input-blue': '0 4px 0 #0E0C4E',
       },
       keyframes: {
+        'fade-in': { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
         blink: { '0%,92%,100%': { transform: 'scaleY(1)' }, '95%': { transform: 'scaleY(0.1)' } },
         breathe: { '0%,100%': { transform: 'translateY(0) scale(1)' }, '50%': { transform: 'translateY(2px) scale(1.01,0.99)' } },
         zzz: { '0%': { transform: 'translate(0,0) scale(0.6)', opacity: '0' }, '30%': { opacity: '1' }, '100%': { transform: 'translate(14px,-34px) scale(1.1)', opacity: '0' } },
@@ -82,6 +83,7 @@ const config: Config = {
         },
       },
       animation: {
+        'fade-in': 'fade-in 0.35s ease-out both',
         blink: 'blink 4.2s ease-in-out infinite',
         breathe: 'breathe 3s ease-in-out infinite',
         zzz: 'zzz 2.4s ease-out infinite',

@@ -56,7 +56,7 @@ export default function Inicio() {
   if (registered) {
     return (
       <Screen portada>
-        <Link href="/jugar" className="flex flex-1 flex-col items-center justify-center px-4 text-center" aria-label="Continuar jugando">
+        <Link href="/jugar" className="flex flex-1 animate-fade-in flex-col items-center justify-center px-4 text-center" aria-label="Continuar jugando">
           <div className="flex w-full max-w-[360px] flex-col items-center gap-6 rounded-[28px] bg-white/95 px-5 py-6 shadow-[0_8px_28px_rgba(14,12,78,0.18)]">
             {header}
             <span className="btn-uep mt-2 w-full max-w-[320px]">Seguir jugando</span>
@@ -70,11 +70,17 @@ export default function Inicio() {
   return (
     <Screen portada>
       <div className="flex flex-1 flex-col items-center justify-center px-4 text-center">
-        {/* Recuadro blanco para que los arcos del fondo no choquen con el texto. */}
-        <div className="flex w-full max-w-[360px] flex-col items-center gap-5 rounded-[28px] bg-white/95 px-5 py-6 shadow-[0_8px_28px_rgba(14,12,78,0.18)]">
+        {/* Recuadro blanco para que los arcos del fondo no choquen con el texto.
+            Mientras se consulta la sesión queda invisible pero con su tamaño final (el formulario ya ocupa su lugar),
+            así no titila ni salta cuando llega la respuesta. */}
+        <div
+          aria-hidden={registered === null}
+          className={`flex w-full max-w-[360px] flex-col items-center gap-5 rounded-[28px] bg-white/95 px-5 py-6 shadow-[0_8px_28px_rgba(14,12,78,0.18)] ${
+            registered === null ? 'invisible' : 'animate-fade-in'
+          }`}
+        >
         {header}
-        {registered === false && (
-          <form onSubmit={submit} className="mt-2 flex w-full max-w-[320px] flex-col gap-3">
+        <form onSubmit={submit} className="mt-2 flex w-full max-w-[320px] flex-col gap-3">
             <label htmlFor="cedula" className="text-base font-bold text-polar-navy">
               Escribe tu cédula para entrar
             </label>
@@ -103,7 +109,6 @@ export default function Inicio() {
               )}
             </button>
           </form>
-        )}
         </div>
       </div>
     </Screen>

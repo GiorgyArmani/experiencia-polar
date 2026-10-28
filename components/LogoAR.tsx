@@ -58,8 +58,22 @@ export default function LogoAR({ url, className = '', onError }: { url: string; 
         scene.add(sol, new THREE.AmbientLight(0xffffff, 0.35));
 
         // El modelo, centrado en el origen y de alto 1.
+        // Se centra según la pose FINAL de su animación (donde se queda quieto): algunos GLB, como el del
+        // logo 4, mueven y giran sus piezas, y centrarlos con la pose inicial los deja corridos al terminar.
         const modelo = gltf.scene.clone(true);
-        const bbox = new THREE.Box3().setFromObject(modelo);
+        const poseFinal = gltf.scene.clone(true);
+        if (gltf.animations.length) {
+          const m = new THREE.AnimationMixer(poseFinal);
+          gltf.animations.forEach((a) => {
+            const acc = m.clipAction(a);
+            acc.setLoop(THREE.LoopOnce, 1);
+            acc.clampWhenFinished = true;
+            acc.play();
+          });
+          m.update(Math.max(...gltf.animations.map((a) => a.duration)));
+        }
+        poseFinal.updateMatrixWorld(true);
+        const bbox = new THREE.Box3().setFromObject(poseFinal);
         const tam = bbox.getSize(new THREE.Vector3());
         const centro = bbox.getCenter(new THREE.Vector3());
         modelo.position.sub(centro);

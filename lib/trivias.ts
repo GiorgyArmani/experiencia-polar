@@ -333,7 +333,7 @@ const BANKS: Record<number, Question[]> = {
       '¡Casi! La Unidad Móvil cuenta con 8 neumáticos (sin contar con los de repuesto).',
     ),
   ],
-  // Estación 4 · Plataforma UEP (por ahora una sola pregunta; la UEP enviará las que faltan)
+  // Estación 4 · Plataforma UEP
   4: [
     q(
       '¿Qué requisito hay para descargar e instalar las aplicaciones de la Universidad Empresas Polar y la Biblioteca UEP en tus dispositivos?',
@@ -346,6 +346,100 @@ const BANKS: Record<number, Question[]> = {
       0,
       'Puedes descargar e instalar ambas aplicaciones de forma 100% gratuita para disfrutar de todo su contenido sin costo ni suscripciones.',
       'Ambas aplicaciones (Universidad Empresas Polar y Biblioteca UEP) son completamente gratuitas y no requieren ningún pago ni suscripción.',
+    ),
+    q(
+      '¿Cuáles son los principales servicios de aprendizaje que ofrece actualmente el ecosistema de la UEP?',
+      [
+        'La Plataforma UEP, la Biblioteca UEP y la Unidad Móvil',
+        'Solamente el correo electrónico',
+        'Exclusivamente la Unidad Móvil y la plataforma',
+        'Únicamente la plataforma virtual',
+      ],
+      0,
+      '¡Así es! El ecosistema formativo combina la Plataforma UEP, la Biblioteca UEP y la Unidad Móvil.',
+      '¡Incorrecto! Los servicios principales que integran nuestro ecosistema son la Plataforma UEP, la Biblioteca UEP y la Unidad Móvil.',
+    ),
+    q('¿Con cuántos matriculados inició la Universidad Empresas Polar?', ['1.200', '1.000', '3.000', '2.500'], 0),
+    q(
+      '¿En qué se sustenta la estrategia de formación de la Universidad Empresas Polar?',
+      [
+        'En un modelo de cursos externos comprados a otras instituciones',
+        'En un Modelo de Aprendizaje propio diseñado para la organización',
+        'En talleres libres sin una estructura definida',
+        'En programas universitarios tradicionales de pregrado',
+      ],
+      1,
+      '¡Correcto! La UEP se fundamenta en un Modelo de Aprendizaje propio adaptado a las necesidades de nuestra organización.',
+      '¡Incorrecto! La formación de la Universidad Empresas Polar se sustenta en un Modelo de Aprendizaje propio.',
+    ),
+    q(
+      '¿Cómo se asignan y habilitan las formaciones a cada trabajador dentro de la plataforma?',
+      [
+        'Todos los usuarios ven exactamente el mismo catálogo de cursos al mismo tiempo',
+        'Cada usuario tiene un pensum asociado a su perfil educativo y se le habilitan formaciones según su requerimiento',
+        'Los contenidos se asignan de forma aleatoria cada inicio de mes',
+        'El colaborador debe solicitar aprobación manual para ver cualquier contenido',
+      ],
+      1,
+      '¡Excelente! Tu pensum está personalizado según tu perfil educativo para habilitarte las formaciones adecuadas.',
+      '¡Incorrecto! Cada colaborador cuenta con un pensum asociado a su perfil formativo, habilitando contenidos de acuerdo con sus necesidades.',
+    ),
+    q(
+      '¿Un colaborador puede matricularse libremente en cualquier curso disponible de la plataforma en el momento que lo desee?',
+      VF,
+      1,
+      '¡Así es! Es Falso. Las formaciones se habilitan de manera progresiva y planificada según las necesidades de tu rol y perfil.',
+      '¡Casi! Es Falso. Las formaciones no se eligen de forma aleatoria, sino que se habilitan en la plataforma según los requerimientos de tu perfil.',
+    ),
+    q(
+      'En relación con la Línea Técnica / Especializada, ¿de qué manera se clasifican las formaciones disponibles?',
+      [
+        'Son exclusivamente para el personal operativo de plantas',
+        'Pueden ser específicas de acuerdo con el rol de la persona o transversales para distintas áreas',
+        'Aplican únicamente para líderes y gerentes de unidad',
+        'Son de libre elección sin importar el área a la que perteneces',
+      ],
+      1,
+      '¡Correcto! Las formaciones técnicas se adaptan tanto a las funciones específicas de tu rol como a temas transversales.',
+      '¡Incorrecto! Las formaciones técnicas especializadas pueden estar enfocadas en tu rol específico o ser de carácter transversal.',
+    ),
+    q(
+      '¿Existe un solo pensum para todos los perfiles educativos?',
+      VF,
+      1,
+      '¡Correcto! Cada perfil educativo cuenta con un pensum personalizado.',
+      '¡Casi! Cada perfil educativo cuenta con un pensum personalizado.',
+    ),
+    q(
+      '¿Cuántos perfiles educativos se han definido en Empresas Polar a partir de los diferentes roles y responsabilidades?',
+      ['3 perfiles', '5 perfiles', '9 perfiles', '10 perfiles'],
+      2,
+      '¡Correcto! En Empresas Polar se han definido 9 perfiles educativos (Dirección, Gerencia, Supervisorio, Especialización, Profesional, Técnico, Operativo, Pasante y Aprendiz).',
+      '¡Incorrecto! La Universidad Empresas Polar contempla exactamente 9 perfiles educativos derivados de los roles y responsabilidades.',
+    ),
+    q(
+      'Dentro de la estructura del Modelo de Aprendizaje, ¿cuál es uno de los objetivos del "¿Para qué?" del aprendizaje orientado en la UEP?',
+      [
+        'Reducir la jornada laboral de los colaboradores',
+        'Potenciar el desarrollo de la organización, el crecimiento individual y mantener la continuidad operativa',
+        'Reemplazar las actividades presenciales por completo',
+        'Evaluar únicamente a los nuevos ingresos',
+      ],
+      1,
+      '¡Excelente! El aprendizaje se orienta a potenciar la organización, el desarrollo individual y la continuidad operativa.',
+      '¡Incorrecto! El aprendizaje está orientado a potenciar la organización, el desarrollo/crecimiento individual y la continuidad operativa.',
+    ),
+    q(
+      '¿Cuáles son algunos de los perfiles educativos definidos dentro del modelo de la Universidad Empresas Polar?',
+      [
+        'Exclusivamente Directivo y Administrativo',
+        'Dirección, Gerencia, Supervisorio y Especialización',
+        'Pasantes y Contratistas únicamente',
+        'Junior, Semi-Senior y Senior',
+      ],
+      1,
+      '¡Así es! Los 9 perfiles abarcan desde Dirección hasta Pasantes, adaptando el pensum a cada rol.',
+      '¡Casi! Los 9 perfiles definidos son: Dirección, Gerencia, Supervisorio, Especialización, Profesional, Técnico, Operativo, Pasante y Aprendiz.',
     ),
   ],
 };
