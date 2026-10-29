@@ -136,6 +136,8 @@ const orden = (f: Fila) => f.tiempoMs || Number.MAX_SAFE_INTEGER;
 export async function leerDatos(): Promise<Datos> {
   const rows = (await leerFilas())
     .map(toFila)
+    // "Pruebas" es la localidad de quien entró sin estar en la nómina (cuentas de prueba): no compite.
+    .filter((f) => f.localidad !== 'Pruebas')
     // Orden de premiación: más puntos; a igual puntaje, menos tiempo.
     // Sin tiempo registrado (jugó antes de que se guardara) va después de quien sí lo tiene.
     .sort((a, b) => b.puntos - a.puntos || orden(a) - orden(b));
