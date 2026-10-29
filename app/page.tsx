@@ -105,7 +105,7 @@ export default function Inicio() {
                   <Destello size={20} color="#FFFFFF" /> Entrando…
                 </>
               ) : (
-                'Entrar'
+                'Comenzar'
               )}
             </button>
           </form>
