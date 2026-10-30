@@ -125,23 +125,25 @@ function baseStatus(p: Player, now: Date): Omit<GameStatus, 'wrongPenalty'> {
     return { ...base, phase: 'scan', trivia: next, opensAt: null, closesAt: null };
   }
 
-  // Modo horario: cada trivia tiene su ventana. Si una ventana ya cerró sin jugarla, se salta.
-  for (let t = next; t <= TOTAL_TRIVIAS; t++) {
-    if (p.completed.includes(t)) continue;
-    const w = config.windows[t - 1];
-    if (!w) continue;
-    const opens = new Date(w.opensAt);
-    const closes = new Date(w.closesAt);
-    if (now >= closes) continue;
-    if (now < opens) return { ...base, phase: 'locked', trivia: t, opensAt: w.opensAt, closesAt: w.closesAt };
-    return { ...base, phase: 'scan', trivia: t, opensAt: null, closesAt: w.closesAt };
+  // Modo horario: los niveles van siempre en orden. Cada uno abre a su hora y sigue abierto hasta
+  // que termina el evento, así quien no alcanzó a jugar uno lo recupera antes de pasar al siguiente.
+  const end = eventEnd();
+  if (end && now >= new Date(end)) return { ...base, phase: 'final', trivia: null, opensAt: null, closesAt: null };
+  const w = config.windows[next - 1];
+  if (w && now < new Date(w.opensAt)) {
+    return { ...base, phase: 'locked', trivia: next, opensAt: w.opensAt, closesAt: end };
   }
-  return { ...base, phase: 'final', trivia: null, opensAt: null, closesAt: null };
+  return { ...base, phase: 'scan', trivia: next, opensAt: null, closesAt: end };
 }
 
-function closesAtFor(trivia: number): string | null {
+/** Cierre del evento: el `closesAt` de la última ventana. */
+function eventEnd(): string | null {
+  return config.windows[config.windows.length - 1]?.closesAt ?? null;
+}
+
+function closesAtFor(_trivia: number): string | null {
   if (config.mode !== 'schedule') return null;
-  return config.windows[trivia - 1]?.closesAt ?? null;
+  return eventEnd();
 }
 
 export function questionView(p: Player): QuestionView | null {

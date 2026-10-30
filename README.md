@@ -50,7 +50,8 @@ y globos de diálogo (`Bubble`) en `mobile/src/components/comic.tsx`.
 
 - El servidor decide todo con **su** hora: el teléfono nunca recibe la respuesta correcta y no se adelanta una trivia cambiando el reloj.
 - **Horarios por nivel** (`TRIVIA_WINDOWS`): cada trivia tiene ventana `opensAt`–`closesAt`. Se evalúa en cada petición, así que
-  no hace falta un cron que "abra" niveles (no hay proceso que se pueda caer). Si una ventana cierra sin jugarla, se salta.
+  no hace falta un cron que "abra" niveles (no hay proceso que se pueda caer). Los niveles van en orden: un nivel abierto sigue
+  disponible hasta el cierre del evento (`closesAt` del último), así quien no jugó uno lo recupera antes del siguiente.
 - **Un solo QR**: el servidor decide qué abre cada escaneo según el progreso guardado del jugador.
 - Un doble toque no suma dos veces (la actualización es condicional a la pregunta actual).
 - El reloj lo lleva el servidor (`trivia_started_at`, `question_started_at`), con 2 s de margen por la latencia. Si el jugador
