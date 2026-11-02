@@ -3,9 +3,12 @@ import { scanQr } from '@/lib/game';
 import { error, json, meResponse } from '@/lib/http';
 import { currentPlayer } from '@/lib/session';
 
+import { CONCURSO_TERMINADO, MSG_TERMINADO } from '@/shared/cierre';
+
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  if (CONCURSO_TERMINADO) return error(MSG_TERMINADO, 403);
   const p = await currentPlayer();
   if (!p) return error('Regístrate primero', 401);
 

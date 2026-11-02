@@ -2,6 +2,7 @@
 // se crea su partida con el nombre, la localidad y el estado de la nómina (no se le pide nada más).
 import { DEFAULT_ICONO } from '@/shared/icono';
 import type { RegisterResponse } from '@/shared/types';
+import { CONCURSO_TERMINADO } from '@/shared/cierre';
 import { config } from '@/lib/config';
 import { error, json, meResponse } from '@/lib/http';
 import { setPlayerCookie } from '@/lib/session';
@@ -53,6 +54,9 @@ export async function POST(req: Request) {
       const res: RegisterResponse = { ...meResponse(existing), recovered: true, token: existing.id };
       return json(res);
     }
+
+    // Concurso cerrado: solo entra quien ya jugó, para ver su resultado.
+    if (CONCURSO_TERMINADO) return error('No encontramos una participación con esa cédula. Revisa el número.', 404);
 
     let persona = await store.getNomina(digits);
     const enNomina = persona !== null;

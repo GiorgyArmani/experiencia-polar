@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { CONCURSO_TERMINADO } from '@/shared/cierre';
 import { COLORES, DEFAULT_ICONO, SIMBOLOS, simboloLabel, type Icono } from '@/shared/icono';
 import { PlayerIcon, SimboloSvg } from '@/components/PlayerIcon';
 import { Logos, Screen, Spinner } from '@/components/ui';
@@ -18,6 +19,7 @@ export default function Registro() {
   const cargaVista = useTiempoMinimo(CARGA_MIN_MS.pantalla);
 
   useEffect(() => {
+    if (CONCURSO_TERMINADO) return router.replace('/');
     api
       .me()
       .then((r) => {

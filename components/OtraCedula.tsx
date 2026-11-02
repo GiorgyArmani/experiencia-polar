@@ -9,7 +9,7 @@ import { stopMusic } from '@/lib/sfx';
 const DEMO = process.env.NEXT_PUBLIC_DEMO === 'true';
 
 /** Reiniciar: cierra la sesión y vuelve a la portada para entrar con otra cédula (pedido UEP: jugar una y otra vez). */
-export function OtraCedula({ className = '', siempre = false }: { className?: string; siempre?: boolean }) {
+export function OtraCedula({ className = '', siempre = false, label = 'Reiniciar' }: { className?: string; siempre?: boolean; label?: string }) {
   const [saliendo, setSaliendo] = useState(false);
   if (!DEMO && !siempre) return null;
 
@@ -32,7 +32,7 @@ export function OtraCedula({ className = '', siempre = false }: { className?: st
         <path d="M3 12a9 9 0 1 0 3-6.7" />
         <path d="M3 4v5h5" />
       </svg>
-      {saliendo ? 'Reiniciando…' : 'Reiniciar'}
+      {saliendo ? 'Saliendo…' : label}
     </button>
   );
 }

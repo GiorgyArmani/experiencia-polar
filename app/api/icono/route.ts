@@ -4,9 +4,12 @@ import { error, json, meResponse } from '@/lib/http';
 import { currentPlayer } from '@/lib/session';
 import { getStore } from '@/lib/store';
 
+import { CONCURSO_TERMINADO, MSG_TERMINADO } from '@/shared/cierre';
+
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  if (CONCURSO_TERMINADO) return error(MSG_TERMINADO, 403);
   const p = await currentPlayer();
   if (!p) return error('Entra con tu cédula primero', 401);
   const { icono } = (await req.json().catch(() => ({}))) as { icono?: unknown };

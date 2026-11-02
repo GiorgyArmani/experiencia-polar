@@ -5,11 +5,14 @@ import { getStore } from '@/lib/store';
 import { feedbackFor } from '@/lib/trivias';
 import { FEEDBACK_MS, type AnswerResponse, type Player } from '@/shared/types';
 
+import { CONCURSO_TERMINADO, MSG_TERMINADO } from '@/shared/cierre';
+
 export const dynamic = 'force-dynamic';
 
 // Contrarreloj: correcta = puntos según rapidez (de 100 a 50); incorrecta = 0, salvo en la última estación,
 // donde resta WRONG_PENALTY_LAST (sin bajar el total del jugador de 0). En ambos casos pasa a la siguiente.
 export async function POST(req: Request) {
+  if (CONCURSO_TERMINADO) return error(MSG_TERMINADO, 403);
   // currentPlayer ya cerró la trivia si se le acabó el tiempo.
   const p = await currentPlayer();
   if (!p) return error('Regístrate primero', 401);

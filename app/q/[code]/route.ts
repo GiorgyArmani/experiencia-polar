@@ -4,6 +4,7 @@
 //   · Registrado → /jugar (la cámara del juego). Los niveles se abren escaneando el QR desde el juego,
 //     así se ve el modelo 3D de la estación.
 import { QR_CODE } from '@/shared/qr';
+import { CONCURSO_TERMINADO } from '@/shared/cierre';
 import { currentPlayer } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,7 @@ export const dynamic = 'force-dynamic';
 const to = (path: string) => new Response(null, { status: 303, headers: { Location: path } });
 
 export async function GET(_req: Request, { params }: { params: { code: string } }) {
-  if (params.code.toUpperCase() !== QR_CODE) return to('/');
+  if (CONCURSO_TERMINADO || params.code.toUpperCase() !== QR_CODE) return to('/');
 
   const p = await currentPlayer();
   return to(p ? '/jugar' : '/');

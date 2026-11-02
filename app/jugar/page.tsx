@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
+import { CONCURSO_TERMINADO } from '@/shared/cierre';
 import { isExperienceQr, qrUrlFor } from '@/shared/qr';
 import type { Icono } from '@/shared/icono';
 import { estacion } from '@/shared/estaciones';
@@ -117,7 +118,7 @@ export default function Jugar() {
   }, [refresh]);
 
   useEffect(() => {
-    if (me && !me.player) router.replace('/');
+    if (CONCURSO_TERMINADO || (me && !me.player)) router.replace('/');
   }, [me, router]);
 
   useEffect(() => {

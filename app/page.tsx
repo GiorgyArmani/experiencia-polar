@@ -10,6 +10,9 @@ import { api } from '@/lib/api';
 import { Destello } from '@/components/Cargando';
 import { Screen } from '@/components/ui';
 import { OtraCedula } from '@/components/OtraCedula';
+import { PlayerIcon } from '@/components/PlayerIcon';
+import { CONCURSO_TERMINADO } from '@/shared/cierre';
+import type { LeaderboardResponse, PublicPlayer } from '@/shared/types';
 
 export default function Inicio() {
   const router = useRouter();
@@ -17,13 +20,24 @@ export default function Inicio() {
   const [cedula, setCedula] = useState('');
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
+  // Concurso cerrado: datos del jugador y su puesto para la pantalla de "Gracias por participar".
+  const [player, setPlayer] = useState<PublicPlayer | null>(null);
+  const [ranking, setRanking] = useState<LeaderboardResponse | null>(null);
 
   useEffect(() => {
     api
       .me()
-      .then((r) => setRegistered(Boolean(r.player)))
+      .then((r) => {
+        setPlayer(r.player);
+        setRegistered(Boolean(r.player));
+      })
       .catch(() => setRegistered(false));
   }, []);
+
+  useEffect(() => {
+    if (!CONCURSO_TERMINADO || !registered) return;
+    api.leaderboard().then(setRanking).catch(() => {});
+  }, [registered]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,6 +45,12 @@ export default function Inicio() {
     setError('');
     try {
       const r = await api.login(cedula);
+      if (CONCURSO_TERMINADO) {
+        setPlayer(r.player);
+        setRegistered(true);
+        setSending(false);
+        return;
+      }
       if (!r.recovered) {
         router.replace('/registro');
         return;
@@ -52,6 +72,49 @@ export default function Inicio() {
       </h1>
     </>
   );
+
+  if (CONCURSO_TERMINADO && registered && player) {
+    const sedeMia = ranking?.sedes.find((s) => s.isMine);
+    const sedeReal = player.sede !== 'Pruebas' ? player.sede : null;
+    return (
+      <Screen portada>
+        <div className="flex flex-1 animate-fade-in flex-col items-center justify-center px-4 text-center">
+          <div className="flex w-full max-w-[360px] flex-col items-center gap-4 rounded-[28px] bg-white/95 px-5 py-6 shadow-[0_8px_28px_rgba(14,12,78,0.18)]">
+            <Image src="/logos/uep.svg" alt="Universidad Empresas Polar" width={190} height={184} priority className="h-[min(120px,16dvh)] w-auto object-contain" />
+            <h1 className="title-display text-[clamp(38px,min(12vw,7dvh),52px)] leading-[0.98] text-polar-navy">
+              ¡Gracias por
+              <br />
+              <span className="text-polar-steel">participar!</span>
+            </h1>
+            <p className="text-balance text-base font-semibold text-polar-navy">El concurso de la Experiencia UEP ya terminó.</p>
+
+            <div className="flex w-full flex-col items-center gap-2 rounded-[20px] border-2 border-polar-steel bg-polar-lav px-4 py-4">
+              <PlayerIcon icono={player.icono} size={64} className="border-[3px] border-white shadow-[0_4px_10px_rgba(14,12,78,0.25)]" title={player.apodo} />
+              <span className="max-w-full truncate text-lg font-bold text-polar-navy">{player.apodo}</span>
+              <span className="font-display text-[44px] leading-none text-polar-steel">{player.puntos}</span>
+              <span className="text-sm font-bold uppercase tracking-wide text-polar-muted">puntos</span>
+              {ranking?.me && (
+                <span className="mt-1 text-base font-bold text-polar-navy">
+                  Puesto #{ranking.me.rank}
+                  {sedeReal ? ` en ${sedeReal}` : ''}
+                </span>
+              )}
+              {sedeReal && sedeMia && (
+                <span className="text-sm font-semibold text-polar-muted">
+                  Tu localidad quedó #{sedeMia.rank} de {ranking?.sedes.length}
+                </span>
+              )}
+            </div>
+
+            <Link href="/ranking" className="btn-uep w-full max-w-[320px]">
+              Ver ranking
+            </Link>
+          </div>
+        </div>
+        <OtraCedula siempre label="Consultar otra cédula" className="mb-[max(20px,env(safe-area-inset-bottom))]" />
+      </Screen>
+    );
+  }
 
   if (registered) {
     return (
@@ -82,7 +145,7 @@ export default function Inicio() {
         {header}
         <form onSubmit={submit} className="mt-2 flex w-full max-w-[320px] flex-col gap-3">
             <label htmlFor="cedula" className="text-balance text-base font-bold text-polar-navy">
-              Ingresa tu número de cédula para iniciar
+              {CONCURSO_TERMINADO ? 'Ingresa tu cédula para ver tu resultado' : 'Ingresa tu número de cédula para iniciar'}
             </label>
             <input
               id="cedula"
@@ -104,6 +167,8 @@ export default function Inicio() {
                 <>
                   <Destello size={20} color="#FFFFFF" /> Entrando…
                 </>
+              ) : CONCURSO_TERMINADO ? (
+                'Ver mi resultado'
               ) : (
                 'Comenzar'
               )}

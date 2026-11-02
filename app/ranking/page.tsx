@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { CONCURSO_TERMINADO } from '@/shared/cierre';
 import type { LeaderboardResponse, LeaderRow } from '@/shared/types';
 import { PlayerIcon } from '@/components/PlayerIcon';
 import { Screen } from '@/components/ui';
@@ -58,8 +59,8 @@ export default function Ranking() {
       <div className="flex flex-col gap-4 px-[18px] pb-2 pt-5">
         <div className="flex items-center gap-3">
           <Link
-            href="/jugar"
-            aria-label="Volver al juego"
+            href={CONCURSO_TERMINADO ? '/' : '/jugar'}
+            aria-label={CONCURSO_TERMINADO ? 'Volver' : 'Volver al juego'}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border-2 border-polar-navy bg-white text-polar-navy shadow-[0_3px_8px_rgba(14,12,78,0.2)]"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
