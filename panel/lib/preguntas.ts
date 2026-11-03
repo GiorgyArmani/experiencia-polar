@@ -1,0 +1,425 @@
+// COPIA del banco de preguntas del juego (lib/trivias.ts), solo para mostrar los textos en las estadísticas.
+// El panel se despliega aparte (contexto de build: panel/) y no puede importar del juego.
+// Si el juego cambia el banco, copiar de nuevo: en la base cada respuesta guarda el ÍNDICE de la pregunta en este banco.
+// Nunca reordenar ni borrar preguntas: solo agregar al final, o las respuestas viejas apuntarían a otra pregunta.
+
+export interface Pregunta {
+  text: string;
+  options: string[];
+  correct: number;
+  /** Mensaje de acierto que envió la UEP: sirve como "dato a reforzar". */
+  ok?: string;
+}
+
+export const ESTACIONES = [
+  { id: 1, nombre: 'Universidad Empresas Polar' },
+  { id: 2, nombre: 'Biblioteca UEP' },
+  { id: 3, nombre: 'Unidad Móvil' },
+  { id: 4, nombre: 'Plataforma UEP' },
+] as const;
+
+const q = (text: string, options: string[], correct: number, ok?: string, _ko?: string): Pregunta => ({ text, options, correct, ok });
+const VF = ['Verdadero', 'Falso'];
+
+export const BANCOS: Record<number, Pregunta[]> = {
+  // Estación 1 · Universidad Empresas Polar
+  1: [
+    q(
+      '¿Sabes en qué año nació la Universidad Empresas Polar?',
+      ['2021', '2022', '2023', '2024'],
+      1,
+      'La Universidad Empresas Polar comenzó sus actividades el 02 de noviembre de 2022.',
+    ),
+    q(
+      '¿Recuerdas en qué año se estrenó la app de la UEP?',
+      ['2022', '2023', '2024', '2025'],
+      3,
+      'La aplicación de la Universidad se desplegó el 13 de noviembre de 2025, para celebrar el 3er aniversario.',
+    ),
+    q(
+      '¿Cuál es el objetivo principal de la plataforma de la Universidad Empresas Polar?',
+      [
+        'Tu formación integral y el desarrollo de competencias requeridas en tu rol',
+        'Gestionar exclusivamente la nómina y beneficios de los colaboradores',
+        'Evaluar el desempeño anual de los trabajadores',
+        'Ofrecer eventos de entretenimiento presenciales para la organización',
+      ],
+      0,
+      '¡Así es! La UEP es una plataforma creada para acompañar tu formación integral y potenciar tu talento.',
+      '¡Casi! El objetivo principal de la UEP es tu formación integral y el desarrollo de tus competencias en la organización.',
+    ),
+    q(
+      '¿Cuántas líneas educativas contempla el Modelo de Aprendizaje propio de la UEP?',
+      ['2 líneas educativas', '3 líneas educativas', '4 líneas educativas', '5 líneas educativas'],
+      1,
+      'La UEP contempla 3 líneas educativas: Individual, Organizacional y Técnica / Especializada.',
+    ),
+    q(
+      '¿Qué busca desarrollar la Línea Individual del Modelo de Aprendizaje?',
+      [
+        'Desarrollo de capacidades específicas y especializadas por área',
+        'Desarrollo de capacidades asociadas a la ejecución del rol en la organización',
+        'Desarrollo de habilidades humanas y comportamientos de Gente Polar',
+        'Entrenamiento exclusivo de directivos y gerentes',
+      ],
+      2,
+    ),
+    q(
+      'Si la Línea Individual contribuye al desarrollo de capacidades humanas... ¿Qué capacidades aborda la Línea Organizacional?',
+      [
+        'Capacidades específicas técnicas requeridas por cada área operativa',
+        'Capacidades asociadas a la ejecución del rol dentro de la organización',
+        'Habilidades exclusivamente académicas y teóricas',
+        'Formación de competencias en idiomas extranjeros',
+      ],
+      1,
+      '¡Así es! La Línea Organizacional impulsa las capacidades clave para desempeñar con éxito tu rol en la empresa.',
+      '¡Incorrecto! La Línea Organizacional desarrolla las capacidades necesarias para ejecutar tu rol dentro de la organización.',
+    ),
+    q(
+      '¿Cuál es el enfoque principal de la Línea Técnica especializada?',
+      [
+        'Habilidades humanas de liderazgo y empatía',
+        'Capacidades asociadas únicamente al clima organizacional',
+        'Capacidades específicas y especializadas requeridas por el área a la que perteneces',
+        'Integración y convivencia corporativa',
+      ],
+      2,
+      '¡Exacto! Esta línea fortalece los conocimientos técnicos y especializados de tu área de trabajo.',
+      '¡Casi! La Línea Técnica busca desarrollar capacidades específicas y especializadas propias de tu área.',
+    ),
+    q(
+      '¿Quiénes tienen acceso a la plataforma de la Universidad Empresas Polar?',
+      [
+        'Únicamente el personal directivo y gerencial',
+        'Todos los trabajadores de la organización',
+        'Solo los trabajadores del área técnica',
+        'Exclusivamente los empleados de nuevo ingreso',
+      ],
+      1,
+      '¡Correcto! La plataforma está disponible para el 100% de los trabajadores de Empresas Polar.',
+      '¡Incorrecto! Todos los trabajadores de la organización cuentan con acceso a la plataforma UEP.',
+    ),
+    q(
+      '¿Qué modalidades de formación te ofrece la UEP?',
+      ['Únicamente presenciales', 'Únicamente virtuales', 'Exclusivamente a través de guías impresas', 'Tanto presenciales como virtuales'],
+      3,
+      '¡Así es! Combinamos experiencias formativas presenciales y virtuales para adaptarnos a tus necesidades.',
+      '¡Casi! Las actividades de la UEP ofrecen modalidades tanto presenciales como virtuales.',
+    ),
+    q(
+      '¿Sabes qué ventaja de conexión te da la app de la UEP?',
+      [
+        'Requiere obligatoriamente conexión a internet por fibra óptica',
+        'Solo funciona mediante conexión a red interna de la empresa',
+        'Permite conexión de manera offline en algunos recursos',
+        'Funciona únicamente enviando mensajes de texto (SMS)',
+      ],
+      2,
+      '¡Excelente! Puedes acceder a recursos de aprendizaje seleccionados incluso sin conexión a internet.',
+      '¡Incorrecto! La aplicación móvil permite conectarte de manera offline en ciertos recursos para facilitar tu aprendizaje.',
+    ),
+  ],
+  // Estación 2 · Biblioteca UEP
+  2: [
+    q(
+      '¿En qué fecha sumamos la Biblioteca UEP a nuestro ecosistema de aprendizaje?',
+      ['Marzo de 2025', 'Noviembre de 2024', 'Enero de 2023', 'Julio de 2024'],
+      1,
+    ),
+    q(
+      '¿Qué hace únicos a los contenidos de la Biblioteca UEP?',
+      [
+        'Contiene únicamente documentos en formato PDF y en español',
+        'Ofrece recursos exclusivamente en formato impreso y físico',
+        'Maneja recursos en distintos idiomas y formatos',
+        'Solo está disponible para consulta en horario de oficina',
+      ],
+      2,
+      '¡Así es! Cuentas con una amplia diversidad de formatos (ebooks, audios, videos) y contenidos en distintos idiomas.',
+      '¡Incorrecto! La Biblioteca UEP se destaca por ofrecer recursos en múltiples idiomas y diversos formatos digitales.',
+    ),
+    q(
+      '¿Cómo puedes crear y compartir una selección personalizada de recursos con tus compañeros en la Biblioteca UEP?',
+      [
+        'Enviando un correo electrónico directamente al equipo de soporte de la plataforma',
+        'En la Biblioteca, haciendo clic en la opción de “Listas” en el área del usuario para crear listas públicas o privadas',
+        'Descargando los archivos directamente al equipo y enviándolos por mensajería interna',
+        'Solicitando una autorización impresa al equipo de Gestión de Gente',
+      ],
+      1,
+      '¡Muy bien! En la sección “Listas” de tu perfil puedes guardar y compartir tus selecciones favoritas con tus compañeros.',
+      '¡Casi! Puedes ingresar a “Listas” en tu área de usuario para crear y compartir listas públicas o privadas.',
+    ),
+    q(
+      '¿A cuántos recursos educativos puedes acceder en la Biblioteca UEP?',
+      [
+        'A más de 100 manuales técnicos únicamente en formato texto',
+        'A más de 4 millones de recursos de distintos tipos, como ebooks, audiolibros, películas, resúmenes y videos',
+        'A 500 resúmenes en formato web',
+        'A 1 millón de artículos académicos únicamente en español',
+      ],
+      1,
+      '¡Impresionante! Tienes a tu alcance más de 4 millones de contenidos educativos diversos.',
+      '¡Incorrecto! La Biblioteca UEP cuenta con más de 4 millones de recursos (ebooks, audiolibros, videos y más).',
+    ),
+    q(
+      'Si deseas acceder a un recurso educativo que actualmente no se encuentra disponible en la Biblioteca UEP, puedes sugerirlo a través de una opción al final del catálogo navegando por la plataforma.',
+      VF,
+      0,
+      '¡Así es! Al final del catálogo encontrarás la opción para solicitar los recursos que desees ver en la plataforma.',
+      '¡Incorrecto! Es Verdadero. Puedes sugerir contenidos nuevos utilizando la opción disponible al final del catálogo.',
+    ),
+    q(
+      '¿Con qué frecuencia la Universidad Empresas Polar realiza campañas para promocionar nuevos contenidos y mantener actualizado su catálogo?',
+      ['Semanalmente', 'Mensualmente', 'Trimestralmente', 'Anualmente'],
+      1,
+      '¡Así es! Cada mes lanzamos campañas especiales con los contenidos más relevantes para ti.',
+      '¡Casi! Las campañas de promoción y actualización de contenidos se realizan mensualmente.',
+    ),
+    q(
+      '¿Desde cuántos dispositivos puedes acceder a la Biblioteca UEP?',
+      ['2', '3', '4', '6'],
+      3,
+      '¡Correcto! Puedes acceder a la Biblioteca UEP desde un máximo de 6 dispositivos.',
+      '¡Casi! Puedes acceder a la Biblioteca UEP desde hasta 6 dispositivos.',
+    ),
+    // El documento no marca la correcta: es la primera (medallas y badges), confirmado por el equipo 2026-10-23.
+    q(
+      'Además de los puntos y el ranking, ¿de qué otra forma reconoce la plataforma el aprendizaje acumulado de los usuarios?',
+      [
+        'Otorgando medallas y badges acumulables mediante el progreso, el número de recursos consumidos o las horas dedicadas',
+        'Enviando diplomas impresos por correo postal al finalizar la semana',
+        'Otorgando permisos especiales para modificar el catálogo de la biblioteca',
+        'Habilitando la descarga de materiales externos a la universidad',
+      ],
+      0,
+      '¡Excelente! Ganarás medallas e insignias digitales a medida que acumules horas de aprendizaje y lecturas.',
+      '¡Casi! La plataforma te otorga medallas y badges acumulables según tus recursos consumidos y tiempo invertido.',
+    ),
+    q(
+      'Al solicitar el préstamo de un recurso en la Biblioteca UEP, ¿cuántos puntos obtienes y cuál es el límite diario permitido por esta acción?',
+      [
+        '1 punto por préstamo, hasta un máximo de 5 puntos al día',
+        '5 puntos por préstamo, hasta un máximo de 20 puntos al día',
+        '2 puntos por préstamo, hasta un máximo de 10 puntos al día',
+        '10 puntos por préstamo, sin límite diario de puntos',
+      ],
+      2,
+      '¡Así es! Sumas 2 puntos por cada préstamo, pudiendo acumular un máximo de 10 puntos diarios por esta acción.',
+      '¡Incorrecto! Cada préstamo te otorga 2 puntos, con un límite máximo de 10 puntos al día.',
+    ),
+    q(
+      '¿Cómo funciona el sistema de ranking en la plataforma para los usuarios a medida que consumen contenidos?',
+      [
+        'Asigna posiciones aleatorias cada semana independientemente del uso',
+        'Permite acumular puntos por realizar acciones en la plataforma, ubicando al usuario en un ranking del mes y un ranking global',
+        'Compara únicamente las calificaciones obtenidas en evaluaciones presenciales',
+        'Otorga puntos exclusivamente por la asistencia a charlas presenciales en la empresa',
+      ],
+      1,
+      '¡Correcto! Tus interacciones y lecturas te suman puntos para destacar en el ranking mensual y global.',
+      '¡Casi! Todas tus acciones de aprendizaje te otorgan puntos para ubicarte en el ranking del mes y el global.',
+    ),
+    q(
+      '¿Cuál fue el último carrusel que se estrenó en la Biblioteca UEP?',
+      ['Líderes del Futuro', 'Innovación y Tecnología', 'Serie Gente Polar', 'Competencias Digitales 2025'],
+      2,
+      '¡Así es! “Serie Gente Polar” fue el carrusel más reciente en integrarse al catálogo.',
+      '¡Incorrecto! El carrusel más reciente estrenado en la Biblioteca fue Serie Gente Polar.',
+    ),
+  ],
+  // Estación 3 · Unidad Móvil
+  3: [
+    q(
+      '¿En qué mes y año arrancó motores la Unidad Móvil de la UEP?',
+      ['Febrero de 2026', 'Marzo de 2026', 'Abril de 2026', 'Mayo de 2025'],
+      1,
+      '¡Excelente! La UEP Móvil inició su recorrido el 12 de marzo de 2026.',
+      '¡Casi! La UEP Móvil tuvo su primera actividad en carretera el 12 de marzo de 2026.',
+    ),
+    q(
+      '¿Cuál fue la primera planta que visitó la UEP Móvil?',
+      ['Caucagua', 'San Joaquín', 'Turmero', 'San Pedro'],
+      0,
+      '¡Así es! La primera parada oficial de la Unidad Móvil fue la planta de Caucagua.',
+      '¡Incorrecto! La primera actividad de la UEP Móvil se realizó en Caucagua el 12 de marzo de 2026.',
+    ),
+    q(
+      '¿La Unidad Móvil tiene la capacidad de operar con energía fotovoltaica?',
+      VF,
+      0,
+      '¡Correcto! La Unidad Móvil puede operar aprovechando la energía solar.',
+      '¡Incorrecto! Es Verdadero. La unidad está equipada para operar mediante energía fotovoltaica.',
+    ),
+    q(
+      '¿La Unidad Móvil tiene características sustentables?',
+      VF,
+      0,
+      '¡Excelente! Cuenta con 12 paneles solares y un avanzado sistema de administración de cargas.',
+      '¡Incorrecto! Es Verdadero. Es sustentable gracias a sus 12 paneles solares y su sistema de gestión de cargas.',
+    ),
+    q(
+      'A lo largo de la primera gira, la Unidad Móvil recorrió más de 4.000 kilómetros.',
+      VF,
+      0,
+      '¡Así es! Recorrió un total de 4.337 kilómetros llevando formación a nuestras sedes.',
+      '¡Casi! Es Verdadero. La gira cubrió exactamente 4.337 kilómetros a nivel nacional.',
+    ),
+    // El documento no marca la correcta: es la segunda, confirmado por el equipo 2026-10-23.
+    q(
+      '¿Cuál es el propósito principal de la Unidad Móvil de la Universidad Empresas Polar?',
+      [
+        'Realizar entregas de productos y mercancía a nivel nacional',
+        'Fomentar la conexión presencial con los trabajadores llevando el aprendizaje a cada rincón del país con experiencias de desarrollo',
+        'Funcionar como una oficina administrativa itinerante de reclutamiento',
+        'Ofrecer servicios de transporte privado para los colaboradores',
+      ],
+      1,
+      '¡Así es! La UEP Móvil busca conectar presencialmente con cada trabajador en todo el país para impulsar su máximo potencial.',
+      '¡Casi! Su propósito central es fomentar la conexión presencial llevando el aprendizaje a cada rincón del país.',
+    ),
+    q(
+      'El contenido abordado en la primera gira de la Unidad Móvil fue:',
+      ['Serie Gente Polar', 'Biblioteca UEP', 'Todos Somos Líderes'],
+      1,
+      '¡Correcto! La primera gira estuvo dedicada a promover el uso y alcance de la Biblioteca UEP.',
+      '¡Incorrecto! El tema principal desplegado durante la primera gira fue la Biblioteca UEP.',
+    ),
+    q(
+      '¿De qué color es externamente la Unidad Móvil de la Universidad Empresas Polar?',
+      ['Verde Oliva', 'Azul Rey', 'Blanco', 'Azul Cielo'],
+      1,
+      '¡Así es! La Unidad Móvil destaca por su distintivo color Azul Rey.',
+      '¡Casi! El color exterior de la Unidad Móvil es Azul Rey.',
+    ),
+    q(
+      '¿Cuáles son las dimensiones físicas (largo por ancho) de la Unidad Móvil UEP?',
+      [
+        '10 metros de largo por 2,00 metros de ancho',
+        '12 metros de largo por 2,40 metros de ancho',
+        '13 metros de largo por 2,60 metros de ancho',
+        '15 metros de largo por 3,00 metros de ancho',
+      ],
+      2,
+      '¡Correcto! La Unidad Móvil tiene una extensión de 13 metros de largo por 2,60 metros de ancho.',
+      '¡Incorrecto! Sus medidas exactas son 13 metros de largo por 2,60 metros de ancho.',
+    ),
+    q(
+      '¿Con cuántos neumáticos (cauchos) cuenta la Unidad Móvil de la UEP para recorrer el país?',
+      ['4 neumáticos', '6 neumáticos', '8 neumáticos', '10 neumáticos'],
+      2,
+      '¡Correcto! La Unidad Móvil cuenta con 8 neumáticos (sin contar con los de repuesto).',
+      '¡Casi! La Unidad Móvil cuenta con 8 neumáticos (sin contar con los de repuesto).',
+    ),
+  ],
+  // Estación 4 · Plataforma UEP
+  4: [
+    q(
+      '¿Qué requisito hay para descargar e instalar las aplicaciones de la Universidad Empresas Polar y la Biblioteca UEP en tus dispositivos?',
+      [
+        'Ninguno, ambas aplicaciones son totalmente gratuitas para todos los colaboradores',
+        'Requiere pagar una suscripción mensual de uso',
+        'Debes realizar un pago único al momento de la descarga en la tienda de aplicaciones',
+        'Necesitas una autorización bancaria previa para habilitar la descarga',
+      ],
+      0,
+      'Puedes descargar e instalar ambas aplicaciones de forma 100% gratuita para disfrutar de todo su contenido sin costo ni suscripciones.',
+      'Ambas aplicaciones (Universidad Empresas Polar y Biblioteca UEP) son completamente gratuitas y no requieren ningún pago ni suscripción.',
+    ),
+    q(
+      '¿Cuáles son los principales servicios de aprendizaje que ofrece actualmente el ecosistema de la UEP?',
+      [
+        'La Plataforma UEP, la Biblioteca UEP y la Unidad Móvil',
+        'Solamente el correo electrónico',
+        'Exclusivamente la Unidad Móvil y la plataforma',
+        'Únicamente la plataforma virtual',
+      ],
+      0,
+      '¡Así es! El ecosistema formativo combina la Plataforma UEP, la Biblioteca UEP y la Unidad Móvil.',
+      '¡Incorrecto! Los servicios principales que integran nuestro ecosistema son la Plataforma UEP, la Biblioteca UEP y la Unidad Móvil.',
+    ),
+    q('¿Con cuántos matriculados inició la Universidad Empresas Polar?', ['1.200', '1.000', '3.000', '2.500'], 0),
+    q(
+      '¿En qué se sustenta la estrategia de formación de la Universidad Empresas Polar?',
+      [
+        'En un modelo de cursos externos comprados a otras instituciones',
+        'En un Modelo de Aprendizaje propio diseñado para la organización',
+        'En talleres libres sin una estructura definida',
+        'En programas universitarios tradicionales de pregrado',
+      ],
+      1,
+      '¡Correcto! La UEP se fundamenta en un Modelo de Aprendizaje propio adaptado a las necesidades de nuestra organización.',
+      '¡Incorrecto! La formación de la Universidad Empresas Polar se sustenta en un Modelo de Aprendizaje propio.',
+    ),
+    q(
+      '¿Cómo se asignan y habilitan las formaciones a cada trabajador dentro de la plataforma?',
+      [
+        'Todos los usuarios ven exactamente el mismo catálogo de cursos al mismo tiempo',
+        'Cada usuario tiene un pensum asociado a su perfil educativo y se le habilitan formaciones según su requerimiento',
+        'Los contenidos se asignan de forma aleatoria cada inicio de mes',
+        'El colaborador debe solicitar aprobación manual para ver cualquier contenido',
+      ],
+      1,
+      '¡Excelente! Tu pensum está personalizado según tu perfil educativo para habilitarte las formaciones adecuadas.',
+      '¡Incorrecto! Cada colaborador cuenta con un pensum asociado a su perfil formativo, habilitando contenidos de acuerdo con sus necesidades.',
+    ),
+    q(
+      '¿Un colaborador puede matricularse libremente en cualquier curso disponible de la plataforma en el momento que lo desee?',
+      VF,
+      1,
+      '¡Así es! Es Falso. Las formaciones se habilitan de manera progresiva y planificada según las necesidades de tu rol y perfil.',
+      '¡Casi! Es Falso. Las formaciones no se eligen de forma aleatoria, sino que se habilitan en la plataforma según los requerimientos de tu perfil.',
+    ),
+    q(
+      'En relación con la Línea Técnica / Especializada, ¿de qué manera se clasifican las formaciones disponibles?',
+      [
+        'Son exclusivamente para el personal operativo de plantas',
+        'Pueden ser específicas de acuerdo con el rol de la persona o transversales para distintas áreas',
+        'Aplican únicamente para líderes y gerentes de unidad',
+        'Son de libre elección sin importar el área a la que perteneces',
+      ],
+      1,
+      '¡Correcto! Las formaciones técnicas se adaptan tanto a las funciones específicas de tu rol como a temas transversales.',
+      '¡Incorrecto! Las formaciones técnicas especializadas pueden estar enfocadas en tu rol específico o ser de carácter transversal.',
+    ),
+    q(
+      '¿Existe un solo pensum para todos los perfiles educativos?',
+      VF,
+      1,
+      '¡Correcto! Cada perfil educativo cuenta con un pensum personalizado.',
+      '¡Casi! Cada perfil educativo cuenta con un pensum personalizado.',
+    ),
+    q(
+      '¿Cuántos perfiles educativos se han definido en Empresas Polar a partir de los diferentes roles y responsabilidades?',
+      ['3 perfiles', '5 perfiles', '9 perfiles', '10 perfiles'],
+      2,
+      '¡Correcto! En Empresas Polar se han definido 9 perfiles educativos (Dirección, Gerencia, Supervisorio, Especialización, Profesional, Técnico, Operativo, Pasante y Aprendiz).',
+      '¡Incorrecto! La Universidad Empresas Polar contempla exactamente 9 perfiles educativos derivados de los roles y responsabilidades.',
+    ),
+    q(
+      'Dentro de la estructura del Modelo de Aprendizaje, ¿cuál es uno de los objetivos del "¿Para qué?" del aprendizaje orientado en la UEP?',
+      [
+        'Reducir la jornada laboral de los colaboradores',
+        'Potenciar el desarrollo de la organización, el crecimiento individual y mantener la continuidad operativa',
+        'Reemplazar las actividades presenciales por completo',
+        'Evaluar únicamente a los nuevos ingresos',
+      ],
+      1,
+      '¡Excelente! El aprendizaje se orienta a potenciar la organización, el desarrollo individual y la continuidad operativa.',
+      '¡Incorrecto! El aprendizaje está orientado a potenciar la organización, el desarrollo/crecimiento individual y la continuidad operativa.',
+    ),
+    q(
+      '¿Cuáles son algunos de los perfiles educativos definidos dentro del modelo de la Universidad Empresas Polar?',
+      [
+        'Exclusivamente Directivo y Administrativo',
+        'Dirección, Gerencia, Supervisorio y Especialización',
+        'Pasantes y Contratistas únicamente',
+        'Junior, Semi-Senior y Senior',
+      ],
+      1,
+      '¡Así es! Los 9 perfiles abarcan desde Dirección hasta Pasantes, adaptando el pensum a cada rol.',
+      '¡Casi! Los 9 perfiles definidos son: Dirección, Gerencia, Supervisorio, Especialización, Profesional, Técnico, Operativo, Pasante y Aprendiz.',
+    ),
+  ],
+};

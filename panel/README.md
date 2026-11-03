@@ -8,6 +8,12 @@ No escribe nada ni comparte código con el juego.
 - Se entra con **solo una clave** (`PANEL_PASSWORD`) en la pantalla `/entrar`; la sesión dura 30 días o hasta tocar «Salir».
   Cambiar la clave cierra todas las sesiones. Muestra cédulas y nombres: la clave es solo para UEP.
 - Se actualiza solo cada 30 s.
+- Pestaña **Reporte** (`/reporte`): lee también la tabla `answers`. Resumen, hallazgos principales, acierto por estación,
+  temas a reforzar (preguntas con menos aciertos, confusión más común y dato correcto), detalle de cada pregunta y tabla
+  de acierto por localidad. Filtros por localidad y estación. **Guardar PDF** usa la impresión del navegador (A4).
+  El reporte no muestra nombres ni cédulas; esos solo van en el Excel por participante (`/api/reporte/excel`).
+  Los textos salen de `lib/preguntas.ts`, **copia** del banco del juego (`lib/trivias.ts`): si el juego cambia preguntas,
+  copiarlas de nuevo (solo agregar al final, nunca reordenar).
 
 ## Correr
 
@@ -45,6 +51,9 @@ grant usage on schema public to panel_lectura;
 grant select on public.players to panel_lectura;
 -- El juego tiene RLS activado: este usuario necesita permiso explícito para leer.
 create policy panel_lee_players on public.players for select to panel_lectura using (true);
+-- Para la pestaña «Estaciones» (qué respondió cada participante):
+grant select on public.answers to panel_lectura;
+create policy panel_lee_answers on public.answers for select to panel_lectura using (true);
 ```
 
 Luego `DATABASE_URL` = la cadena "Connection pooling" de Supabase con ese usuario

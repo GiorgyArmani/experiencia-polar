@@ -4,7 +4,8 @@
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
-import type { Datos, Fila } from './tipos';
+import { BANCOS } from './preguntas';
+import type { Conteo, Datos, DatosReporte, Fila, Respuesta } from './tipos';
 
 const COLS = 'cedula, nombre, sede, estado, puntos, tiempo_ms, completed, last_completed_at, created_at';
 export const TOTAL_NIVELES = Number(process.env.TOTAL_NIVELES ?? 4);
@@ -142,4 +143,103 @@ export async function leerDatos(): Promise<Datos> {
     // Sin tiempo registrado (jugó antes de que se guardara) va después de quien sí lo tiene.
     .sort((a, b) => b.puntos - a.puntos || orden(a) - orden(b));
   return { rows, totalNiveles: TOTAL_NIVELES, generadoAt: new Date().toISOString() };
+}
+
+// ---------- Respuestas por estación ----------
+
+type RowResp = {
+  cedula: string | null;
+  nombre: string;
+  sede: string;
+  trivia: number;
+  question: number;
+  option_idx: number;
+  correct: boolean;
+  created_at: string | Date;
+};
+
+/** Respuestas inventadas para PANEL_DATOS_PRUEBA: 3 preguntas por nivel completado, unas más difíciles que otras. */
+function respuestasDePrueba(): RowResp[] {
+  let seed = 777;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const out: RowResp[] = [];
+  for (const p of filasDePrueba()) {
+    for (const trivia of p.completed ?? []) {
+      const banco = BANCOS[trivia] ?? [];
+      const ids = banco.map((_, i) => i).sort(() => rnd() - 0.5).slice(0, 3);
+      for (const question of ids) {
+        const preg = banco[question];
+        const dificultad = ((question * 37 + trivia * 11) % 60) / 100; // 0 a 0,6
+        const correct = rnd() > dificultad;
+        const otras = preg.options.map((_, i) => i).filter((i) => i !== preg.correct);
+        const option_idx = correct ? preg.correct : otras[rnd() < 0.6 ? 0 : Math.floor(rnd() * otras.length)];
+        out.push({ cedula: p.cedula, nombre: p.nombre, sede: p.sede, trivia, question, option_idx, correct, created_at: p.last_completed_at ?? p.created_at });
+      }
+    }
+  }
+  return out;
+}
+
+async function leerRespuestasCrudas(): Promise<RowResp[]> {
+  if (process.env.PANEL_DATOS_PRUEBA === 'true') return respuestasDePrueba();
+  const url = process.env.DATABASE_URL;
+  if (url) {
+    const sql = (g.__panelSql ??= postgres(url, { max: 3, prepare: false, idle_timeout: 30 }));
+    return (await sql.unsafe(
+      `select p.cedula, p.nombre, p.sede, a.trivia, a.question, a.option_idx, a.correct, a.created_at
+       from answers a join players p on p.id = a.player_id
+       order by a.created_at`,
+    )) as unknown as RowResp[];
+  }
+  const sbUrl = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!sbUrl || !key) throw new Error('Falta DATABASE_URL o SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY');
+  const db = createClient(sbUrl, key, { auth: { persistSession: false } });
+  type SbRow = Omit<RowResp, 'cedula' | 'nombre' | 'sede'> & { players: { cedula: string | null; nombre: string; sede: string } | null };
+  const out: RowResp[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await db
+      .from('answers')
+      .select('trivia, question, option_idx, correct, created_at, players!inner(cedula, nombre, sede)')
+      .order('id')
+      .range(from, from + 999);
+    if (error) throw error;
+    for (const r of (data ?? []) as unknown as SbRow[]) {
+      if (r.players) out.push({ ...r, ...r.players });
+    }
+    if (!data || data.length < 1000) return out;
+  }
+}
+
+/** Todas las respuestas, sin las cuentas de prueba (localidad "Pruebas"). */
+export async function leerRespuestas(): Promise<Respuesta[]> {
+  return (await leerRespuestasCrudas())
+    .filter((r) => r.sede !== 'Pruebas')
+    .map((r) => ({
+      cedula: r.cedula ?? '',
+      nombre: r.nombre,
+      localidad: r.sede,
+      trivia: Number(r.trivia),
+      pregunta: Number(r.question),
+      opcion: Number(r.option_idx),
+      correcta: Boolean(r.correct),
+      at: iso(r.created_at)!,
+    }));
+}
+
+/** Lo que necesita el reporte: conteos por localidad / estación / pregunta / opción, y participantes por localidad. */
+export async function leerReporte(): Promise<DatosReporte> {
+  const mapa = new Map<string, Conteo>();
+  const jugadores = new Map<string, Set<string>>();
+  for (const r of await leerRespuestas()) {
+    const k = `${r.localidad}|${r.trivia}|${r.pregunta}|${r.opcion}`;
+    const c = mapa.get(k);
+    if (c) c.n++;
+    else mapa.set(k, { localidad: r.localidad, trivia: r.trivia, pregunta: r.pregunta, opcion: r.opcion, n: 1 });
+    let set = jugadores.get(r.localidad);
+    if (!set) jugadores.set(r.localidad, (set = new Set()));
+    set.add(r.cedula || r.nombre);
+  }
+  const participantes = Object.fromEntries([...jugadores].map(([l, set]) => [l, set.size]));
+  return { conteos: [...mapa.values()], participantes, generadoAt: new Date().toISOString() };
 }

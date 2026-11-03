@@ -20,3 +20,20 @@ body {
 .input {
   @apply h-11 w-full rounded-xl border-2 border-[#CBD5E1] bg-white px-3 text-sm font-semibold text-polar-ink outline-none focus:border-polar-blue;
 }
+
+/* PDF del reporte (Imprimir → Guardar como PDF): A4, fondo blanco, colores de los gráficos tal cual. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body {
+    font-size: 12px;
+  }
+}

@@ -4,6 +4,7 @@
 // Pensado para usarse sin explicación: filtro por localidad (la nómina de la UEP no trae estado), el podio arriba y la tabla completa abajo.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Datos, Fila } from '@/lib/tipos';
+import { Encabezado } from './Encabezado';
 
 const PAGINA = 50;
 
@@ -137,30 +138,10 @@ export default function Panel() {
     setSoloTerminados(false);
   }
 
-  async function salir() {
-    await fetch('/api/salir', { method: 'POST' }).catch(() => {});
-    window.location.replace('/entrar');
-  }
 
   return (
     <main className="min-h-[100dvh] pb-10">
-      <header className="bg-polar-navy text-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-8">
-          <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-polar-yellow">Experiencia UEP</p>
-            <h1 className="title-display text-[clamp(26px,4.5vw,36px)] leading-none">Panel de premiación</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-2 text-sm text-[#CFE3F7]">
-              <span className="h-2 w-2 rounded-full bg-[#3DDC84]" aria-hidden />
-              {data ? `Actualizado ${haceCuanto(data.generadoAt, ahora)}` : 'Cargando…'}
-            </span>
-            <button type="button" onClick={salir} className="h-9 rounded-lg border border-white/30 px-3 text-sm font-semibold hover:bg-white/10">
-              Salir
-            </button>
-          </div>
-        </div>
-      </header>
+      <Encabezado activo="ranking" estado={data ? `Actualizado ${haceCuanto(data.generadoAt, ahora)}` : 'Cargando…'} />
 
       {/* Filtros: siempre a la vista */}
       <div className="z-20 border-b lg:sticky lg:top-0 border-[#E2E8F0] bg-white/95 backdrop-blur">
